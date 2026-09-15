@@ -60,6 +60,9 @@ data/processed/
 *.tsv
 *.csv
 !asap_sample.csv
+*.db
+*.sqlite
+*.sqlite3
 
 # Environment & Secrets
 .env
