@@ -217,3 +217,8 @@ class StorageService:
             if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):
                 return False
             raise exc
+
+
+def get_storage_service() -> StorageService:
+    """Dependency provider returning an instance of StorageService."""
+    return StorageService()
