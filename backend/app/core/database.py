@@ -1,7 +1,7 @@
 """Database connection configuration and session management."""
 
 import logging
-from typing import AsyncGenerator, Generator
+from typing import Any, AsyncGenerator, Dict, Generator
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def _create_sync_engine():
     sync_url = settings.DATABASE_SYNC_URL
     is_sqlite = sync_url.startswith("sqlite")
-    engine_kwargs = {"pool_pre_ping": True}
+    engine_kwargs: Dict[str, Any] = {"pool_pre_ping": True}
     if is_sqlite:
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
@@ -37,7 +37,7 @@ def _create_sync_engine():
 def _create_async_engine():
     async_url = settings.DATABASE_URL
     is_sqlite = async_url.startswith("sqlite")
-    engine_kwargs = {"pool_pre_ping": True}
+    engine_kwargs: Dict[str, Any] = {"pool_pre_ping": True}
     if is_sqlite:
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
