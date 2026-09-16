@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
 from app.api.v1.essays import router as essays_router
+from app.api.v1.jobs import router as jobs_router
 from app.core.config import settings
 
 api_router = APIRouter()
 api_router.include_router(essays_router, prefix="/essays", tags=["Essays"])
+api_router.include_router(jobs_router, prefix="/jobs", tags=["Jobs"])
 
 
 @api_router.get("/health", tags=["Health"])

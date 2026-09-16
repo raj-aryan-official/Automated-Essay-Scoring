@@ -10,6 +10,12 @@ from app.schemas.essay import (
     EssayStatusEnum,
     SourceTypeEnum,
 )
+from app.schemas.job import (
+    JobDispatchResponse,
+    JobResponse,
+    JobStatusEnum,
+    JobTypeEnum,
+)
 
 __all__ = [
     "SourceTypeEnum",
@@ -20,4 +26,8 @@ __all__ = [
     "EssayResponse",
     "EssayDetailResponse",
     "EssayListResponse",
+    "JobTypeEnum",
+    "JobStatusEnum",
+    "JobDispatchResponse",
+    "JobResponse",
 ]

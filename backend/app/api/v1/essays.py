@@ -23,6 +23,8 @@ from app.schemas.essay import (
     EssayResponse,
     SourceTypeEnum,
 )
+from app.schemas.job import JobDispatchResponse
+from app.services.job_service import create_scoring_job
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger(__name__)
@@ -300,18 +302,9 @@ async def submit_essay(
         f"Persisted essay {essay.id} for prompt {prompt.id} with status {essay.status}"
     )
 
-    return EssayCreateResponse(
-        id=essay.id,
-        status=essay.status,
-        prompt_id=essay.prompt_id,
-        submitted_by=essay.submitted_by,
-        source_type=essay.source_type,
-        raw_text=essay.raw_text,
-        storage_bucket=essay.storage_bucket,
-        storage_key=essay.storage_key,
-        created_at=essay.created_at,
-        message="Essay submitted successfully",
-    )
+    response_obj = EssayCreateResponse.model_validate(essay)
+    response_obj.message = "Essay submitted successfully"
+    return response_obj
 
 
 @router.get(
@@ -363,7 +356,7 @@ def get_essay_by_id(
     download_url: Optional[str] = None
     if essay.storage_key:
         try:
-            download_url = storage.get_presigned_url(essay.storage_key)
+            download_url = storage.get_presigned_url(str(essay.storage_key))
         except Exception as exc:
             logger.warning(
                 f"Could not generate presigned download URL for essay {essay.id}: {exc}"
@@ -371,16 +364,39 @@ def get_essay_by_id(
 
     prompt_title = essay.prompt.title if essay.prompt else None
 
-    return EssayDetailResponse(
-        id=essay.id,
-        prompt_id=essay.prompt_id,
-        submitted_by=essay.submitted_by,
-        raw_text=essay.raw_text,
-        source_type=essay.source_type,
-        storage_bucket=essay.storage_bucket,
-        storage_key=essay.storage_key,
-        status=essay.status,
-        created_at=essay.created_at,
-        download_url=download_url,
-        prompt_title=prompt_title,
+    detail_res = EssayDetailResponse.model_validate(essay)
+    detail_res.download_url = download_url
+    detail_res.prompt_title = prompt_title
+    return detail_res
+
+
+@router.post(
+    "/{essay_id}/score",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=JobDispatchResponse,
+    summary="Dispatch an asynchronous scoring job for an essay",
+)
+def dispatch_scoring_job(
+    essay_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Insert a row into jobs (job_type=SCORING, status=QUEUED) and return HTTP 202
+
+    with the job_id immediately (non-blocking).
+    """
+    essay = db.query(Essay).filter(Essay.id == essay_id).first()
+    if not essay:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Essay with id '{essay_id}' not found.",
+        )
+
+    job = create_scoring_job(db, essay_id=essay.id)
+
+    return JobDispatchResponse(
+        job_id=job.id,
+        essay_id=job.essay_id,
+        status=job.status,
+        job_type=job.job_type,
+        message="Scoring job queued successfully",
     )
