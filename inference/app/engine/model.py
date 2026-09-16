@@ -263,7 +263,7 @@ class BertEssayScoringModel(EssayScoringModel):
 
     def get_rubric_bounds(self, prompt_id: str) -> Tuple[float, float]:
         """Retrieve rubric min and max for the requested prompt ID."""
-        clean_id = str(prompt_id).strip()
+        clean_id = prompt_id.strip()
         if clean_id in self.prompt_rubrics:
             rubric = self.prompt_rubrics[clean_id]
             return float(rubric.get("min_score", 2.0)), float(rubric.get("max_score", 12.0))

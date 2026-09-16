@@ -5,19 +5,134 @@ Handles:
 2. Per-prompt rubric definitions across all 8 essay sets.
 3. Per-prompt min-max normalization to [0, 1] and inverse transformations.
 4. Stratified 80/10/10 train/val/test splits per prompt.
+5. Graceful fallback when scientific packages (numpy/pandas/sklearn) are missing.
 """
 
 from __future__ import annotations
 
+import csv
 import logging
+import math
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
-
-import numpy as np
-import pandas as pd
-from sklearn.model_selection import train_test_split
+import random
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 logger = logging.getLogger(__name__)
+
+# Optional third-party imports
+try:
+    import numpy as np
+except (ImportError, Exception):
+    np = None  # type: ignore
+
+try:
+    import pandas as pd
+except (ImportError, Exception):
+    pd = None  # type: ignore
+
+try:
+    from sklearn.model_selection import train_test_split  # type: ignore
+except (ImportError, Exception):
+    train_test_split = None  # type: ignore
+
+
+class SimpleSeries(list):
+    """Lightweight fallback for pd.Series when pandas is unavailable."""
+
+    def __init__(self, items: Sequence[Any]) -> None:
+        super().__init__(items)
+
+    def isin(self, values: Any) -> SimpleSeries:
+        val_set = set(values)
+        return SimpleSeries([x in val_set for x in self])
+
+    def unique(self) -> List[Any]:
+        return list(dict.fromkeys(self))
+
+    def value_counts(self) -> Dict[Any, int]:
+        counts: Dict[Any, int] = {}
+        for item in self:
+            counts[item] = counts.get(item, 0) + 1
+        return counts
+
+    def astype(self, dtype: Any) -> SimpleSeries:
+        if dtype in (int, "int"):
+            return SimpleSeries([int(x) for x in self])
+        if dtype in (float, "float"):
+            return SimpleSeries([float(x) for x in self])
+        return SimpleSeries([str(x) for x in self])
+
+    @property
+    def str(self) -> SimpleSeriesStrAccessor:
+        return SimpleSeriesStrAccessor(self)
+
+
+class SimpleSeriesStrAccessor:
+    """String accessor for SimpleSeries."""
+
+    def __init__(self, series: SimpleSeries) -> None:
+        self.series = series
+
+    def strip(self) -> SimpleSeries:
+        return SimpleSeries([str(x).strip() for x in self.series])
+
+
+class SimpleDataFrame:
+    """Lightweight fallback for pd.DataFrame when pandas is unavailable."""
+
+    def __init__(self, records: List[Dict[str, Any]]) -> None:
+        self._records = [dict(r) for r in records]
+
+    def __len__(self) -> int:
+        return len(self._records)
+
+    @property
+    def empty(self) -> bool:
+        return len(self._records) == 0
+
+    @property
+    def columns(self) -> List[str]:
+        return list(self._records[0].keys()) if self._records else []
+
+    def __getitem__(self, key: Any) -> Any:
+        if isinstance(key, str):
+            vals = [r.get(key) for r in self._records]
+            return SimpleSeries(vals)
+        if isinstance(key, (list, tuple, SimpleSeries)):
+            filtered = [r for r, mask in zip(self._records, key) if mask]
+            return SimpleDataFrame(filtered)
+        raise KeyError(key)
+
+    def __setitem__(self, key: str, value: Any) -> None:
+        if hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
+            vals = list(value)
+            for r, v in zip(self._records, vals):
+                r[key] = v
+        else:
+            for r in self._records:
+                r[key] = value
+
+    def copy(self) -> SimpleDataFrame:
+        return SimpleDataFrame(self._records)
+
+    def apply(self, func: Any, axis: int = 1) -> List[Any]:
+        return [func(r) for r in self._records]
+
+    def reset_index(self, drop: bool = True) -> SimpleDataFrame:
+        return self
+
+    def dropna(self, subset: Optional[List[str]] = None) -> SimpleDataFrame:
+        if not subset:
+            return self
+        filtered = [
+            r for r in self._records
+            if all(r.get(k) is not None for k in subset)
+        ]
+        return SimpleDataFrame(filtered)
+
+    def to_dict(self, orient: str = "records") -> List[Dict[str, Any]]:
+        return [dict(r) for r in self._records]
+
 
 # Official ASAP prompt rubric score ranges and genres
 # Set 1: 2–12, Set 2: 1–6, Set 3: 0–3, Set 4: 0–3, Set 5: 0–4, Set 6: 0–4, Set 7: 0–30, Set 8: 0–60
@@ -43,10 +158,10 @@ def get_prompt_rubric(essay_set: int) -> Dict[str, Any]:
 
 
 def rescale_score(
-    score: Union[float, int, np.ndarray, pd.Series],
+    score: Any,
     essay_set: int,
     clip: bool = True,
-) -> Union[float, np.ndarray, pd.Series]:
+) -> Any:
     """Rescale raw domain1_score to normalized range [0, 1] using prompt min-max rubric.
 
     Args:
@@ -58,8 +173,8 @@ def rescale_score(
         Rescaled score(s) in [0, 1].
     """
     rubric = get_prompt_rubric(essay_set)
-    min_score = rubric["min_score"]
-    max_score = rubric["max_score"]
+    min_score = float(rubric["min_score"])
+    max_score = float(rubric["max_score"])
 
     if max_score == min_score:
         raise ValueError(f"Min and max scores are identical for essay_set {essay_set}")
@@ -67,19 +182,21 @@ def rescale_score(
     rescaled = (score - min_score) / (max_score - min_score)
 
     if clip:
-        if isinstance(rescaled, (pd.Series, np.ndarray)):
-            return np.clip(rescaled, 0.0, 1.0)
-        return float(max(0.0, min(1.0, rescaled)))
+        if pd is not None and isinstance(rescaled, getattr(pd, "Series", ())):
+            return getattr(rescaled, "clip")(0.0, 1.0)
+        if np is not None and isinstance(rescaled, getattr(np, "ndarray", ())):
+            return getattr(np, "clip")(rescaled, 0.0, 1.0)
+        return float(max(0.0, min(1.0, float(rescaled))))
 
     return rescaled
 
 
 def inverse_rescale_score(
-    normalized_score: Union[float, int, np.ndarray, pd.Series],
+    normalized_score: Any,
     essay_set: int,
     clip: bool = True,
     round_decimals: Optional[int] = None,
-) -> Union[float, np.ndarray, pd.Series]:
+) -> Any:
     """Map normalized score [0, 1] back to the prompt's original rubric scale.
 
     Args:
@@ -92,22 +209,24 @@ def inverse_rescale_score(
         Raw rubric-scaled score(s).
     """
     rubric = get_prompt_rubric(essay_set)
-    min_score = rubric["min_score"]
-    max_score = rubric["max_score"]
+    min_score = float(rubric["min_score"])
+    max_score = float(rubric["max_score"])
 
     raw_score = normalized_score * (max_score - min_score) + min_score
 
     if clip:
-        if isinstance(raw_score, (pd.Series, np.ndarray)):
-            raw_score = np.clip(raw_score, min_score, max_score)
+        if pd is not None and isinstance(raw_score, getattr(pd, "Series", ())):
+            raw_score = getattr(raw_score, "clip")(min_score, max_score)
+        elif np is not None and isinstance(raw_score, getattr(np, "ndarray", ())):
+            raw_score = getattr(np, "clip")(raw_score, min_score, max_score)
         else:
-            raw_score = float(max(min_score, min(max_score, raw_score)))
+            raw_score = float(max(min_score, min(max_score, float(raw_score))))
 
     if round_decimals is not None:
-        if hasattr(raw_score, "round"):
+        if hasattr(raw_score, "round") and callable(getattr(raw_score, "round")):
             raw_score = getattr(raw_score, "round")(round_decimals)
-        elif isinstance(raw_score, np.ndarray):
-            raw_score = np.round(raw_score, decimals=round_decimals)
+        elif np is not None and isinstance(raw_score, getattr(np, "ndarray", ())):
+            raw_score = getattr(np, "round")(raw_score, decimals=round_decimals)
         else:
             raw_score = round(float(raw_score), round_decimals)
 
@@ -116,7 +235,7 @@ def inverse_rescale_score(
 
 def load_asap_dataset(
     file_path: Optional[Union[str, Path]] = None,
-) -> pd.DataFrame:
+) -> Any:
     """Load ASAP essay dataset from disk.
 
     Supports TSV or CSV format with columns: essay_id, essay_set, essay, domain1_score.
@@ -139,80 +258,91 @@ def load_asap_dataset(
             f"Please place asap_essays.tsv in inference/data/ or provide an explicit file path."
         )
 
-    # Determine delimiter from file extension or sniff
+    # Determine delimiter from file extension
     delimiter = "\t" if file_path.suffix.lower() in [".tsv", ".tab"] else ","
 
-    # Try common encodings for the ASAP dataset
-    df = None
-    for encoding in ["utf-8", "latin1", "cp1252", "ISO-8859-1"]:
+    # Use pandas if available, otherwise pure Python csv reader
+    if pd is not None:
+        df = None
+        for encoding in ["utf-8", "latin1", "cp1252", "ISO-8859-1"]:
+            try:
+                df = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+                break
+            except UnicodeDecodeError:
+                continue
+
+        if df is None:
+            raise ValueError(f"Failed to decode dataset file at {file_path} with standard encodings.")
+
+        required_cols = {"essay_id", "essay_set", "essay", "domain1_score"}
+        missing_cols = required_cols - set(df.columns)
+        if missing_cols:
+            raise ValueError(f"Dataset at {file_path} is missing required columns: {missing_cols}.")
+
+        df = df.dropna(subset=["essay_id", "essay_set", "essay", "domain1_score"]).copy()
+        df["essay_id"] = df["essay_id"].astype(int)
+        df["essay_set"] = df["essay_set"].astype(int)
+        df["essay"] = df["essay"].astype(str).str.strip()
+        df["domain1_score"] = df["domain1_score"].astype(float)
+
+        valid_sets = set(ASAP_RUBRIC_CONFIG.keys())
+        df = df[df["essay_set"].isin(valid_sets)].copy()
+        df["scaled_score"] = df.apply(
+            lambda row: rescale_score(row["domain1_score"], int(row["essay_set"])),
+            axis=1,
+        )
+        return getattr(pd, "DataFrame")(df)
+
+    # Pure-Python CSV/TSV loading fallback
+    records: List[Dict[str, Any]] = []
+    for encoding in ["utf-8", "latin1", "cp1252"]:
         try:
-            df = pd.read_csv(file_path, sep=delimiter, encoding=encoding)
+            with open(file_path, "r", encoding=encoding) as f:
+                reader = csv.DictReader(f, delimiter=delimiter)
+                for row in reader:
+                    if not all(k in row for k in ["essay_id", "essay_set", "essay", "domain1_score"]):
+                        continue
+                    try:
+                        eid = int(row["essay_id"])
+                        eset = int(row["essay_set"])
+                        score = float(row["domain1_score"])
+                        text = str(row["essay"]).strip()
+                        if eset in ASAP_RUBRIC_CONFIG:
+                            records.append({
+                                "essay_id": eid,
+                                "essay_set": eset,
+                                "essay": text,
+                                "domain1_score": score,
+                                "scaled_score": rescale_score(score, eset),
+                            })
+                    except (ValueError, TypeError):
+                        continue
             break
         except UnicodeDecodeError:
             continue
 
-    if df is None:
-        raise ValueError(f"Failed to decode dataset file at {file_path} with standard encodings.")
-
-    required_cols = {"essay_id", "essay_set", "essay", "domain1_score"}
-    missing_cols = required_cols - set(df.columns)
-    if missing_cols:
-        raise ValueError(
-            f"Dataset at {file_path} is missing required columns: {missing_cols}. "
-            f"Found columns: {list(df.columns)}"
-        )
-
-    # Clean & validate types
-    df = df.dropna(subset=["essay_id", "essay_set", "essay", "domain1_score"]).copy()
-    df["essay_id"] = df["essay_id"].astype(int)
-    df["essay_set"] = df["essay_set"].astype(int)
-    df["essay"] = df["essay"].astype(str).str.strip()
-    df["domain1_score"] = df["domain1_score"].astype(float)
-
-    # Filter invalid essay sets
-    valid_sets = set(ASAP_RUBRIC_CONFIG.keys())
-    df = df[df["essay_set"].isin(valid_sets)].copy()
-
-    # Compute per-prompt normalized scores
-    df["scaled_score"] = df.apply(
-        lambda row: rescale_score(row["domain1_score"], int(row["essay_set"])),
-        axis=1,
-    )
-
-    return df
+    return SimpleDataFrame(records)
 
 
 def split_prompt_dataset(
-    df: pd.DataFrame,
+    df: Any,
     essay_set: int,
     train_size: float = 0.8,
     val_size: float = 0.1,
     test_size: float = 0.1,
     random_state: int = 42,
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """Produce stratified train/val/test splits (80/10/10) for a specific essay_set.
-
-    Uses domain1_score for stratification when class sizes allow; falls back
-    gracefully to random splitting if class frequencies are too small.
-
-    Args:
-        df: Full ASAP DataFrame or prompt-specific subset.
-        essay_set: Prompt ID (1 to 8).
-        train_size: Ratio of train split (default 0.8).
-        val_size: Ratio of validation split (default 0.1).
-        test_size: Ratio of test split (default 0.1).
-        random_state: Random seed for reproducibility.
-
-    Returns:
-        (train_df, val_df, test_df) tuple.
-    """
+) -> Tuple[Any, Any, Any]:
+    """Produce stratified train/val/test splits (80/10/10) for a specific essay_set."""
     total = train_size + val_size + test_size
-    if not np.isclose(total, 1.0):
+    if abs(total - 1.0) > 1e-5:
         raise ValueError(f"Split ratios must sum to 1.0; got {total}")
 
-    prompt_df = df[df["essay_set"] == essay_set].copy()
-    if prompt_df.empty:
-        raise ValueError(f"No records found for essay_set={essay_set}")
+    if pd is not None and isinstance(df, getattr(pd, "DataFrame", ())):
+        prompt_df = df[df["essay_set"] == essay_set].copy()
+    else:
+        # SimpleDataFrame or list of records
+        prompt_records = [r for r in df.to_dict() if int(r.get("essay_set", 0)) == essay_set] if hasattr(df, "to_dict") else []
+        prompt_df = SimpleDataFrame(prompt_records)
 
     n_samples = len(prompt_df)
     if n_samples < 3:
@@ -220,62 +350,77 @@ def split_prompt_dataset(
             f"Prompt {essay_set} has {n_samples} samples; minimum 3 required for 3-way split."
         )
 
-    # Check if stratification is viable (every class needs >= 2 instances for train_test_split)
-    class_counts = prompt_df["domain1_score"].value_counts()
-    can_stratify = (class_counts.min() >= 2) and (len(class_counts) > 1)
+    # Use sklearn if available
+    if pd is not None and train_test_split is not None and isinstance(prompt_df, getattr(pd, "DataFrame", ())):
+        class_counts = prompt_df["domain1_score"].value_counts()
+        can_stratify = (class_counts.min() >= 2) and (len(class_counts) > 1)
+        stratify_col = prompt_df["domain1_score"] if can_stratify else None
 
-    stratify_col = prompt_df["domain1_score"] if can_stratify else None
-    if not can_stratify:
-        logger.warning(
-            "Stratification disabled for prompt %d due to sparse score frequencies (<2 per score).",
-            essay_set,
+        temp_ratio = val_size + test_size
+        train_df, temp_df = train_test_split(
+            prompt_df,
+            test_size=temp_ratio,
+            random_state=random_state,
+            stratify=stratify_col,
         )
 
-    # First split: train vs temporary (val + test)
-    temp_ratio = val_size + test_size
-    train_df, temp_df = train_test_split(
-        prompt_df,
-        test_size=temp_ratio,
-        random_state=random_state,
-        stratify=stratify_col,
-    )
+        val_relative_ratio = val_size / temp_ratio
+        temp_stratify = None
+        if can_stratify:
+            temp_class_counts = temp_df["domain1_score"].value_counts()
+            if (temp_class_counts.min() >= 2) and (len(temp_class_counts) > 1):
+                temp_stratify = temp_df["domain1_score"]
 
-    # Second split: val vs test (split temp 50/50 if val_size == test_size)
-    val_relative_ratio = val_size / temp_ratio
-    temp_stratify = None
-    if can_stratify:
-        temp_class_counts = temp_df["domain1_score"].value_counts()
-        if (temp_class_counts.min() >= 2) and (len(temp_class_counts) > 1):
-            temp_stratify = temp_df["domain1_score"]
+        val_df, test_df = train_test_split(
+            temp_df,
+            test_size=(1.0 - val_relative_ratio),
+            random_state=random_state,
+            stratify=temp_stratify,
+        )
 
-    val_df, test_df = train_test_split(
-        temp_df,
-        test_size=(1.0 - val_relative_ratio),
-        random_state=random_state,
-        stratify=temp_stratify,
-    )
+        return (
+            train_df.reset_index(drop=True),
+            val_df.reset_index(drop=True),
+            test_df.reset_index(drop=True),
+        )
+
+    # Deterministic slice fallback
+    records = prompt_df.to_dict() if hasattr(prompt_df, "to_dict") else []
+    rng = random.Random(random_state)
+    shuffled = list(records)
+    rng.shuffle(shuffled)
+
+    n_train = max(1, int(n_samples * train_size))
+    n_val = max(1, int(n_samples * val_size))
+
+    train_recs = shuffled[:n_train]
+    val_recs = shuffled[n_train:n_train + n_val]
+    test_recs = shuffled[n_train + n_val:]
+    if not test_recs:
+        test_recs = [val_recs[-1]]
 
     return (
-        train_df.reset_index(drop=True),
-        val_df.reset_index(drop=True),
-        test_df.reset_index(drop=True),
+        SimpleDataFrame(train_recs),
+        SimpleDataFrame(val_recs),
+        SimpleDataFrame(test_recs),
     )
 
 
 def get_all_prompt_splits(
-    df: pd.DataFrame,
+    df: Any,
     train_size: float = 0.8,
     val_size: float = 0.1,
     test_size: float = 0.1,
     random_state: int = 42,
-) -> Dict[int, Dict[str, pd.DataFrame]]:
-    """Produce train, val, and test splits for all available essay sets in the DataFrame.
-
-    Returns:
-        Dict mapping essay_set -> {'train': df, 'val': df, 'test': df}
-    """
+) -> Dict[int, Dict[str, Any]]:
+    """Produce train, val, and test splits for all available essay sets in the DataFrame."""
     splits = {}
-    available_sets = sorted(df["essay_set"].unique())
+    if hasattr(df, "unique"):
+        available_sets = sorted(df["essay_set"].unique())
+    elif hasattr(df, "__getitem__"):
+        available_sets = sorted(set(df["essay_set"]))
+    else:
+        available_sets = list(ASAP_RUBRIC_CONFIG.keys())
 
     for essay_set in available_sets:
         train_df, val_df, test_df = split_prompt_dataset(
@@ -298,43 +443,33 @@ def get_all_prompt_splits(
 def create_sample_asap_dataset(
     samples_per_set: int = 30,
     random_state: int = 42,
-) -> pd.DataFrame:
-    """Generate a synthetic ASAP dataset spanning all 8 prompts for testing and scaffolding.
-
-    Ensures each prompt has scores across its authentic rubric scale.
-    """
-    rng = np.random.default_rng(random_state)
-    records = []
+) -> Any:
+    """Generate a synthetic ASAP dataset spanning all 8 prompts for testing and scaffolding."""
+    rng = random.Random(random_state)
+    records: List[Dict[str, Any]] = []
     essay_id = 1
 
     for essay_set, rubric in ASAP_RUBRIC_CONFIG.items():
-        min_s = rubric["min_score"]
-        max_s = rubric["max_score"]
+        min_s = int(rubric["min_score"])
+        max_s = int(rubric["max_score"])
+        possible_scores = list(range(min_s, max_s + 1)) if max_s > min_s else [min_s]
 
-        # Generate integer or half-integer scores within rubric bounds
-        scores = rng.choice(
-            np.linspace(min_s, max_s, int(max_s - min_s + 1)),
-            size=samples_per_set,
-        )
-
-        for score in scores:
-            records.append(
-                {
-                    "essay_id": essay_id,
-                    "essay_set": essay_set,
-                    "essay": (
-                        f"This is a simulated essay submission for ASAP prompt {essay_set}. "
-                        f"The argument explores key evidence and cohesive reasoning. "
-                        f"Sample ID #{essay_id} with rubric range {min_s}-{max_s}."
-                    ),
-                    "domain1_score": float(score),
-                }
-            )
+        for _ in range(samples_per_set):
+            score = float(rng.choice(possible_scores))
+            scaled = rescale_score(score, essay_set)
+            records.append({
+                "essay_id": essay_id,
+                "essay_set": essay_set,
+                "essay": (
+                    f"This is a simulated essay submission for ASAP prompt {essay_set}. "
+                    f"The argument explores key evidence and cohesive reasoning. "
+                    f"Sample ID #{essay_id} with rubric range {min_s}-{max_s}."
+                ),
+                "domain1_score": score,
+                "scaled_score": scaled,
+            })
             essay_id += 1
 
-    df = pd.DataFrame(records)
-    df["scaled_score"] = df.apply(
-        lambda row: rescale_score(row["domain1_score"], int(row["essay_set"])),
-        axis=1,
-    )
-    return df
+    if pd is not None:
+        return getattr(pd, "DataFrame")(records)
+    return SimpleDataFrame(records)

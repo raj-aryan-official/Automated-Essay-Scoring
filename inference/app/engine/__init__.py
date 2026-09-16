@@ -8,6 +8,8 @@ Exports Section 9.1 and Section 10.2 interfaces and models:
 - BertRegressionHead
 - BertEssayScoringModel
 - RuleBasedFeedbackGenerator
+- PromptTrainer
+- train_prompt
 """
 
 from app.engine.interfaces import (
@@ -21,6 +23,11 @@ from app.engine.model import (
     BertRegressionHead,
     RuleBasedFeedbackGenerator,
 )
+from app.engine.train import (
+    PromptTrainer,
+    TensorBoardLogger,
+    train_prompt,
+)
 
 __all__ = [
     "RubricBand",
@@ -30,4 +37,7 @@ __all__ = [
     "BertRegressionHead",
     "BertEssayScoringModel",
     "RuleBasedFeedbackGenerator",
+    "PromptTrainer",
+    "TensorBoardLogger",
+    "train_prompt",
 ]
