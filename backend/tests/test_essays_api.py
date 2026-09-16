@@ -368,3 +368,160 @@ def test_get_essay_by_id_not_found(client: TestClient):
     response = client.get(f"/api/v1/essays/{random_id}")
     assert response.status_code == 404
     assert f"Essay with id '{random_id}' not found" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# Project Test Matrix Cases: TEST-001, TEST-002, TEST-003, TEST-006 & Validation
+# ---------------------------------------------------------------------------
+
+
+def test_test_001_valid_essay_submission(client: TestClient, seed_prompt: Prompt):
+    """TEST-001: Valid Essay Submission.
+
+    Input Vector: Plain-text essay
+    Expected Output: HTTP 201 Created + UUID
+    Priority: High
+    """
+    essay_text = (
+        "Modern digital computing has fundamentally revolutionized education, access to "
+        "scholarly knowledge, and interactive pedagogy across global classroom environments. "
+        "Through computer-assisted instruction, students synthesize complex curricula more rapidly."
+    )
+    payload = {
+        "prompt_id": str(seed_prompt.id),
+        "source_type": "PASTE",
+        "raw_text": essay_text,
+    }
+
+    response = client.post("/api/v1/essays", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert "id" in data
+    assert uuid.UUID(data["id"])
+    assert data["status"] == "SUBMITTED"
+    assert data["prompt_id"] == str(seed_prompt.id)
+    assert data["raw_text"] == essay_text
+
+
+def test_test_002_oversized_essay_rejected(client: TestClient, seed_prompt: Prompt):
+    """TEST-002: Oversized Essay.
+
+    Input Vector: > 8,000-char essay
+    Expected Output: HTTP 413 Payload Too Large
+    Priority: High
+    """
+    # Create an essay text strictly exceeding 8,000 characters
+    oversized_text = "Computers in modern education. " * 300
+    assert len(oversized_text) > 8000
+
+    payload = {
+        "prompt_id": str(seed_prompt.id),
+        "source_type": "PASTE",
+        "raw_text": oversized_text,
+    }
+
+    response = client.post("/api/v1/essays", json=payload)
+    assert response.status_code == 413
+    assert "8,000" in response.json()["detail"] or "maximum" in response.json()["detail"].lower()
+
+
+def test_test_003_empty_submission_rejected(client: TestClient, seed_prompt: Prompt):
+    """TEST-003: Empty Submission.
+
+    Input Vector: Blank text field
+    Expected Output: HTTP 422 Validation Failure
+    Priority: High
+    """
+    payload = {
+        "prompt_id": str(seed_prompt.id),
+        "source_type": "PASTE",
+        "raw_text": "   \n\t   ",
+    }
+
+    response = client.post("/api/v1/essays", json=payload)
+    assert response.status_code == 422
+
+
+def test_test_006_unscored_edge_case_unsupported_prompt_id(client: TestClient):
+    """TEST-006: Unscored Edge Case.
+
+    Input Vector: Essay in unsupported prompt ID
+    Expected Output: HTTP 404, no job dispatched
+    Priority: Medium
+    """
+    unsupported_prompt_id = str(uuid.uuid4())
+    payload = {
+        "prompt_id": unsupported_prompt_id,
+        "source_type": "PASTE",
+        "raw_text": "This essay addresses a non-existent or unsupported prompt ID reference.",
+    }
+
+    response = client.post("/api/v1/essays", json=payload)
+    assert response.status_code == 404
+    assert f"Prompt with id '{unsupported_prompt_id}' not found" in response.json()["detail"]
+
+
+def test_near_empty_essay_rejected(client: TestClient, seed_prompt: Prompt):
+    """Verify near-empty essay text (< 10 characters or < 2 words) is rejected with HTTP 422."""
+    for text in ["Too short", "a", "word", "   hi   "]:
+        payload = {
+            "prompt_id": str(seed_prompt.id),
+            "source_type": "PASTE",
+            "raw_text": text,
+        }
+        response = client.post("/api/v1/essays", json=payload)
+        assert response.status_code == 422
+
+
+def test_document_oversized_rejected(client: TestClient, seed_prompt: Prompt):
+    """Verify uploaded documents exceeding 20MB are rejected with HTTP 413."""
+    # 20MB + 100 bytes
+    oversized_bytes = b"0" * (20 * 1024 * 1024 + 100)
+    response = client.post(
+        "/api/v1/essays",
+        data={
+            "prompt_id": str(seed_prompt.id),
+            "source_type": "DOCUMENT",
+        },
+        files={
+            "file": ("huge_essay.pdf", oversized_bytes, "application/pdf"),
+        },
+    )
+    assert response.status_code == 413
+    assert "20MB" in response.json()["detail"] or "maximum" in response.json()["detail"].lower()
+
+
+def test_document_disallowed_mime_type_rejected(client: TestClient, seed_prompt: Prompt):
+    """Verify documents with disallowed MIME types are rejected with HTTP 415."""
+    disallowed_files = [
+        ("malicious.sh", b"#!/bin/bash\necho bad", "application/x-sh"),
+        ("image.png", b"\x89PNG\r\n\x1a\nfakeimage", "image/png"),
+        ("archive.zip", b"PK\x03\x04fakezip", "application/zip"),
+    ]
+    for filename, content, mime in disallowed_files:
+        response = client.post(
+            "/api/v1/essays",
+            data={
+                "prompt_id": str(seed_prompt.id),
+                "source_type": "DOCUMENT",
+            },
+            files={
+                "file": (filename, content, mime),
+            },
+        )
+        assert response.status_code == 415
+        assert "Disallowed" in response.json()["detail"]
+
+
+def test_document_disallowed_extension_in_json_rejected(client: TestClient, seed_prompt: Prompt):
+    """Verify document submissions via JSON with disallowed extension are rejected with HTTP 415."""
+    payload = {
+        "prompt_id": str(seed_prompt.id),
+        "source_type": "DOCUMENT",
+        "file_content": "VGhpcyBpcyBhIHRlc3QgZG9jdW1lbnQu",
+        "file_name": "malicious_script.exe",
+    }
+    response = client.post("/api/v1/essays", json=payload)
+    assert response.status_code == 415
+    assert "Disallowed" in response.json()["detail"]
+

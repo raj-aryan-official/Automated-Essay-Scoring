@@ -10,6 +10,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.core.validation import (
+    validate_document,
+    validate_essay_text,
+    validate_prompt_exists,
+)
 from app.models.entities import Essay, Prompt, User
 from app.schemas.essay import (
     EssayCreate,
@@ -134,6 +139,9 @@ async def submit_essay(
                 detail="Field 'prompt_id' must be a valid UUID.",
             )
 
+        # Validate prompt exists BEFORE performing storage operations
+        prompt = validate_prompt_exists(db, prompt_id)
+
         source_type_in = str(form.get("source_type", "")).strip().upper()
         upload_file = form.get("file")
 
@@ -161,35 +169,39 @@ async def submit_essay(
         if form_raw_text is not None:
             raw_text = str(form_raw_text)
 
-        # Handle file upload if present
-        if upload_file is not None and hasattr(upload_file, "read"):
-            file_bytes = await upload_file.read()
-            filename = getattr(upload_file, "filename", None) or "document"
-            file_content_type = getattr(upload_file, "content_type", "application/octet-stream")
+        if source_type == SourceTypeEnum.PASTE.value:
+            raw_text = validate_essay_text(raw_text)
+        elif source_type == SourceTypeEnum.DOCUMENT.value:
+            # Handle file upload if present
+            if upload_file is not None and hasattr(upload_file, "read"):
+                file_bytes = await upload_file.read()
+                filename = getattr(upload_file, "filename", None) or "document"
+                file_content_type = getattr(upload_file, "content_type", "application/octet-stream")
 
-            try:
-                storage.ensure_bucket_exists()
-            except Exception as exc:
-                logger.warning(f"Could not verify S3 bucket exists: {exc}")
+                # Validate document size (<= 20MB) and MIME type / extension
+                validate_document(file_bytes, filename=filename, content_type=file_content_type)
 
-            key = f"essays/{essay_id}/{filename}"
-            storage.upload_file(file_bytes, key=key, content_type=file_content_type)
-            storage_bucket = storage.bucket_name
-            storage_key = key
+                if not raw_text.strip():
+                    raw_text = file_bytes.decode("utf-8", errors="replace")
 
-            if not raw_text.strip():
-                raw_text = file_bytes.decode("utf-8", errors="replace")
+                raw_text = validate_essay_text(raw_text)
 
-        if source_type == SourceTypeEnum.PASTE.value and not raw_text.strip():
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="raw_text is required when source_type is PASTE",
-            )
-        if source_type == SourceTypeEnum.DOCUMENT.value and not (raw_text.strip() or storage_key):
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="A document file or raw_text must be provided for DOCUMENT submissions",
-            )
+                try:
+                    storage.ensure_bucket_exists()
+                except Exception as exc:
+                    logger.warning(f"Could not verify S3 bucket exists: {exc}")
+
+                key = f"essays/{essay_id}/{filename}"
+                storage.upload_file(file_bytes, key=key, content_type=file_content_type)
+                storage_bucket = storage.bucket_name
+                storage_key = key
+            elif raw_text.strip():
+                raw_text = validate_essay_text(raw_text)
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="A document file or raw_text must be provided for DOCUMENT submissions",
+                )
 
     else:
         # JSON body parsing
@@ -201,6 +213,13 @@ async def submit_essay(
                 detail="Invalid JSON request body.",
             )
 
+        # Enforce max essay length check (8,000 chars) -> HTTP 413
+        if body_json.get("raw_text") and len(str(body_json["raw_text"])) > 8000:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="Essay text exceeds the maximum allowed length of 8,000 characters.",
+            )
+
         try:
             payload = EssayCreate.model_validate(body_json)
         except Exception as val_err:
@@ -210,22 +229,41 @@ async def submit_essay(
             )
 
         prompt_id = payload.prompt_id
+        # Validate prompt exists BEFORE performing storage operations
+        prompt = validate_prompt_exists(db, prompt_id)
+
         source_type = payload.source_type.value
         submitted_by_id = payload.submitted_by
         raw_text = payload.raw_text or ""
         storage_bucket = payload.storage_bucket
         storage_key = payload.storage_key
 
-        # If document upload is sent as base64 or string content in JSON
-        if source_type == SourceTypeEnum.DOCUMENT.value:
+        if source_type == SourceTypeEnum.PASTE.value:
+            raw_text = validate_essay_text(raw_text)
+        elif source_type == SourceTypeEnum.DOCUMENT.value:
+            # If document upload is sent as base64 or string content in JSON
             if payload.file_content:
                 content_str = payload.file_content
                 if _is_base64(content_str):
-                    file_bytes = base64.b64decode(content_str)
+                    try:
+                        file_bytes = base64.b64decode(content_str)
+                    except Exception:
+                        raise HTTPException(
+                            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                            detail="Invalid base64 document content.",
+                        )
                 else:
                     file_bytes = content_str.encode("utf-8")
 
                 filename = payload.file_name or "document.txt"
+                # Validate document size (<= 20MB) and MIME type / extension
+                validate_document(file_bytes, filename=filename)
+
+                if not raw_text.strip():
+                    raw_text = file_bytes.decode("utf-8", errors="replace")
+
+                raw_text = validate_essay_text(raw_text)
+
                 try:
                     storage.ensure_bucket_exists()
                 except Exception as exc:
@@ -235,19 +273,10 @@ async def submit_essay(
                 storage.upload_file(file_bytes, key=key)
                 storage_bucket = storage.bucket_name
                 storage_key = key
-
-                if not raw_text.strip():
-                    raw_text = file_bytes.decode("utf-8", errors="replace")
+            elif raw_text.strip():
+                raw_text = validate_essay_text(raw_text)
             elif storage_key and not storage_bucket:
                 storage_bucket = storage.bucket_name
-
-    # Validate that prompt exists in the database
-    prompt = db.query(Prompt).filter(Prompt.id == prompt_id).first()
-    if not prompt:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Prompt with id '{prompt_id}' not found.",
-        )
 
     # Ensure user exists for foreign key constraint
     user = _get_or_create_user(db, submitted_by_id)

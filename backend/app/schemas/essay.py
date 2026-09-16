@@ -61,8 +61,12 @@ class EssayCreate(EssayBase):
 
     @model_validator(mode="after")
     def validate_source_and_content(self) -> "EssayCreate":
-        if self.source_type == SourceTypeEnum.PASTE and not (self.raw_text and self.raw_text.strip()):
-            raise ValueError("raw_text is required when source_type is PASTE")
+        if self.source_type == SourceTypeEnum.PASTE:
+            if not (self.raw_text and self.raw_text.strip()):
+                raise ValueError("raw_text is required when source_type is PASTE and cannot be empty")
+            stripped = self.raw_text.strip()
+            if len(stripped) < 10 or len(stripped.split()) < 2:
+                raise ValueError("raw_text is too short or near-empty (minimum 10 characters and 2 words required)")
         if self.source_type == SourceTypeEnum.DOCUMENT and not (
             self.raw_text or self.file_content or self.storage_key
         ):
