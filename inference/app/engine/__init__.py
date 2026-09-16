@@ -12,6 +12,12 @@ Exports Section 9.1 and Section 10.2 interfaces and models:
 - train_prompt
 """
 
+from app.engine.export_onnx import (
+    BenchmarkReport,
+    LatencyMetrics,
+    benchmark_inference_paths,
+    export_checkpoint_to_onnx,
+)
 from app.engine.interfaces import (
     DimensionFeedbackGenerator,
     EssayScoringModel,
@@ -40,4 +46,9 @@ __all__ = [
     "PromptTrainer",
     "TensorBoardLogger",
     "train_prompt",
+    "export_checkpoint_to_onnx",
+    "benchmark_inference_paths",
+    "BenchmarkReport",
+    "LatencyMetrics",
 ]
+

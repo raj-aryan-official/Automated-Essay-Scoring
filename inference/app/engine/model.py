@@ -64,6 +64,19 @@ except ImportError:
     AutoTokenizer = None  # type: ignore
     TRANSFORMERS_AVAILABLE = False
 
+try:
+    import numpy as np
+except ImportError:
+    np = None  # type: ignore
+
+try:
+    import onnxruntime as ort
+    ORT_AVAILABLE = True
+except ImportError:
+    ort = None  # type: ignore
+    ORT_AVAILABLE = False
+
+
 
 class BertRegressionHead(_ModuleBase):  # type: ignore[misc]
     """Two-layer dense regression head on pooled [CLS] representation (Section 10.2).
@@ -157,6 +170,8 @@ class BertEssayScoringModel(EssayScoringModel):
         activation: str = "gelu",
         scaling_method: str = "sigmoid",
         prompt_rubrics: Optional[Dict[str, Dict[str, float]]] = None,
+        use_onnx: bool = False,
+        onnx_model_path: Optional[str] = None,
     ) -> None:
         self.model_name_or_path = model_name_or_path
         self.max_length = max_length
@@ -167,6 +182,10 @@ class BertEssayScoringModel(EssayScoringModel):
         self.prompt_rubrics = dict(DEFAULT_ASAP_RUBRICS)
         if prompt_rubrics:
             self.prompt_rubrics.update(prompt_rubrics)
+
+        self.use_onnx = use_onnx
+        self.onnx_model_path = onnx_model_path
+        self.ort_session: Optional[Any] = None
 
         # Device selection
         if device is not None:
@@ -188,11 +207,38 @@ class BertEssayScoringModel(EssayScoringModel):
 
         self.is_loaded = False
 
+        # If ONNX model path is explicitly provided, load it
+        if self.onnx_model_path:
+            self.load_onnx_model(self.onnx_model_path)
+
         # If weights or config paths provided at construction, load them
         if weights_path or config_path:
             self.load_model(weights_path or "", config_path or "")
-        else:
+        elif not self.use_onnx:
             self._initialize_default_components()
+        else:
+            self.is_loaded = True
+
+    def load_onnx_model(self, onnx_model_path: str) -> None:
+        """Initialize ONNX Runtime InferenceSession from exported model file."""
+        if not ORT_AVAILABLE or ort is None:
+            logger.warning("onnxruntime is not available in environment. Cannot load ONNX model.")
+            return
+
+        resolved_path = os.path.abspath(onnx_model_path)
+        if not os.path.isfile(resolved_path):
+            raise FileNotFoundError(f"ONNX model file not found at: {resolved_path}")
+
+        try:
+            session_options = ort.SessionOptions()
+            session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            self.ort_session = ort.InferenceSession(resolved_path, session_options)
+            self.use_onnx = True
+            self.onnx_model_path = resolved_path
+            self.is_loaded = True
+            logger.info(f"Successfully initialized ONNX Runtime session from '{resolved_path}'.")
+        except Exception as e:
+            logger.warning(f"Failed to initialize ONNX Runtime session from '{resolved_path}': {e}")
 
     def _initialize_default_components(self) -> None:
         """Initialize default encoder and tokenizer if dependencies are available."""
@@ -225,6 +271,11 @@ class BertEssayScoringModel(EssayScoringModel):
             config_path: Path to model configuration file (JSON/YAML).
         """
         logger.info(f"Initializing model with weights='{weights_path}', config='{config_path}'")
+
+        # 0. Route to ONNX loader if weights_path points to an ONNX model file
+        if weights_path and (weights_path.endswith(".onnx") or "onnx" in weights_path.lower() and os.path.isfile(weights_path)):
+            self.load_onnx_model(weights_path)
+            return
 
         # 1. Parse configuration if provided
         if config_path and os.path.isfile(config_path):
@@ -350,9 +401,38 @@ class BertEssayScoringModel(EssayScoringModel):
                 inference_ms=1,
             )
 
-        # 1. Execute inference through PyTorch BERT + Regression Head if available
+        # 1. Execute inference via ONNX Runtime if enabled and initialized
         raw_logit: float = 0.0
-        if TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE and self.encoder is not None and self.tokenizer is not None and torch is not None:
+        if self.use_onnx and self.ort_session is not None and np is not None:
+            try:
+                if TRANSFORMERS_AVAILABLE and self.tokenizer is not None:
+                    encoded = self.tokenizer(
+                        clean_text,
+                        max_length=self.max_length,
+                        truncation=True,
+                        padding="max_length",
+                        return_tensors="np",
+                    )
+                    input_ids = encoded["input_ids"].astype(np.int64)
+                    attention_mask = encoded["attention_mask"].astype(np.int64)
+                else:
+                    # Token sequence encoding fallback
+                    tokens = [hash(w) % 30000 for w in clean_text.split()][:self.max_length]
+                    input_ids = np.zeros((1, self.max_length), dtype=np.int64)
+                    attention_mask = np.zeros((1, self.max_length), dtype=np.int64)
+                    input_ids[0, :len(tokens)] = tokens
+                    attention_mask[0, :len(tokens)] = 1
+
+                ort_inputs = {"input_ids": input_ids, "attention_mask": attention_mask}
+                ort_outputs = self.ort_session.run(None, ort_inputs)
+                out_arr = ort_outputs[0]
+                raw_logit = float(out_arr[0][0] if getattr(out_arr, "ndim", 1) > 1 else out_arr[0])
+            except Exception as e:
+                logger.warning(f"Error during ONNX runtime forward pass: {e}. Falling back to deterministic features.")
+                raw_logit = self._fallback_logit(clean_text)
+
+        # 2. Execute inference through PyTorch BERT + Regression Head if available
+        elif TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE and self.encoder is not None and self.tokenizer is not None and torch is not None:
             try:
                 # Tokenize with WordPiece tokenizer, truncation to max_length (512), and padding
                 inputs = self.tokenizer(
