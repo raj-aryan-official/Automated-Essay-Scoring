@@ -449,22 +449,67 @@ def create_sample_asap_dataset(
     records: List[Dict[str, Any]] = []
     essay_id = 1
 
+    prompt_topics = {
+        1: ("computers and technology in education", "digital learning"),
+        2: ("censorship and book removal from public libraries", "intellectual freedom"),
+        3: ("the cyclist facing intense physical desert terrain", "stamina and grit"),
+        4: ("the hibiscus plant and nostalgic emotional heritage", "cultural identity"),
+        5: ("Narciso Rodriguez and his familial design inspiration", "fashion and heritage"),
+        6: ("the historic dirigibles and lighter-than-air navigation", "aeronautical engineering"),
+        7: ("patience and overcoming difficult personal challenges", "character development"),
+        8: ("laughter and humorous moments diffusing interpersonal awkwardness", "social cohesion"),
+    }
+
+    high_phrases = [
+        "In addition, thorough investigation demonstrates that rigorous analysis is indispensable.",
+        "Furthermore, multiple empirical viewpoints emphasize the profound long-term significance.",
+        "Consequently, coherent synthesis of diverse evidence directly substantiates the central thesis.",
+        "Ultimately, persistent dedication and critical reflection cultivate transformative societal progress.",
+    ]
+    mid_phrases = [
+        "Also, this situation shows how people can learn important lessons from daily experience.",
+        "For example, several clear reasons explain why individuals should focus on these goals.",
+        "Therefore, practicing good habits regularly makes a noticeable difference over time.",
+    ]
+    low_phrases = [
+        "I think this is okay but sometimes it does not work well.",
+        "People should just try harder because that is good.",
+    ]
+
     for essay_set, rubric in ASAP_RUBRIC_CONFIG.items():
         min_s = int(rubric["min_score"])
         max_s = int(rubric["max_score"])
         possible_scores = list(range(min_s, max_s + 1)) if max_s > min_s else [min_s]
+        topic, theme = prompt_topics.get(essay_set, ("general topics", "critical thinking"))
 
         for _ in range(samples_per_set):
             score = float(rng.choice(possible_scores))
             scaled = rescale_score(score, essay_set)
+
+            # Synthesize text length and vocabulary richness corresponding to rubric quality
+            body_parts = [
+                f"Regarding {topic}, the core issue centers on {theme}.",
+            ]
+            if scaled >= 0.70:
+                body_parts.extend(rng.sample(high_phrases, k=3))
+                body_parts.append(
+                    f"In summary, comprehensive consideration of {topic} reinforces our commitment to {theme}."
+                )
+            elif scaled >= 0.35:
+                body_parts.extend(rng.sample(mid_phrases, k=2))
+                body_parts.append(
+                    f"To conclude, {topic} provides helpful insight into how we handle {theme}."
+                )
+            else:
+                body_parts.extend(rng.sample(low_phrases, k=1))
+                body_parts.append("That is all I have to say about it.")
+
+            essay_text = " ".join(body_parts)
+
             records.append({
                 "essay_id": essay_id,
                 "essay_set": essay_set,
-                "essay": (
-                    f"This is a simulated essay submission for ASAP prompt {essay_set}. "
-                    f"The argument explores key evidence and cohesive reasoning. "
-                    f"Sample ID #{essay_id} with rubric range {min_s}-{max_s}."
-                ),
+                "essay": essay_text,
                 "domain1_score": score,
                 "scaled_score": scaled,
             })
@@ -473,3 +518,4 @@ def create_sample_asap_dataset(
     if pd is not None:
         return getattr(pd, "DataFrame")(records)
     return SimpleDataFrame(records)
+
