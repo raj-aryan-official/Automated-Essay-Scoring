@@ -95,8 +95,9 @@ def _build_fallback_onnx_graph(
     opset_version: int = 14,
 ) -> None:
     """Construct a valid ONNX computational graph using onnx.helper when PyTorch export is unavailable."""
-    if not ONNX_AVAILABLE or helper is None or TensorProto is None:
+    if not ONNX_AVAILABLE or onnx is None or helper is None or TensorProto is None:
         raise RuntimeError("The 'onnx' library is required to build the ONNX model graph.")
+
 
     # 1. Inputs: input_ids (int64) and attention_mask (int64) with dynamic batch and sequence dimensions
     input_ids = helper.make_tensor_value_info(
@@ -286,7 +287,8 @@ def export_checkpoint_to_onnx(
                 "attention_mask": np.ones((1, max_sequence_length), dtype=np.int64),
             }
             outputs = session.run(None, dummy_input)
-            out_shape = outputs[0].shape
+            out_tensor: Any = outputs[0]
+            out_shape = out_tensor.shape if hasattr(out_tensor, "shape") else (1, 1)
             logger.info(f"ONNX Runtime verification passed! Output tensor shape: {out_shape}.")
         except Exception as err:
             logger.error(f"ONNX Runtime verification failed: {err}")
@@ -327,11 +329,11 @@ def _calculate_percentiles(latencies: Sequence[float]) -> LatencyMetrics:
         return LatencyMetrics(p50=0.0, p95=0.0, mean=0.0, min_ms=0.0, max_ms=0.0, iterations=0)
 
     # 50th percentile (median)
-    idx_50 = int(round(0.50 * (n - 1)))
+    idx_50 = round(0.50 * (n - 1))
     p50 = sorted_l[idx_50]
 
     # 95th percentile
-    idx_95 = int(round(0.95 * (n - 1)))
+    idx_95 = round(0.95 * (n - 1))
     p95 = sorted_l[idx_95]
 
     mean_val = sum(sorted_l) / float(n)
@@ -419,7 +421,8 @@ def benchmark_inference_paths(
 
     # Speedup: ratio of p50 latencies
     speedup = round(pt_metrics.p50 / max(0.001, ox_metrics.p50), 2)
-    nfr_passed = bool(ox_metrics.p95 <= nfr_target_ms)
+    nfr_passed = ox_metrics.p95 <= nfr_target_ms
+
 
     return BenchmarkReport(
         pytorch_metrics=pt_metrics,

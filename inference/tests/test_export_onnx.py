@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 import pytest
 
 from app.engine.export_onnx import (
@@ -25,14 +26,19 @@ from app.engine.export_onnx import (
 )
 from app.engine.model import BertEssayScoringModel
 
-try:
+if TYPE_CHECKING:
     import numpy as np
     import onnxruntime as ort
     ORT_AVAILABLE = True
-except ImportError:
-    np = None  # type: ignore
-    ort = None  # type: ignore
-    ORT_AVAILABLE = False
+else:
+    try:
+        import numpy as np
+        import onnxruntime as ort
+        ORT_AVAILABLE = True
+    except ImportError:
+        np = None  # type: ignore
+        ort = None  # type: ignore
+        ORT_AVAILABLE = False
 
 
 @pytest.fixture
@@ -87,13 +93,18 @@ def test_onnxruntime_inference_dynamic_axes(exported_onnx_model: Path):
     ids_1 = np.ones((1, 128), dtype=np.int64)
     mask_1 = np.ones((1, 128), dtype=np.int64)
     res_1 = session.run(None, {"input_ids": ids_1, "attention_mask": mask_1})
-    assert res_1[0].shape == (1, 1)
+    out_1: Any = res_1[0]
+    assert isinstance(out_1, np.ndarray)
+    assert out_1.shape == (1, 1)
 
     # Test batch size 4, sequence length 512
     ids_4 = np.ones((4, 512), dtype=np.int64)
     mask_4 = np.ones((4, 512), dtype=np.int64)
     res_4 = session.run(None, {"input_ids": ids_4, "attention_mask": mask_4})
-    assert res_4[0].shape == (4, 1)
+    out_4: Any = res_4[0]
+    assert isinstance(out_4, np.ndarray)
+    assert out_4.shape == (4, 1)
+
 
 
 def test_bert_scoring_model_onnx_mode(exported_onnx_model: Path):

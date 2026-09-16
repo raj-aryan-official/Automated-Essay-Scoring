@@ -20,6 +20,7 @@ from pathlib import Path
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
+from app.engine.feedback import RuleBasedDimensionFeedbackGenerator
 from app.engine.interfaces import (
     DimensionFeedbackGenerator,
     EssayScoringModel,
@@ -206,6 +207,7 @@ class BertEssayScoringModel(EssayScoringModel):
         )
 
         self.is_loaded = False
+        self.feedback_generator = RuleBasedDimensionFeedbackGenerator()
 
         # If ONNX model path is explicitly provided, load it
         if self.onnx_model_path:
@@ -481,12 +483,10 @@ class BertEssayScoringModel(EssayScoringModel):
         # 4. Calibrate confidence
         confidence = self._estimate_confidence(raw_logit, word_count)
 
-        # 5. Compute dimension scores (e.g. coherence, argumentation, vocabulary)
-        dimension_scores = {
-            "grammar": round(min(max_score, max(min_score, holistic_score * 0.98)), 2),
-            "coherence": round(min(max_score, max(min_score, holistic_score * 1.01)), 2),
-            "argumentation": round(min(max_score, max(min_score, holistic_score * 0.99)), 2),
-        }
+        # 5. Compute dimension scores (grammar, coherence, argumentation)
+        dimension_scores = self.feedback_generator.score_dimensions(
+            clean_text, holistic_score, min_score, max_score
+        )
 
         inference_ms = int((time.perf_counter() - start_time) * 1000)
 
@@ -516,25 +516,6 @@ class BertEssayScoringModel(EssayScoringModel):
         return float(max(-4.0, min(4.0, score_base)))
 
 
-class RuleBasedFeedbackGenerator(DimensionFeedbackGenerator):
+class RuleBasedFeedbackGenerator(RuleBasedDimensionFeedbackGenerator):
     """Implementation of DimensionFeedbackGenerator producing pedagogical feedback."""
-
-    def generate_feedback(self, essay_text: str, dimension: str) -> str:
-        """Produce dimension-specific feedback text (grammar / coherence / argumentation)."""
-        dim_lower = dimension.strip().lower()
-        word_count = len(essay_text.split())
-
-        if dim_lower == "grammar":
-            if word_count < 100:
-                return "The submission is concise. Ensure standard capitalization, punctuation, and subject-verb agreement."
-            return "Good sentence mechanics. Consider reviewing compound sentence structures and varied syntactic transitions."
-        elif dim_lower == "coherence":
-            if word_count < 150:
-                return "Work on expanding paragraph structures with clear transitional phrases between key points."
-            return "Clear organizational structure with logical progressions between paragraphs."
-        elif dim_lower == "argumentation":
-            if word_count < 150:
-                return "Strengthen the thesis by providing concrete examples, citations, or supporting evidence."
-            return "Strong supporting arguments with persuasive evidence addressing the core prompt requirements."
-        else:
-            return f"Overall strong execution in {dimension}. Continue developing clarity and analytical depth."
+    pass

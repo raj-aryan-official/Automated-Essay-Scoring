@@ -18,6 +18,10 @@ from app.engine.export_onnx import (
     benchmark_inference_paths,
     export_checkpoint_to_onnx,
 )
+from app.engine.feedback import (
+    DimensionFeedbackGeneratorImpl,
+    RuleBasedDimensionFeedbackGenerator,
+)
 from app.engine.interfaces import (
     DimensionFeedbackGenerator,
     EssayScoringModel,
@@ -40,6 +44,8 @@ __all__ = [
     "ScorePrediction",
     "EssayScoringModel",
     "DimensionFeedbackGenerator",
+    "RuleBasedDimensionFeedbackGenerator",
+    "DimensionFeedbackGeneratorImpl",
     "BertRegressionHead",
     "BertEssayScoringModel",
     "RuleBasedFeedbackGenerator",
