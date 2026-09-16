@@ -1,15 +1,15 @@
-"""Tests for the ASAP Dataset Adapter.
-
-Verifies:
-1. Every essay_set (1-8) has non-empty train/val/test splits.
-2. Rescaled scores fall strictly within [0, 1].
-3. Inverse-rescaling accurately reconstructs original rubric scores.
-"""
+from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
 import pytest
-import numpy as np
-import pandas as pd
+
+if TYPE_CHECKING:
+    import numpy as np
+    import pandas as pd
+else:
+    np = pytest.importorskip("numpy")
+    pd = pytest.importorskip("pandas")
 
 from app.dataset.asap_adapter import (
     ASAP_RUBRIC_CONFIG,

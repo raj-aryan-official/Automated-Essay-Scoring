@@ -104,12 +104,12 @@ def inverse_rescale_score(
             raw_score = float(max(min_score, min(max_score, raw_score)))
 
     if round_decimals is not None:
-        if isinstance(raw_score, pd.Series):
-            raw_score = raw_score.round(round_decimals)
+        if hasattr(raw_score, "round"):
+            raw_score = getattr(raw_score, "round")(round_decimals)
         elif isinstance(raw_score, np.ndarray):
             raw_score = np.round(raw_score, decimals=round_decimals)
         else:
-            raw_score = round(raw_score, round_decimals)
+            raw_score = round(float(raw_score), round_decimals)
 
     return raw_score
 

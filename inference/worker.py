@@ -102,7 +102,7 @@ def process_job(
         if not essay:
             raise ValueError(f"Referenced essay '{job.essay_id}' not found in database.")
 
-        raw_text = essay.raw_text or ""
+        raw_text: str = str(essay.raw_text or "")
         if not raw_text.strip():
             raise ValueError(f"Essay '{essay.id}' has empty raw_text.")
 
@@ -153,11 +153,11 @@ def process_job(
             logger.debug(f"Skipping model/score record persistence (e.g. test isolation): {model_rec_err}")
 
         # 4. Success: set status=COMPLETED and completed_at
-        job.status = "COMPLETED"
-        job.completed_at = datetime.now(timezone.utc)
-        job.error_message = None
+        setattr(job, "status", "COMPLETED")
+        setattr(job, "completed_at", datetime.now(timezone.utc))
+        setattr(job, "error_message", None)
 
-        essay.status = "SCORED"
+        setattr(essay, "status", "SCORED")
         db.add(essay)
         db.add(job)
         db.commit()
@@ -178,30 +178,36 @@ def process_job(
         if not refreshed_job:
             return job
 
-        refreshed_job.error_message = str(exc)
+        setattr(refreshed_job, "error_message", str(exc))
 
         # Ensure attempts is at least 1
-        if refreshed_job.attempts is None or refreshed_job.attempts < 1:
-            refreshed_job.attempts = 1
+        current_attempts = int(getattr(refreshed_job, "attempts", 0) or 0)
+        new_attempts = max(1, current_attempts)
+        setattr(refreshed_job, "attempts", new_attempts)
+
+        max_attempts = int(getattr(refreshed_job, "max_attempts", 3) or 3)
+
+        # Update essay status accordingly
+        refreshed_essay = db.query(Essay).filter(Essay.id == refreshed_job.essay_id).first()
 
         # Check retry threshold
-        if refreshed_job.attempts >= refreshed_job.max_attempts:
-            refreshed_job.status = "FAILED"
-            if refreshed_job.essay:
-                refreshed_job.essay.status = "PROCESSING_FAILED"
-                db.add(refreshed_job.essay)
+        if new_attempts >= max_attempts:
+            setattr(refreshed_job, "status", "FAILED")
+            if refreshed_essay:
+                setattr(refreshed_essay, "status", "PROCESSING_FAILED")
+                db.add(refreshed_essay)
             logger.warning(
                 f"Job {refreshed_job.id} FAILED permanently "
-                f"({refreshed_job.attempts}/{refreshed_job.max_attempts} attempts exhausted)."
+                f"({new_attempts}/{max_attempts} attempts exhausted)."
             )
         else:
-            refreshed_job.status = "QUEUED"  # Requeue for retry
-            if refreshed_job.essay:
-                refreshed_job.essay.status = "QUEUED"
-                db.add(refreshed_job.essay)
+            setattr(refreshed_job, "status", "QUEUED")  # Requeue for retry
+            if refreshed_essay:
+                setattr(refreshed_essay, "status", "QUEUED")
+                db.add(refreshed_essay)
             logger.info(
                 f"Job {refreshed_job.id} requeued as QUEUED for retry "
-                f"({refreshed_job.attempts}/{refreshed_job.max_attempts} attempts)."
+                f"({new_attempts}/{max_attempts} attempts)."
             )
 
         db.add(refreshed_job)
