@@ -22,16 +22,21 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
-# Ensure backend directory is in sys.path
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-if str(BACKEND_DIR) not in sys.path:
-    sys.path.insert(0, str(BACKEND_DIR))
+# Ensure backend and inference directories are in sys.path
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+BACKEND_DIR = REPO_ROOT / "backend"
+INFERENCE_DIR = REPO_ROOT / "inference"
+
+for p in (str(BACKEND_DIR), str(INFERENCE_DIR)):
+    if p not in sys.path:
+        sys.path.insert(0, p)
 
 from app.api.deps import get_db
 from app.main import app
 from app.models.entities import Essay, Job, Prompt, User
 from app.services.job_service import claim_next_job, create_scoring_job, get_job_by_id
 from app.services.storage import StorageService, get_storage_service
+from worker import poll_and_process_once, process_job
 
 
 @pytest.fixture(scope="session")
@@ -221,6 +226,7 @@ def test_claim_next_job_status_transition(db_session: Session, seed_prompt: Prom
 
     # Verify associated essay status transitioned to PROCESSING
     essay_in_db = db_session.query(Essay).filter(Essay.id == essay_id).first()
+    assert essay_in_db is not None
     assert essay_in_db.status == "PROCESSING"
 
 
@@ -271,3 +277,72 @@ def test_claim_next_job_priority_and_no_double_processing(
     # Worker 4 claims -> queue is empty, returns None
     w4_job = claim_next_job(db_session)
     assert w4_job is None
+
+
+def test_test_005_simulated_worker_crash_and_retries(
+    db_session: Session, seed_prompt: Prompt, client: TestClient
+):
+    """TEST-005: Async Worker Crash & Job Retries.
+
+    Scenario: Simulated worker crash / exception during model execution.
+    Expected Behavior:
+    - Attempt 1 failure: attempts ticks to 1, job requeued as QUEUED (retry flag).
+    - Attempt 2 failure: attempts ticks to 2, job requeued as QUEUED.
+    - Attempt 3 failure: attempts ticks to 3 (>= max_attempts=3), job flags terminal FAILED.
+    Priority: High
+    """
+    db_session.query(Job).delete()
+    db_session.commit()
+
+    res = client.post(
+        "/api/v1/essays",
+        json={
+            "prompt_id": str(seed_prompt.id),
+            "source_type": "PASTE",
+            "raw_text": "Computers and artificial intelligence in contemporary evaluation paradigms.",
+        },
+    )
+    essay_id = uuid.UUID(res.json()["id"])
+    job = create_scoring_job(db_session, essay_id=essay_id, max_attempts=3)
+    assert job.status == "QUEUED"
+    assert job.attempts == 0
+
+    crash_count = 0
+
+    def crashing_model(raw_text: str, rubric_min: float, rubric_max: float) -> dict:
+        nonlocal crash_count
+        crash_count += 1
+        raise RuntimeError(f"Simulated Worker Crash #{crash_count}")
+
+    # Attempt 1: Worker claims and crashes -> Requeued as QUEUED
+    job_1 = poll_and_process_once(db_session, model_fn=crashing_model)
+    assert job_1 is not None
+    assert job_1.id == job.id
+    assert job_1.attempts == 1
+    assert job_1.status == "QUEUED"
+    assert "Crash #1" in str(job_1.error_message)
+
+    # Attempt 2: Worker claims and crashes -> Still QUEUED
+    job_2 = poll_and_process_once(db_session, model_fn=crashing_model)
+    assert job_2 is not None
+    assert job_2.id == job.id
+    assert job_2.attempts == 2
+    assert job_2.status == "QUEUED"
+    assert "Crash #2" in str(job_2.error_message)
+
+    # Attempt 3: Max attempts reached (3/3) -> Terminal FAILED
+    job_3 = poll_and_process_once(db_session, model_fn=crashing_model)
+    assert job_3 is not None
+    assert job_3.id == job.id
+    assert job_3.attempts == 3
+    assert job_3.status == "FAILED"
+    assert "Crash #3" in str(job_3.error_message)
+
+    # Confirm essay status transitioned to PROCESSING_FAILED
+    essay_in_db = db_session.query(Essay).filter(Essay.id == essay_id).first()
+    assert essay_in_db is not None
+    assert essay_in_db.status == "PROCESSING_FAILED"
+
+    # Confirm queue is now empty
+    assert poll_and_process_once(db_session) is None
+
