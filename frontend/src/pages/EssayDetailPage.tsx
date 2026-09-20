@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   getEssay,
@@ -9,6 +9,7 @@ import {
   EssayScoreResponse,
   JobResponse,
 } from '../api';
+import { ScoreWorkspace } from '../features/scoring';
 
 export const EssayDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,16 +19,28 @@ export const EssayDetailPage: React.FC = () => {
   const [activeJob, setActiveJob] = useState<JobResponse | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
+  const [isDispatching, setIsDispatching] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [pollSecondsElapsed, setPollSecondsElapsed] = useState<number>(0);
+
+  const pollTimerRef = useRef<number | null>(null);
+  const elapsedTimerRef = useRef<number | null>(null);
+
+  // Clean up timers on unmount
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+    };
+  }, []);
 
   // 1. Fetch Essay on mount / id change
   useEffect(() => {
     if (!id) return;
-    loadEssayData(id);
+    loadEssay(id);
   }, [id]);
 
-  const loadEssayData = async (essayId: string) => {
+  const loadEssay = async (essayId: string) => {
     setLoading(true);
     setError(null);
     try {
@@ -36,7 +49,7 @@ export const EssayDetailPage: React.FC = () => {
       setEssay(data);
 
       if (data.status === 'SCORED') {
-        loadScoreData(essayId);
+        await loadScore(essayId);
       }
     } catch (err: any) {
       console.error('[EssayDetailPage] Error loading essay:', err);
@@ -46,64 +59,85 @@ export const EssayDetailPage: React.FC = () => {
     }
   };
 
-  const loadScoreData = async (essayId: string) => {
+  const loadScore = async (essayId: string) => {
     try {
-      console.log('[EssayDetailPage] Loading score for essay:', essayId);
+      console.log('[EssayDetailPage] Fetching score for essay:', essayId);
       const score = await getEssayScore(essayId);
       setScoreData(score);
     } catch (err: any) {
       console.error('[EssayDetailPage] Error loading score data:', err);
-      // If score is not yet ready, that's expected while processing
+      // If score is not yet ready or failed, report appropriately
+      if (err.response?.status !== 404) {
+        setError(err.response?.data?.detail || err.message || 'Failed to load score');
+      }
     }
   };
 
-  // 2. Dispatch scoring and poll job status
+  // 2. Dispatch Scoring Job
   const handleDispatchScoring = async () => {
     if (!id) return;
-    setActionMessage('Dispatching scoring job...');
+    setIsDispatching(true);
     setError(null);
+    setPollSecondsElapsed(0);
 
     try {
+      console.log('[EssayDetailPage] Dispatching scoring for essay:', id);
       const dispatchRes = await dispatchScoring(id);
-      console.log('[EssayDetailPage] Dispatched scoring job:', dispatchRes);
-      setActionMessage(`Scoring job dispatched: ${dispatchRes.job_id}. Polling worker status...`);
+      console.log('[EssayDetailPage] Job dispatched:', dispatchRes);
 
-      // Start polling job status
-      pollJob(dispatchRes.job_id, id);
+      // Start elapsed timer
+      elapsedTimerRef.current = setInterval(() => {
+        setPollSecondsElapsed((prev) => prev + 1);
+      }, 1000);
+
+      // Start polling worker status
+      startJobPolling(dispatchRes.job_id, id);
     } catch (err: any) {
       console.error('[EssayDetailPage] Error dispatching scoring:', err);
       setError(err.response?.data?.detail || err.message || 'Failed to dispatch scoring job');
-      setActionMessage(null);
+      setIsDispatching(false);
     }
   };
 
-  const pollJob = async (jobId: string, essayId: string) => {
-    const pollInterval = setInterval(async () => {
+  // 3. Poll GET /api/v1/jobs/{job_id} while QUEUED or PROCESSING
+  const startJobPolling = (jobId: string, essayId: string) => {
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+
+    pollTimerRef.current = setInterval(async () => {
       try {
+        console.log(`[EssayDetailPage] Polling job ${jobId}...`);
         const job = await getJobStatus(jobId);
-        console.log('[EssayDetailPage] Polling job status:', job.status);
         setActiveJob(job);
 
         if (job.status === 'COMPLETED') {
-          clearInterval(pollInterval);
-          setActionMessage('Job COMPLETED! Loading score results...');
-          await loadEssayData(essayId);
-          await loadScoreData(essayId);
+          console.log('[EssayDetailPage] Job COMPLETED! Auto-transitioning to score view...');
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+
+          setIsDispatching(false);
+          // Auto-transition: fetch updated essay and score
+          const updatedEssay = await getEssay(essayId);
+          setEssay(updatedEssay);
+          await loadScore(essayId);
         } else if (job.status === 'FAILED') {
-          clearInterval(pollInterval);
-          setError(`Scoring job failed: ${job.error_message || 'Unknown worker error'}`);
-          setActionMessage(null);
+          console.warn('[EssayDetailPage] Job FAILED:', job.error_message);
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+
+          setIsDispatching(false);
+          setError(`Scoring job failed: ${job.error_message || 'Worker execution failed'}`);
         }
-      } catch (pollErr) {
-        console.error('[EssayDetailPage] Polling error:', pollErr);
+      } catch (pollErr: any) {
+        console.error('[EssayDetailPage] Error during job polling:', pollErr);
       }
-    }, 2000);
+    }, 1500);
   };
 
   if (loading && !essay) {
     return (
-      <div className="max-w-4xl mx-auto p-6 text-center text-slate-400">
-        Loading essay details...
+      <div className="max-w-6xl mx-auto p-8 text-center text-slate-400 space-y-3">
+        <div className="inline-block w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-sm">Loading essay details...</p>
       </div>
     );
   }
@@ -111,10 +145,10 @@ export const EssayDetailPage: React.FC = () => {
   if (error && !essay) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-4">
-        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
-          {error}
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm">
+          <strong>Error:</strong> {error}
         </div>
-        <Link to="/" className="inline-block text-sm text-brand-400 hover:underline">
+        <Link to="/" className="inline-block text-xs text-brand-400 hover:underline">
           &larr; Return to Submission Page
         </Link>
       </div>
@@ -122,145 +156,132 @@ export const EssayDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-5">
-        <div>
-          <div className="flex items-center space-x-3">
-            <h1 className="text-xl font-bold text-white">Essay Assessment Details</h1>
-            <span
-              className={`px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                essay?.status === 'SCORED'
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-              }`}
-            >
-              {essay?.status}
-            </span>
-          </div>
-          <p className="text-xs text-slate-400 font-mono mt-1">ID: {essay?.id}</p>
+    <div className="max-w-6xl mx-auto px-6 space-y-6">
+      {/* Top Breadcrumb & Status Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700/80 rounded-xl px-5 py-3.5 backdrop-blur">
+        <div className="flex items-center space-x-3">
+          <Link
+            to="/"
+            className="text-xs font-medium text-slate-400 hover:text-slate-200 transition"
+          >
+            &larr; Back to Submit
+          </Link>
+          <span className="text-slate-600">/</span>
+          <span className="text-xs text-slate-300 font-mono">
+            Essay {essay?.id.slice(0, 8)}...
+          </span>
+          <span
+            id="essay-status-pill"
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+              essay?.status === 'SCORED'
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : essay?.status === 'PROCESSING' || isDispatching
+                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse'
+                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+            }`}
+          >
+            {isDispatching ? 'PROCESSING' : essay?.status}
+          </span>
         </div>
-        <Link
-          to="/"
-          className="text-xs px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded transition"
-        >
-          &larr; Submit Another
-        </Link>
+
+        <div className="flex items-center space-x-3">
+          {essay?.status !== 'SCORED' && !isDispatching && (
+            <button
+              id="btn-dispatch-scoring"
+              type="button"
+              onClick={handleDispatchScoring}
+              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
+            >
+              Start AI Scoring
+            </button>
+          )}
+        </div>
       </div>
 
-      {actionMessage && (
-        <div className="p-3 bg-blue-500/10 border border-blue-500/20 text-blue-300 rounded-lg text-xs font-mono">
-          {actionMessage}
-        </div>
-      )}
-
+      {/* Error Alert */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-xs font-mono">
-          {error}
-        </div>
-      )}
-
-      {/* Action / Scoring Trigger Bar if not scored yet */}
-      {essay?.status !== 'SCORED' && (
-        <div className="bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-center justify-between">
-          <div className="text-sm text-slate-300">
-            This essay has not been evaluated yet.
-            {activeJob && (
-              <span className="ml-2 font-mono text-xs text-amber-400">
-                Current Job Status: {activeJob.status} (Attempts: {activeJob.attempts})
-              </span>
-            )}
-          </div>
+        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-xs font-mono flex items-center justify-between">
+          <span>{error}</span>
           <button
             type="button"
             onClick={handleDispatchScoring}
-            className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
+            className="underline text-rose-200 hover:text-white ml-4 font-sans font-medium"
           >
-            Dispatch Scoring Job
+            Retry Scoring
           </button>
         </div>
       )}
 
-      {/* Score & Dimensions Display */}
-      {scoreData && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-6">
-          <div className="border-b border-slate-700 pb-4 flex flex-wrap justify-between items-center gap-4">
-            <div>
-              <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold">
-                Holistic Score
-              </span>
-              <div className="flex items-baseline space-x-3 mt-1">
-                <span className="text-4xl font-extrabold text-emerald-400">
-                  {scoreData.holisticScore.toFixed(2)}
-                </span>
-                <span className="px-2.5 py-1 bg-slate-700 text-slate-200 text-xs font-semibold rounded-md">
-                  {scoreData.rubricBand}
-                </span>
-              </div>
-            </div>
-
-            <div className="text-right">
-              <p className="text-xs text-slate-400">
-                Confidence: <span className="text-slate-200 font-semibold">{(scoreData.confidence * 100).toFixed(1)}%</span>
-              </p>
-              <p className="text-xs text-slate-500 font-mono mt-0.5">
-                Model: {scoreData.modelVersion}
-              </p>
-            </div>
+      {/* Processing State: Polling Progress Box */}
+      {isDispatching && (
+        <div
+          id="job-processing-panel"
+          className="bg-slate-800 border border-blue-500/40 rounded-xl p-6 shadow-xl text-center space-y-4 animate-fade-in"
+        >
+          <div className="inline-flex p-3 bg-blue-500/10 rounded-full text-blue-400 mb-1">
+            <div className="w-8 h-8 border-3 border-blue-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">
+              Evaluating Essay with BERT &amp; Multi-Dimensional Feedback...
+            </h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-lg mx-auto">
+              Inference worker is calculating holistic score, rubric band, confidence metrics, and pedagogical diagnostics across grammar, coherence, and argumentation.
+            </p>
           </div>
 
-          {/* Dimension Cards */}
-          <div>
-            <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">
-              Multi-Dimensional Pedagogical Feedback
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {scoreData.dimensions.map((dim) => (
-                <div
-                  key={dim.dimension}
-                  className="bg-slate-900 border border-slate-700/80 rounded-lg p-4 space-y-2 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                        {dim.dimension}
-                      </span>
-                      {dim.score !== null && dim.score !== undefined && (
-                        <span className="text-xs font-semibold px-2 py-0.5 bg-brand-500/10 text-brand-400 rounded">
-                          {dim.score.toFixed(1)}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed mt-2">
-                      {dim.feedback || dim.feedbackText}
-                    </p>
-                  </div>
-                </div>
-              ))}
+          <div className="flex justify-center items-center space-x-6 text-xs text-slate-400 font-mono pt-2">
+            <div>
+              Status:{' '}
+              <span className="text-blue-400 font-semibold uppercase">
+                {activeJob?.status || 'DISPATCHED'}
+              </span>
             </div>
+            <div>
+              Elapsed: <span className="text-white font-semibold">{pollSecondsElapsed}s</span>
+            </div>
+            {activeJob && (
+              <div>
+                Attempt:{' '}
+                <span className="text-white font-semibold">
+                  {activeJob.attempts}/{activeJob.max_attempts}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}
 
-      {/* Essay Content Section */}
-      <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
-        <div className="flex justify-between items-center">
-          <h2 className="text-sm font-semibold text-slate-200">Submitted Essay Text</h2>
-          {essay?.download_url && (
-            <a
-              href={essay.download_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-brand-400 hover:underline"
+      {/* Score Workspace (Section 4.2 UI): Rendered once essay is scored */}
+      {essay && scoreData && !isDispatching && (
+        <ScoreWorkspace essay={essay} scoreData={scoreData} />
+      )}
+
+      {/* Fallback Unscored Reader: Rendered if essay is NOT scored yet and NOT dispatching */}
+      {essay && !scoreData && !isDispatching && (
+        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
+          <div className="flex justify-between items-center border-b border-slate-700/80 pb-3">
+            <div>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                Submitted Essay Text
+              </h2>
+              {essay.prompt_title && (
+                <p className="text-xs text-brand-400 mt-0.5">{essay.prompt_title}</p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleDispatchScoring}
+              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
             >
-              Download Original Document &darr;
-            </a>
-          )}
+              Score This Essay Now &rarr;
+            </button>
+          </div>
+          <div className="bg-slate-900/90 border border-slate-700/60 rounded-lg p-5 text-sm text-slate-200 font-serif leading-relaxed whitespace-pre-wrap">
+            {essay.raw_text}
+          </div>
         </div>
-        <div className="bg-slate-900 border border-slate-700/60 rounded-lg p-4 text-xs font-mono text-slate-300 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
-          {essay?.raw_text}
-        </div>
-      </div>
+      )}
     </div>
   );
 };

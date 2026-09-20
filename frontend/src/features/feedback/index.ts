@@ -1,2 +1,1 @@
-// Placeholder for dimension feedback panels
-export {};
+export * from './InspectionDrawer';
