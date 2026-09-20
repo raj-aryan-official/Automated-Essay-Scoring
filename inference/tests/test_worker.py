@@ -18,7 +18,16 @@ for path in (str(BACKEND_DIR), str(INFERENCE_DIR)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from app.models.entities import Essay, InferenceRun, Job, ModelEntity, Prompt, Score, User
+from app.models.entities import (
+    DimensionFeedback,
+    Essay,
+    InferenceRun,
+    Job,
+    ModelEntity,
+    Prompt,
+    Score,
+    User,
+)
 from app.services.job_service import create_scoring_job
 from worker import poll_and_process_once, process_job, stub_predict_score
 
@@ -35,6 +44,10 @@ def test_engine():
     Prompt.__table__.create(bind=eng)
     Essay.__table__.create(bind=eng)
     Job.__table__.create(bind=eng)
+    ModelEntity.__table__.create(bind=eng)
+    InferenceRun.__table__.create(bind=eng)
+    Score.__table__.create(bind=eng)
+    DimensionFeedback.__table__.create(bind=eng)
     return eng
 
 
@@ -194,3 +207,63 @@ def test_test_005_simulated_worker_crash_and_retries(db_session: Session, seed_e
     # Verify no more queued jobs remain to claim
     job_drained = poll_and_process_once(db_session)
     assert job_drained is None
+
+
+def test_worker_real_model_scoring_and_dimension_feedback_persistence(
+    db_session: Session, seed_essay: Essay, seed_prompt: Prompt
+):
+    """Verify worker processes a job with real EssayScoringModel and DimensionFeedbackGenerator,
+
+    persisting complete records into inference_runs, scores, and dimension_feedback.
+    """
+    # Clean prior jobs
+    db_session.query(Job).delete()
+    db_session.query(DimensionFeedback).delete()
+    db_session.query(Score).delete()
+    db_session.query(InferenceRun).delete()
+    db_session.commit()
+
+    job = create_scoring_job(db_session, essay_id=seed_essay.id)
+    assert job.status == "QUEUED"
+
+    # Execute worker with real scoring model and feedback generator
+    completed_job = poll_and_process_once(db_session)
+    assert completed_job is not None
+    assert completed_job.status == "COMPLETED"
+    assert completed_job.completed_at is not None
+
+    # Verify essay transitioned to SCORED
+    essay_scored = db_session.query(Essay).filter(Essay.id == seed_essay.id).first()
+    assert essay_scored is not None
+    assert essay_scored.status == "SCORED"
+
+    # Verify inference_run record
+    inf_run = db_session.query(InferenceRun).filter(InferenceRun.essay_id == seed_essay.id).first()
+    assert inf_run is not None
+    assert inf_run.job_id == job.id
+    assert inf_run.inference_ms >= 0
+
+    # Verify score record
+    score = db_session.query(Score).filter(Score.essay_id == seed_essay.id).first()
+    assert score is not None
+    assert score.inference_run_id == inf_run.id
+    assert seed_prompt.rubric_min <= score.holistic_score <= seed_prompt.rubric_max
+    assert score.rubric_band in ("Advanced", "Proficient", "Basic", "Below Basic")
+    assert 0.0 <= score.confidence <= 1.0
+
+    # Verify dimension_feedback records for all 3 dimensions
+    feedbacks = (
+        db_session.query(DimensionFeedback)
+        .filter(DimensionFeedback.score_id == score.id)
+        .all()
+    )
+    assert len(feedbacks) == 3
+    dims_found = {fb.dimension for fb in feedbacks}
+    assert dims_found == {"grammar", "coherence", "argumentation"}
+
+    for fb in feedbacks:
+        assert fb.score_id == score.id
+        assert len(fb.feedback_text) > 0
+        assert fb.sub_score is not None
+        assert seed_prompt.rubric_min <= fb.sub_score <= seed_prompt.rubric_max
+

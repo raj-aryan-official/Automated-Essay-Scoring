@@ -15,12 +15,22 @@ from app.core.validation import (
     validate_essay_text,
     validate_prompt_exists,
 )
-from app.models.entities import Essay, Prompt, User
+from app.models.entities import (
+    DimensionFeedback,
+    Essay,
+    InferenceRun,
+    ModelEntity,
+    Prompt,
+    Score,
+    User,
+)
 from app.schemas.essay import (
+    DimensionScoreDetail,
     EssayCreate,
     EssayCreateResponse,
     EssayDetailResponse,
     EssayResponse,
+    EssayScoreResponse,
     SourceTypeEnum,
 )
 from app.schemas.job import JobDispatchResponse
@@ -399,4 +409,71 @@ def dispatch_scoring_job(
         status=job.status,
         job_type=job.job_type,
         message="Scoring job queued successfully",
+    )
+
+
+@router.get(
+    "/{essay_id}/score",
+    response_model=EssayScoreResponse,
+    summary="Retrieve scoring results and multi-dimensional feedback for an essay",
+)
+def get_essay_score(
+    essay_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Retrieve the holistic score, rubric band, confidence, dimension-level
+
+    feedback, and model version for a scored essay (Section 8.2).
+    """
+    essay = db.query(Essay).filter(Essay.id == essay_id).first()
+    if not essay:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Essay with id '{essay_id}' not found.",
+        )
+
+    score = (
+        db.query(Score)
+        .filter(Score.essay_id == essay_id)
+        .order_by(Score.created_at.desc())
+        .first()
+    )
+    if not score:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Score for essay '{essay_id}' not found. Essay status is '{essay.status}'.",
+        )
+
+    # Determine model version
+    model_version = "v1.0.0"
+    if score.inference_run and score.inference_run.model:
+        model_version = score.inference_run.model.version
+    else:
+        active_model = db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+        if active_model:
+            model_version = active_model.version
+
+    # Collect dimension feedback
+    dimensions = []
+    if score.dimension_feedbacks:
+        for df in score.dimension_feedbacks:
+            dimensions.append(
+                DimensionScoreDetail(
+                    dimension=df.dimension,
+                    score=df.sub_score,
+                    subScore=df.sub_score,
+                    feedback=df.feedback_text,
+                    feedbackText=df.feedback_text,
+                )
+            )
+
+    return EssayScoreResponse(
+        essayId=essay.id,
+        holisticScore=score.holistic_score,
+        rubricBand=score.rubric_band,
+        confidence=score.confidence,
+        dimensions=dimensions,
+        modelVersion=model_version,
+        reviewerOverrideScore=score.reviewer_override_score,
+        reviewerOverrideReason=score.reviewer_override_reason,
     )

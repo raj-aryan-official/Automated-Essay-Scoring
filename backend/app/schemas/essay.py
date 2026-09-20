@@ -128,3 +128,51 @@ class EssayListResponse(BaseModel):
     limit: int = Field(default=50, description="Page limit used")
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class DimensionScoreDetail(BaseModel):
+    dimension: str = Field(
+        ...,
+        description="Dimension evaluated ('grammar', 'coherence', or 'argumentation')",
+    )
+    score: Optional[float] = Field(
+        default=None,
+        description="Sub-score for this evaluation dimension",
+    )
+    subScore: Optional[float] = Field(
+        default=None,
+        description="Alias for dimension sub-score",
+    )
+    feedback: str = Field(
+        ...,
+        description="Targeted pedagogical guidance text",
+    )
+    feedbackText: Optional[str] = Field(
+        default=None,
+        description="Alias for feedback text",
+    )
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class EssayScoreResponse(BaseModel):
+    essayId: UUID = Field(..., description="UUID of the scored essay")
+    holisticScore: float = Field(..., description="Holistic score predicted for the essay")
+    rubricBand: str = Field(..., description="Rubric band categorization (e.g. Advanced, Proficient)")
+    confidence: float = Field(..., description="Model scoring confidence metric (0.0 to 1.0)")
+    dimensions: List[DimensionScoreDetail] = Field(
+        default_factory=list,
+        description="Dimension-level evaluations (grammar, coherence, argumentation)",
+    )
+    modelVersion: str = Field(..., description="Model version that produced the inference run")
+    reviewerOverrideScore: Optional[float] = Field(
+        default=None,
+        description="Manual score override provided by a human reviewer (if any)",
+    )
+    reviewerOverrideReason: Optional[str] = Field(
+        default=None,
+        description="Pedagogical reason for reviewer override (if any)",
+    )
+
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+

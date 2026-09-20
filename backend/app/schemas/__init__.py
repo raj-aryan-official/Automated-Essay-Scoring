@@ -1,12 +1,14 @@
 """Pydantic validation schemas package."""
 
 from app.schemas.essay import (
+    DimensionScoreDetail,
     EssayBase,
     EssayCreate,
     EssayCreateResponse,
     EssayDetailResponse,
     EssayListResponse,
     EssayResponse,
+    EssayScoreResponse,
     EssayStatusEnum,
     SourceTypeEnum,
 )
@@ -26,6 +28,8 @@ __all__ = [
     "EssayResponse",
     "EssayDetailResponse",
     "EssayListResponse",
+    "DimensionScoreDetail",
+    "EssayScoreResponse",
     "JobTypeEnum",
     "JobStatusEnum",
     "JobDispatchResponse",

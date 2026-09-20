@@ -30,9 +30,17 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
+
+@compiles(JSONB, "sqlite")
+def compile_jsonb_sqlite(type_, compiler, **kw):
+    """Render JSONB as JSON for SQLite compatibility in unit tests."""
+    return "JSON"
+
 
 
 class User(Base):
@@ -161,7 +169,7 @@ class ModelEntity(Base):
         JSONB,
         nullable=False,
         default=dict,
-        server_default=text("'{}'::jsonb"),
+        server_default=text("'{}'"),
     )
     status = Column(String(32), nullable=False)
     created_at = Column(

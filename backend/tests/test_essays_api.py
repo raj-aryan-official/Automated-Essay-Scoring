@@ -26,7 +26,16 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.api.deps import get_db
 from app.main import app
-from app.models.entities import Essay, Prompt, User
+from app.models.entities import (
+    DimensionFeedback,
+    Essay,
+    InferenceRun,
+    Job,
+    ModelEntity,
+    Prompt,
+    Score,
+    User,
+)
 from app.services.storage import StorageService, get_storage_service
 
 
@@ -42,6 +51,11 @@ def test_engine():
     User.__table__.create(bind=eng)
     Prompt.__table__.create(bind=eng)
     Essay.__table__.create(bind=eng)
+    Job.__table__.create(bind=eng)
+    ModelEntity.__table__.create(bind=eng)
+    InferenceRun.__table__.create(bind=eng)
+    Score.__table__.create(bind=eng)
+    DimensionFeedback.__table__.create(bind=eng)
     return eng
 
 
@@ -524,4 +538,151 @@ def test_document_disallowed_extension_in_json_rejected(client: TestClient, seed
     response = client.post("/api/v1/essays", json=payload)
     assert response.status_code == 415
     assert "Disallowed" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------------------
+# GET /api/v1/essays/{id}/score (Section 8.2) Tests
+# ---------------------------------------------------------------------------
+
+
+def test_get_essay_score_success(client: TestClient, seed_prompt: Prompt, db_session: Session):
+    """Verify GET /api/v1/essays/{id}/score returns full nested payload (Section 8.2).
+
+    Expected fields: holisticScore, rubricBand, confidence, dimensions[], modelVersion.
+    """
+    # 1. Create essay
+    create_res = client.post(
+        "/api/v1/essays",
+        json={
+            "prompt_id": str(seed_prompt.id),
+            "source_type": "PASTE",
+            "raw_text": "Evaluating computers in classroom pedagogy with clear thesis and evidence.",
+        },
+    )
+    assert create_res.status_code == 201
+    essay_id = uuid.UUID(create_res.json()["id"])
+
+    # 2. Seed model entity, inference run, score, and dimension feedback
+    model_entity = ModelEntity(
+        id=uuid.uuid4(),
+        name="bert-base-uncased-aes",
+        version="v1.0.0",
+        framework="PyTorch",
+        architecture="BERT+RegressionHead",
+        weights_storage_key="checkpoints/bert_aes_v1.pt",
+        metrics={},
+        status="PRODUCTION",
+    )
+    db_session.add(model_entity)
+    db_session.flush()
+
+    inference_run = InferenceRun(
+        id=uuid.uuid4(),
+        essay_id=essay_id,
+        model_id=model_entity.id,
+        confidence_threshold=0.80,
+        device="cpu",
+        inference_ms=185,
+    )
+    db_session.add(inference_run)
+    db_session.flush()
+
+    score = Score(
+        id=uuid.uuid4(),
+        inference_run_id=inference_run.id,
+        essay_id=essay_id,
+        holistic_score=9.5,
+        rubric_band="Proficient",
+        confidence=0.89,
+    )
+    db_session.add(score)
+    db_session.flush()
+
+    df_grammar = DimensionFeedback(
+        id=uuid.uuid4(),
+        score_id=score.id,
+        dimension="grammar",
+        sub_score=4.5,
+        feedback_text="Strong syntactic control and correct capitalization throughout.",
+    )
+    df_coherence = DimensionFeedback(
+        id=uuid.uuid4(),
+        score_id=score.id,
+        dimension="coherence",
+        sub_score=4.8,
+        feedback_text="Fluid transitions and cohesive discourse markers across paragraphs.",
+    )
+    df_argumentation = DimensionFeedback(
+        id=uuid.uuid4(),
+        score_id=score.id,
+        dimension="argumentation",
+        sub_score=4.2,
+        feedback_text="Clear claims supported by relevant evidence and reasoning.",
+    )
+    db_session.add_all([df_grammar, df_coherence, df_argumentation])
+
+    # Mark essay as SCORED
+    essay = db_session.query(Essay).filter(Essay.id == essay_id).first()
+    assert essay is not None
+    setattr(essay, "status", "SCORED")
+    db_session.add(essay)
+    db_session.commit()
+
+    # 3. Query GET /api/v1/essays/{id}/score
+    response = client.get(f"/api/v1/essays/{essay_id}/score")
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["essayId"] == str(essay_id)
+    assert data["holisticScore"] == 9.5
+    assert data["rubricBand"] == "Proficient"
+    assert data["confidence"] == 0.89
+    assert data["modelVersion"] == "v1.0.0"
+
+    # Verify dimensions array
+    dimensions = data["dimensions"]
+    assert isinstance(dimensions, list)
+    assert len(dimensions) == 3
+
+    dim_map = {d["dimension"]: d for d in dimensions}
+    assert set(dim_map.keys()) == {"grammar", "coherence", "argumentation"}
+
+    assert dim_map["grammar"]["score"] == 4.5
+    assert dim_map["grammar"]["subScore"] == 4.5
+    assert "syntactic control" in dim_map["grammar"]["feedback"]
+    assert "syntactic control" in dim_map["grammar"]["feedbackText"]
+
+    assert dim_map["coherence"]["score"] == 4.8
+    assert "Fluid transitions" in dim_map["coherence"]["feedback"]
+
+    assert dim_map["argumentation"]["score"] == 4.2
+    assert "Clear claims" in dim_map["argumentation"]["feedback"]
+
+
+def test_get_essay_score_not_found(client: TestClient):
+    """Verify GET /api/v1/essays/{id}/score returns HTTP 404 for a non-existent essay."""
+    random_id = str(uuid.uuid4())
+    response = client.get(f"/api/v1/essays/{random_id}/score")
+    assert response.status_code == 404
+    assert f"Essay with id '{random_id}' not found" in response.json()["detail"]
+
+
+def test_get_essay_score_not_scored_yet(client: TestClient, seed_prompt: Prompt):
+    """Verify GET /api/v1/essays/{id}/score returns HTTP 404 when the essay has not been scored yet."""
+    create_res = client.post(
+        "/api/v1/essays",
+        json={
+            "prompt_id": str(seed_prompt.id),
+            "source_type": "PASTE",
+            "raw_text": "Submitted essay that is still awaiting processing by the scoring worker.",
+        },
+    )
+    assert create_res.status_code == 201
+    essay_id = create_res.json()["id"]
+
+    response = client.get(f"/api/v1/essays/{essay_id}/score")
+    assert response.status_code == 404
+    assert f"Score for essay '{essay_id}' not found" in response.json()["detail"]
+    assert "SUBMITTED" in response.json()["detail"]
+
 
