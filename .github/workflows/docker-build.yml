@@ -1,0 +1,76 @@
+name: Build & Tag Docker Images
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: docker-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-tag:
+    name: Build and Tag Container Images
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ------------------------------------------------------------------------
+      # Build & Tag API (Backend)
+      # ------------------------------------------------------------------------
+      - name: Build & Tag API Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: false
+          load: true
+          tags: |
+            aes-api:${{ github.sha }}
+            aes-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ------------------------------------------------------------------------
+      # Build & Tag GPU Worker
+      # ------------------------------------------------------------------------
+      - name: Build & Tag GPU Worker Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./inference
+          file: ./inference/Dockerfile.gpu
+          push: false
+          load: true
+          tags: |
+            aes-gpu-worker:${{ github.sha }}
+            aes-gpu-worker:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ------------------------------------------------------------------------
+      # Build & Tag Frontend
+      # ------------------------------------------------------------------------
+      - name: Build & Tag Frontend Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          load: true
+          tags: |
+            aes-frontend:${{ github.sha }}
+            aes-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify Built Images
+        run: |
+          docker images | grep -E "aes-api|aes-gpu-worker|aes-frontend"
