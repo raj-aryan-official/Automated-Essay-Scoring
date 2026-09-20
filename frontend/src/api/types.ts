@@ -93,4 +93,11 @@ export interface EssayScoreResponse {
   modelVersion: string;
   reviewerOverrideScore?: number | null;
   reviewerOverrideReason?: string | null;
+  reviewerOverrideAt?: string | null;
 }
+
+export interface ReviewerOverridePayload {
+  reviewer_override_score: number;
+  reviewer_override_reason: string;
+}
+

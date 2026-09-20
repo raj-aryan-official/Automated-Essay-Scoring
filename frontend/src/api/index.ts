@@ -6,6 +6,7 @@ import {
   EssayScoreResponse,
   JobDispatchResponse,
   JobResponse,
+  ReviewerOverridePayload,
 } from './types';
 
 // Export all types from index for convenient importing
@@ -102,3 +103,18 @@ export const getEssayScore = async (essayId: string): Promise<EssayScoreResponse
   console.log('[API Call] getEssayScore success:', response.data);
   return response.data;
 };
+
+/**
+ * Submit human reviewer score override and justification.
+ * POST /api/v1/essays/{id}/review
+ */
+export const submitReview = async (
+  essayId: string,
+  payload: ReviewerOverridePayload
+): Promise<EssayScoreResponse> => {
+  console.log(`[API Call] submitReview executing for essayId: ${essayId}...`, payload);
+  const response = await apiClient.post<EssayScoreResponse>(`/essays/${essayId}/review`, payload);
+  console.log('[API Call] submitReview success:', response.data);
+  return response.data;
+};
+

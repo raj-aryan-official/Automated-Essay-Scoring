@@ -309,6 +309,7 @@ class Score(Base):
     confidence = Column(Float, nullable=False)      # REAL
     reviewer_override_score = Column(Float, nullable=True)  # REAL
     reviewer_override_reason = Column(Text, nullable=True)
+    reviewer_override_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,

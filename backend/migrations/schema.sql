@@ -81,6 +81,7 @@ CREATE TABLE IF NOT EXISTS scores (
   confidence REAL NOT NULL CHECK (confidence >= 0.0 AND confidence <= 1.0),
   reviewer_override_score REAL,
   reviewer_override_reason TEXT,
+  reviewer_override_at TIMESTAMPTZ,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

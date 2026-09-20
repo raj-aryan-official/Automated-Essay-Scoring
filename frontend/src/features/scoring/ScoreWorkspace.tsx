@@ -2,14 +2,20 @@ import React, { useState } from 'react';
 import { EssayDetailResponse, EssayScoreResponse } from '../../api';
 import { HolisticScoreCard } from './HolisticScoreCard';
 import { ControlRail, DimensionKey } from './ControlRail';
+import { ReviewerOverridePanel } from './ReviewerOverridePanel';
 import { InspectionDrawer } from '../feedback/InspectionDrawer';
 
 interface ScoreWorkspaceProps {
   essay: EssayDetailResponse;
   scoreData: EssayScoreResponse;
+  onReviewSubmitted?: (updatedScore: EssayScoreResponse) => void;
 }
 
-export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({ essay, scoreData }) => {
+export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
+  essay,
+  scoreData,
+  onReviewSubmitted,
+}) => {
   // Control Rail state
   const [activeDimensions, setActiveDimensions] = useState<Record<DimensionKey, boolean>>({
     grammar: true,
@@ -92,7 +98,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({ essay, scoreData
           )}
         </section>
 
-        {/* Right Pane: Holistic Score + Control Rail + Inspection Drawer (5 columns on desktop) */}
+        {/* Right Pane: Holistic Score + Reviewer Override + Control Rail + Inspection Drawer (5 columns on desktop) */}
         <section
           id="score-and-controls-panel"
           className="lg:col-span-5 space-y-6"
@@ -101,6 +107,17 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({ essay, scoreData
           <HolisticScoreCard
             scoreData={scoreData}
             confidenceThreshold={confidenceThreshold}
+          />
+
+          {/* Reviewer Override Panel (Section 4.1 Information Architecture) */}
+          <ReviewerOverridePanel
+            essayId={essay.id}
+            scoreData={scoreData}
+            onReviewSubmitted={(updatedScore) => {
+              if (onReviewSubmitted) {
+                onReviewSubmitted(updatedScore);
+              }
+            }}
           />
 
           {/* Control Rail */}

@@ -173,6 +173,23 @@ class EssayScoreResponse(BaseModel):
         default=None,
         description="Pedagogical reason for reviewer override (if any)",
     )
+    reviewerOverrideAt: Optional[datetime] = Field(
+        default=None,
+        description="Timestamp when reviewer override was applied",
+    )
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class ReviewerOverrideRequest(BaseModel):
+    reviewer_override_score: float = Field(
+        ...,
+        description="Manual holistic score assigned by a human reviewer",
+    )
+    reviewer_override_reason: str = Field(
+        ...,
+        min_length=1,
+        description="Pedagogical reason for reviewer override (required)",
+    )
+
 

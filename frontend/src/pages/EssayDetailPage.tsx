@@ -48,7 +48,12 @@ export const EssayDetailPage: React.FC = () => {
       const data = await getEssay(essayId);
       setEssay(data);
 
-      if (data.status === 'SCORED' || data.status === 'FEEDBACK_READY') {
+      if (
+        data.status === 'SCORED' ||
+        data.status === 'FEEDBACK_READY' ||
+        data.status === 'UNDER_REVIEW' ||
+        data.status === 'FINALIZED'
+      ) {
         await loadScore(essayId);
       } else if (data.status === 'QUEUED' || data.status === 'PROCESSING') {
         startEssayPolling(essayId);
@@ -129,7 +134,11 @@ export const EssayDetailPage: React.FC = () => {
         const currentEssay = await getEssay(essayId);
         setEssay(currentEssay);
 
-        if (currentEssay.status === 'SCORED' || currentEssay.status === 'FEEDBACK_READY') {
+        if (
+          currentEssay.status === 'SCORED' ||
+          currentEssay.status === 'FEEDBACK_READY' ||
+          currentEssay.status === 'FINALIZED'
+        ) {
           console.log('[EssayDetailPage] Essay reached scored state! Auto-transitioning to score view...');
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
@@ -190,8 +199,12 @@ export const EssayDetailPage: React.FC = () => {
           <span
             id="essay-status-pill"
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-              essay?.status === 'SCORED' || essay?.status === 'FEEDBACK_READY'
+              essay?.status === 'FINALIZED'
+                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                : essay?.status === 'SCORED' || essay?.status === 'FEEDBACK_READY'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : essay?.status === 'UNDER_REVIEW'
+                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 animate-pulse'
                 : essay?.status === 'PROCESSING' || isDispatching
                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse'
                 : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
@@ -202,16 +215,20 @@ export const EssayDetailPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {essay?.status !== 'SCORED' && essay?.status !== 'FEEDBACK_READY' && !isDispatching && (
-            <button
-              id="btn-dispatch-scoring"
-              type="button"
-              onClick={handleDispatchScoring}
-              className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
-            >
-              Start AI Scoring
-            </button>
-          )}
+          {essay?.status !== 'SCORED' &&
+            essay?.status !== 'FEEDBACK_READY' &&
+            essay?.status !== 'FINALIZED' &&
+            essay?.status !== 'UNDER_REVIEW' &&
+            !isDispatching && (
+              <button
+                id="btn-dispatch-scoring"
+                type="button"
+                onClick={handleDispatchScoring}
+                className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
+              >
+                Start AI Scoring
+              </button>
+            )}
         </div>
       </div>
 
@@ -271,7 +288,14 @@ export const EssayDetailPage: React.FC = () => {
 
       {/* Score Workspace (Section 4.2 UI): Rendered once essay is scored */}
       {essay && scoreData && !isDispatching && (
-        <ScoreWorkspace essay={essay} scoreData={scoreData} />
+        <ScoreWorkspace
+          essay={essay}
+          scoreData={scoreData}
+          onReviewSubmitted={(updatedScore) => {
+            setScoreData(updatedScore);
+            setEssay((prev) => (prev ? { ...prev, status: 'FINALIZED' } : null));
+          }}
+        />
       )}
 
       {/* Fallback Unscored Reader: Rendered if essay is NOT scored yet and NOT dispatching */}

@@ -10,6 +10,7 @@ from app.schemas.essay import (
     EssayResponse,
     EssayScoreResponse,
     EssayStatusEnum,
+    ReviewerOverrideRequest,
     SourceTypeEnum,
 )
 from app.schemas.job import (
@@ -30,6 +31,7 @@ __all__ = [
     "EssayListResponse",
     "DimensionScoreDetail",
     "EssayScoreResponse",
+    "ReviewerOverrideRequest",
     "JobTypeEnum",
     "JobStatusEnum",
     "JobDispatchResponse",

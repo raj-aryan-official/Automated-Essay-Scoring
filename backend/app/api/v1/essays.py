@@ -1,6 +1,7 @@
 """Essay submission and retrieval API endpoints."""
 
 import base64
+from datetime import datetime, timezone
 import logging
 from typing import List, Optional
 import uuid
@@ -31,6 +32,7 @@ from app.schemas.essay import (
     EssayDetailResponse,
     EssayResponse,
     EssayScoreResponse,
+    ReviewerOverrideRequest,
     SourceTypeEnum,
 )
 from app.schemas.job import JobDispatchResponse
@@ -476,4 +478,97 @@ def get_essay_score(
         modelVersion=model_version,
         reviewerOverrideScore=score.reviewer_override_score,
         reviewerOverrideReason=score.reviewer_override_reason,
+        reviewerOverrideAt=getattr(score, "reviewer_override_at", None),
     )
+
+
+@router.post(
+    "/{essay_id}/review",
+    response_model=EssayScoreResponse,
+    summary="Submit human reviewer score override and justification",
+)
+def review_essay(
+    essay_id: UUID,
+    payload: ReviewerOverrideRequest,
+    db: Session = Depends(get_db),
+):
+    """Accept reviewer_override_score and reviewer_override_reason, update the
+
+    essay's status to UNDER_REVIEW then FINALIZED, and persist the override onto
+    the scores row with a timestamp.
+    """
+    essay = db.query(Essay).filter(Essay.id == essay_id).first()
+    if not essay:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Essay with id '{essay_id}' not found.",
+        )
+
+    score = (
+        db.query(Score)
+        .filter(Score.essay_id == essay_id)
+        .order_by(Score.created_at.desc())
+        .first()
+    )
+    if not score:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot review essay '{essay_id}' because it has not been scored yet. Current status is '{essay.status}'.",
+        )
+
+    # 1. Update status to UNDER_REVIEW
+    essay.status = "UNDER_REVIEW"
+    db.commit()
+    db.refresh(essay)
+
+    # 2. Persist override onto scores row with timestamp
+    override_time = datetime.now(timezone.utc)
+    score.reviewer_override_score = payload.reviewer_override_score
+    score.reviewer_override_reason = payload.reviewer_override_reason
+    score.reviewer_override_at = override_time
+
+    # 3. Transition status to FINALIZED
+    essay.status = "FINALIZED"
+    db.commit()
+    db.refresh(score)
+    db.refresh(essay)
+
+    logger.info(
+        f"Essay '{essay_id}' reviewed and finalized. Override score: {payload.reviewer_override_score}"
+    )
+
+    # Determine model version
+    model_version = "v1.0.0"
+    if score.inference_run and score.inference_run.model:
+        model_version = score.inference_run.model.version
+    else:
+        active_model = db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+        if active_model:
+            model_version = active_model.version
+
+    # Collect dimension feedback
+    dimensions = []
+    if score.dimension_feedbacks:
+        for df in score.dimension_feedbacks:
+            dimensions.append(
+                DimensionScoreDetail(
+                    dimension=df.dimension,
+                    score=df.sub_score,
+                    subScore=df.sub_score,
+                    feedback=df.feedback_text,
+                    feedbackText=df.feedback_text,
+                )
+            )
+
+    return EssayScoreResponse(
+        essayId=essay.id,
+        holisticScore=score.holistic_score,
+        rubricBand=score.rubric_band,
+        confidence=score.confidence,
+        dimensions=dimensions,
+        modelVersion=model_version,
+        reviewerOverrideScore=score.reviewer_override_score,
+        reviewerOverrideReason=score.reviewer_override_reason,
+        reviewerOverrideAt=score.reviewer_override_at,
+    )
+
