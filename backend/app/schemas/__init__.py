@@ -25,6 +25,14 @@ from app.schemas.job import (
     JobTypeEnum,
 )
 
+from app.schemas.analytics import (
+    EvaluationDashboardResponse,
+    JobStatusCounts,
+    LossCurvePoint,
+    PromptQwkResult,
+    QwkSummaryResponse,
+)
+
 __all__ = [
     "LoginRequest",
     "TokenResponse",
@@ -44,5 +52,10 @@ __all__ = [
     "JobStatusEnum",
     "JobDispatchResponse",
     "JobResponse",
+    "PromptQwkResult",
+    "QwkSummaryResponse",
+    "LossCurvePoint",
+    "JobStatusCounts",
+    "EvaluationDashboardResponse",
 ]
 

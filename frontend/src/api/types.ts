@@ -122,4 +122,54 @@ export interface AuthResponse {
   user_id: string;
 }
 
+export interface PromptQwkResult {
+  prompt_id: number;
+  qwk: number;
+  target_qwk: number;
+  passed: boolean;
+  genre: string;
+  rubric_min: number;
+  rubric_max: number;
+  n_test_samples: number;
+  sample_predictions?: Array<{
+    essay_id: number;
+    true_score: number;
+    normalized_pred?: number;
+    raw_pred?: number;
+    rounded_score: number;
+  }>;
+}
+
+export interface QwkSummary {
+  average_qwk: number;
+  target_qwk: number;
+  all_passed: boolean;
+  evaluated_prompts_count: number;
+  passed_prompts_count: number;
+  failed_prompts_count: number;
+  timestamp?: string;
+  prompts: PromptQwkResult[];
+}
+
+export interface LossCurvePoint {
+  step: number;
+  train_loss?: number;
+  val_loss?: number;
+  learning_rate?: number;
+}
+
+export interface JobStatusCounts {
+  queued: number;
+  processing: number;
+  completed: number;
+  failed: number;
+  total: number;
+}
+
+export interface EvaluationDashboardData {
+  qwk_summary: QwkSummary;
+  loss_curves: Record<string, LossCurvePoint[]>;
+  job_counts: JobStatusCounts;
+}
+
 

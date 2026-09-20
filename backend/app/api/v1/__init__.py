@@ -5,6 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.essays import router as essays_router
 from app.api.v1.jobs import router as jobs_router
@@ -14,6 +15,7 @@ api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 api_router.include_router(essays_router, prefix="/essays", tags=["Essays"])
 api_router.include_router(jobs_router, prefix="/jobs", tags=["Jobs"])
+api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 
 
 @api_router.get("/health", tags=["Health"])

@@ -117,25 +117,30 @@ class StorageService:
             extra_args["ContentType"] = content_type
 
         # Normalize to file-like object
-        if isinstance(file_bytes, bytes):
-            stream: Union[BinaryIO, io.BytesIO] = io.BytesIO(file_bytes)
+        if isinstance(file_bytes, (bytes, bytearray)):
+            raw_bytes = bytes(file_bytes)
+            stream = io.BytesIO(raw_bytes)
         else:
-            stream = file_bytes
-
-        if hasattr(stream, "seek"):
+            if hasattr(file_bytes, "seek"):
+                try:
+                    file_bytes.seek(0)
+                except Exception:
+                    pass
             try:
-                stream.seek(0)
+                raw_bytes = file_bytes.read()
+                stream = io.BytesIO(raw_bytes)
             except Exception:
-                pass
+                raw_bytes = b""
+                stream = io.BytesIO(b"")
 
         client = self.s3_client
         if client is not None:
             try:
                 client.upload_fileobj(
-                    Fileobj=stream,
-                    Bucket=self.bucket_name,
-                    Key=key,
-                    ExtraArgs=extra_args if extra_args else None,
+                    stream,
+                    self.bucket_name,
+                    key,
+                    ExtraArgs={"ContentType": content_type} if content_type else None,
                 )
                 logger.info(f"Uploaded file to '{self.bucket_name}/{key}'.")
                 return key
@@ -145,12 +150,7 @@ class StorageService:
         # Local filesystem fallback
         target = LOCAL_STORAGE_DIR / self.bucket_name / key
         target.parent.mkdir(parents=True, exist_ok=True)
-        if hasattr(stream, "seek"):
-            try:
-                stream.seek(0)
-            except Exception:
-                pass
-        target.write_bytes(stream.read())
+        target.write_bytes(raw_bytes)
         logger.info(f"Persisted file locally to '{target}'.")
         return key
 

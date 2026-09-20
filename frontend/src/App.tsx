@@ -5,6 +5,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { SubmissionPage } from './pages/SubmissionPage';
 import { EssayDetailPage } from './pages/EssayDetailPage';
+import { ModelEvaluationPage } from './pages/ModelEvaluationPage';
 import { UserRole } from './api';
 
 const ROLE_BADGES: Record<UserRole, string> = {
@@ -33,12 +34,21 @@ const HeaderBar: React.FC = () => {
 
         <nav className="flex items-center space-x-5">
           {isAuthenticated && (
-            <Link
-              to="/"
-              className="text-xs font-medium text-slate-300 hover:text-white transition"
-            >
-              Submit Essay
-            </Link>
+            <>
+              <Link
+                to="/"
+                className="text-xs font-medium text-slate-300 hover:text-white transition"
+              >
+                Submit Essay
+              </Link>
+              <Link
+                id="nav-model-eval"
+                to="/evaluation"
+                className="text-xs font-medium text-slate-300 hover:text-white transition"
+              >
+                Model Evaluation
+              </Link>
+            </>
           )}
 
           {isAuthenticated && user ? (
@@ -102,6 +112,14 @@ export const App: React.FC = () => {
                 element={
                   <ProtectedRoute allowedRoles={['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN']}>
                     <EssayDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/evaluation"
+                element={
+                  <ProtectedRoute allowedRoles={['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN']}>
+                    <ModelEvaluationPage />
                   </ProtectedRoute>
                 }
               />

@@ -10,6 +10,8 @@ import {
   LoginPayload,
   AuthResponse,
   UserProfile,
+  EvaluationDashboardData,
+  JobStatusCounts,
 } from './types';
 
 // Export all types from index for convenient importing
@@ -148,6 +150,26 @@ export const getCurrentUser = async (): Promise<UserProfile> => {
   console.log('[API Call] getCurrentUser executing...');
   const response = await apiClient.get<UserProfile>('/auth/me');
   console.log('[API Call] getCurrentUser success:', response.data);
+  return response.data;
+};
+
+/**
+  * Retrieve complete Model Evaluation Dashboard data.
+  * GET /api/v1/analytics/evaluation
+  */
+export const getEvaluationDashboard = async (): Promise<EvaluationDashboardData> => {
+  console.log('[API Call] getEvaluationDashboard executing...');
+  const response = await apiClient.get<EvaluationDashboardData>('/analytics/evaluation');
+  console.log('[API Call] getEvaluationDashboard success:', response.data.qwk_summary.average_qwk);
+  return response.data;
+};
+
+/**
+  * Poll live job queue status counts.
+  * GET /api/v1/analytics/jobs
+  */
+export const getJobStatusCounts = async (): Promise<JobStatusCounts> => {
+  const response = await apiClient.get<JobStatusCounts>('/analytics/jobs');
   return response.data;
 };
 
