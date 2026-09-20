@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Reviewer Override Flow (Section 4.1 & POST /api/v1/essays/:id/review)', () => {
+  test.beforeEach(async ({ page }) => {
+    // Authenticate as TEACHER before each test
+    await page.goto('/login');
+    await page.locator('#btn-demo-teacher').click();
+    await page.waitForURL('/');
+  });
+
   test('submits essay, scores it, applies teacher override, and verifies FINALIZED status and score persistence', async ({
     page,
   }) => {

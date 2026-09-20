@@ -10,7 +10,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
+from app.api.deps import get_db, require_teacher, require_viewer
 from app.core.validation import (
     validate_document,
     validate_essay_text,
@@ -121,6 +121,7 @@ async def submit_essay(
     request: Request,
     db: Session = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
+    current_user: User = Depends(require_teacher),
 ):
     """Accept either raw pasted text (source_type=PASTE) or an uploaded document
 
@@ -293,7 +294,7 @@ async def submit_essay(
                 storage_bucket = storage.bucket_name
 
     # Ensure user exists for foreign key constraint
-    user = _get_or_create_user(db, submitted_by_id)
+    user = current_user if current_user else _get_or_create_user(db, submitted_by_id)
 
     # Persist the essay record with status=SUBMITTED
     essay = Essay(
@@ -332,6 +333,7 @@ def list_essays(
     ),
     prompt_id: Optional[UUID] = Query(None, description="Filter by prompt UUID"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer),
 ):
     """Retrieve historical essays with pagination and optional status/prompt filters."""
     query = db.query(Essay)
@@ -353,6 +355,7 @@ def get_essay_by_id(
     essay_id: UUID,
     db: Session = Depends(get_db),
     storage: StorageService = Depends(get_storage_service),
+    current_user: User = Depends(require_viewer),
 ):
     """Retrieve essay metadata, raw text, lifecycle status, and presigned document
 
@@ -391,6 +394,7 @@ def get_essay_by_id(
 def dispatch_scoring_job(
     essay_id: UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_teacher),
 ):
     """Insert a row into jobs (job_type=SCORING, status=QUEUED) and return HTTP 202
 
@@ -422,6 +426,7 @@ def dispatch_scoring_job(
 def get_essay_score(
     essay_id: UUID,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer),
 ):
     """Retrieve the holistic score, rubric band, confidence, dimension-level
 
@@ -491,6 +496,7 @@ def review_essay(
     essay_id: UUID,
     payload: ReviewerOverrideRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(require_teacher),
 ):
     """Accept reviewer_override_score and reviewer_override_reason, update the
 

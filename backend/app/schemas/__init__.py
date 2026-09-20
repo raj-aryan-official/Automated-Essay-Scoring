@@ -1,5 +1,10 @@
 """Pydantic validation schemas package."""
 
+from app.schemas.auth import (
+    LoginRequest,
+    TokenResponse,
+    UserResponse,
+)
 from app.schemas.essay import (
     DimensionScoreDetail,
     EssayBase,
@@ -21,6 +26,9 @@ from app.schemas.job import (
 )
 
 __all__ = [
+    "LoginRequest",
+    "TokenResponse",
+    "UserResponse",
     "SourceTypeEnum",
     "EssayStatusEnum",
     "EssayBase",
@@ -37,3 +45,4 @@ __all__ = [
     "JobDispatchResponse",
     "JobResponse",
 ]
+

@@ -7,6 +7,9 @@ import {
   JobDispatchResponse,
   JobResponse,
   ReviewerOverridePayload,
+  LoginPayload,
+  AuthResponse,
+  UserProfile,
 } from './types';
 
 // Export all types from index for convenient importing
@@ -22,9 +25,13 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Request & Response logging interceptors for debugging and verification
+// Request & Response logging interceptors with JWT token injection
 apiClient.interceptors.request.use(
   (config) => {
+    const token = localStorage.getItem('aes_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, config.data || '');
     return config;
   },
@@ -41,6 +48,10 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     console.error(`[HTTP Response Error] ${error.response?.status || 'Network Error'} ${error.config?.url}:`, error.response?.data || error.message);
+    // If 401 Unauthorized received and not on login page, optionally clear token
+    if (error.response?.status === 401) {
+      console.warn('[HTTP Response Error] Unauthorized (401). Token may be expired.');
+    }
     return Promise.reject(error);
   }
 );
@@ -117,4 +128,27 @@ export const submitReview = async (
   console.log('[API Call] submitReview success:', response.data);
   return response.data;
 };
+
+/**
+ * Authenticate with email and password to retrieve a JWT access token.
+ * POST /api/v1/auth/login
+ */
+export const login = async (payload: LoginPayload): Promise<AuthResponse> => {
+  console.log('[API Call] login executing for:', payload.email);
+  const response = await apiClient.post<AuthResponse>('/auth/login', payload);
+  console.log('[API Call] login success:', response.data.email, response.data.role);
+  return response.data;
+};
+
+/**
+ * Retrieve current authenticated user profile.
+ * GET /api/v1/auth/me
+ */
+export const getCurrentUser = async (): Promise<UserProfile> => {
+  console.log('[API Call] getCurrentUser executing...');
+  const response = await apiClient.get<UserProfile>('/auth/me');
+  console.log('[API Call] getCurrentUser success:', response.data);
+  return response.data;
+};
+
 

@@ -101,3 +101,25 @@ export interface ReviewerOverridePayload {
   reviewer_override_reason: string;
 }
 
+export type UserRole = 'ADMIN' | 'TEACHER' | 'ML_ENGINEER' | 'VIEWER';
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  role: UserRole;
+}
+
+export interface LoginPayload {
+  email: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  role: UserRole;
+  email: string;
+  user_id: string;
+}
+
+

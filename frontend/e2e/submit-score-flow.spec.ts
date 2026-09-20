@@ -1,6 +1,13 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('End-to-End Submit -> Score -> Review Flow', () => {
+  test.beforeEach(async ({ page }) => {
+    // Authenticate as TEACHER before each test
+    await page.goto('/login');
+    await page.locator('#btn-demo-teacher').click();
+    await page.waitForURL('/');
+  });
+
   test('submits an essay, dispatches AI scoring, polls through lifecycle, and renders Score Workspace', async ({ page }) => {
     // 1. Visit the submission page
     await page.goto('/');
