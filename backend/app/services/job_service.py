@@ -8,7 +8,7 @@ Implements:
 
 from datetime import datetime, timezone
 import logging
-from typing import Optional
+from typing import Any, Optional, Union
 import uuid
 from uuid import UUID
 
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 def create_scoring_job(
     db: Session,
-    essay_id: UUID,
+    essay_id: Union[UUID, Any],
     priority: int = 100,
     max_attempts: int = 3,
 ) -> Job:

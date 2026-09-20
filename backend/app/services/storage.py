@@ -2,6 +2,8 @@
 
 import io
 import logging
+import os
+from pathlib import Path
 from typing import BinaryIO, Optional, Union
 import boto3
 from botocore.client import Config
@@ -11,12 +13,13 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+LOCAL_STORAGE_DIR = Path(".storage")
 
 _DEFAULT = object()
 
 
 class StorageService:
-    """Service wrapper for S3-compatible object storage (e.g. MinIO or AWS S3)."""
+    """Service wrapper for S3-compatible object storage (e.g. MinIO or AWS S3) with local fallback."""
 
     def __init__(
         self,
@@ -57,24 +60,36 @@ class StorageService:
         )
 
         endpoint = str(self.endpoint_url) if self.endpoint_url else None
-        self.s3_client = boto3.client(
-            "s3",
-            region_name=self.region_name,
-            aws_access_key_id=self.access_key,
-            aws_secret_access_key=self.secret_key,
-            endpoint_url=endpoint,
-            config=Config(
-                signature_version="s3v4",
-                s3={"addressing_style": "path"},  # Path-style addressing required for MinIO
-            ),
-        )
+        try:
+            self.s3_client = boto3.client(
+                "s3",
+                region_name=self.region_name,
+                aws_access_key_id=self.access_key,
+                aws_secret_access_key=self.secret_key,
+                endpoint_url=endpoint,
+                config=Config(
+                    signature_version="s3v4",
+                    s3={"addressing_style": "path"},  # Path-style addressing required for MinIO
+                    connect_timeout=1,
+                    read_timeout=1,
+                ),
+            )
+        except Exception:
+            self.s3_client = None
 
     def ensure_bucket_exists(self) -> None:
         """Create the target bucket if it does not already exist."""
+        client = self.s3_client
+        if client is None:
+            (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(parents=True, exist_ok=True)
+            return
+
         try:
-            self.s3_client.head_bucket(Bucket=self.bucket_name)
-        except ClientError as exc:
-            error_code = exc.response.get("Error", {}).get("Code", "")
+            client.head_bucket(Bucket=self.bucket_name)
+        except Exception as exc:
+            error_code = ""
+            if isinstance(exc, ClientError):
+                error_code = exc.response.get("Error", {}).get("Code", "")
             if error_code in ("404", "NoSuchBucket"):
                 create_kwargs = {"Bucket": self.bucket_name}
                 if self.region_name and self.region_name != "us-east-1":
@@ -82,14 +97,13 @@ class StorageService:
                         "LocationConstraint": self.region_name
                     }
                 try:
-                    self.s3_client.create_bucket(**create_kwargs)
+                    client.create_bucket(**create_kwargs)
                     logger.info(f"Created S3 bucket '{self.bucket_name}'.")
-                except ClientError as create_exc:
-                    create_err = create_exc.response.get("Error", {}).get("Code", "")
-                    if create_err not in ("BucketAlreadyOwnedByYou", "BucketAlreadyExists"):
-                        raise create_exc
+                except Exception as create_exc:
+                    logger.warning(f"Could not create S3 bucket: {create_exc}. Using local directory.")
+                    (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(parents=True, exist_ok=True)
             else:
-                raise exc
+                (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(parents=True, exist_ok=True)
 
     def upload_file(
         self,
@@ -97,16 +111,7 @@ class StorageService:
         key: str,
         content_type: Optional[str] = None,
     ) -> str:
-        """Upload raw bytes or file-like object to S3-compatible storage.
-
-        Args:
-            file_bytes: In-memory bytes or readable binary stream.
-            key: Destination storage key / path inside the bucket.
-            content_type: Optional MIME content type.
-
-        Returns:
-            The storage key under which the object is stored.
-        """
+        """Upload raw bytes or file-like object to S3 or fallback to local storage."""
         extra_args = {}
         if content_type:
             extra_args["ContentType"] = content_type
@@ -117,25 +122,37 @@ class StorageService:
         else:
             stream = file_bytes
 
-        # Rewind stream if seekable
         if hasattr(stream, "seek"):
             try:
                 stream.seek(0)
             except Exception:
                 pass
 
-        try:
-            self.s3_client.upload_fileobj(
-                Fileobj=stream,
-                Bucket=self.bucket_name,
-                Key=key,
-                ExtraArgs=extra_args if extra_args else None,
-            )
-            logger.info(f"Uploaded file to '{self.bucket_name}/{key}'.")
-            return key
-        except ClientError as exc:
-            logger.error(f"Failed to upload file to S3 key '{key}': {exc}")
-            raise exc
+        client = self.s3_client
+        if client is not None:
+            try:
+                client.upload_fileobj(
+                    Fileobj=stream,
+                    Bucket=self.bucket_name,
+                    Key=key,
+                    ExtraArgs=extra_args if extra_args else None,
+                )
+                logger.info(f"Uploaded file to '{self.bucket_name}/{key}'.")
+                return key
+            except Exception as exc:
+                logger.warning(f"S3 upload failed ({exc}). Falling back to local storage for key '{key}'.")
+
+        # Local filesystem fallback
+        target = LOCAL_STORAGE_DIR / self.bucket_name / key
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if hasattr(stream, "seek"):
+            try:
+                stream.seek(0)
+            except Exception:
+                pass
+        target.write_bytes(stream.read())
+        logger.info(f"Persisted file locally to '{target}'.")
+        return key
 
     def get_presigned_url(
         self,
@@ -143,48 +160,41 @@ class StorageService:
         expires_in: int = 3600,
         http_method: str = "get_object",
     ) -> str:
-        """Generate a presigned URL for downloading or accessing a stored object.
+        """Generate a presigned URL or return fallback local path."""
+        client = self.s3_client
+        if client is not None:
+            try:
+                url = client.generate_presigned_url(
+                    ClientMethod=http_method,
+                    Params={
+                        "Bucket": self.bucket_name,
+                        "Key": storage_key,
+                    },
+                    ExpiresIn=expires_in,
+                )
+                return url
+            except Exception as exc:
+                logger.debug(f"S3 presigned URL generation failed: {exc}")
 
-        Args:
-            storage_key: The storage key inside the bucket.
-            expires_in: Expiration time in seconds (default: 3600).
-            http_method: Client operation, typically 'get_object'.
-
-        Returns:
-            Presigned URL string.
-        """
-        try:
-            url = self.s3_client.generate_presigned_url(
-                ClientMethod=http_method,
-                Params={
-                    "Bucket": self.bucket_name,
-                    "Key": storage_key,
-                },
-                ExpiresIn=expires_in,
-            )
-            return url
-        except ClientError as exc:
-            logger.error(f"Failed to generate presigned URL for '{storage_key}': {exc}")
-            raise exc
+        return f"/api/v1/storage/{self.bucket_name}/{storage_key}"
 
     def download_file(self, storage_key: str) -> bytes:
-        """Download object bytes from the storage bucket.
+        """Download object bytes from the storage bucket or local disk."""
+        client = self.s3_client
+        if client is not None:
+            try:
+                response = client.get_object(
+                    Bucket=self.bucket_name,
+                    Key=storage_key,
+                )
+                return response["Body"].read()
+            except Exception as exc:
+                logger.debug(f"S3 download failed: {exc}")
 
-        Args:
-            storage_key: The storage key inside the bucket.
-
-        Returns:
-            Raw bytes of the retrieved object.
-        """
-        try:
-            response = self.s3_client.get_object(
-                Bucket=self.bucket_name,
-                Key=storage_key,
-            )
-            return response["Body"].read()
-        except ClientError as exc:
-            logger.error(f"Failed to download S3 key '{storage_key}': {exc}")
-            raise exc
+        target = LOCAL_STORAGE_DIR / self.bucket_name / storage_key
+        if target.is_file():
+            return target.read_bytes()
+        raise FileNotFoundError(f"Storage key '{storage_key}' not found locally or in S3.")
 
     def delete_file(self, storage_key: str) -> bool:
         """Delete an object from the bucket.
@@ -195,28 +205,42 @@ class StorageService:
         Returns:
             True if deletion was issued.
         """
-        try:
-            self.s3_client.delete_object(
-                Bucket=self.bucket_name,
-                Key=storage_key,
-            )
+        client = self.s3_client
+        if client is not None:
+            try:
+                client.delete_object(
+                    Bucket=self.bucket_name,
+                    Key=storage_key,
+                )
+                return True
+            except ClientError as exc:
+                logger.error(f"Failed to delete S3 key '{storage_key}': {exc}")
+                raise exc
+
+        target = LOCAL_STORAGE_DIR / self.bucket_name / storage_key
+        if target.is_file():
+            target.unlink()
             return True
-        except ClientError as exc:
-            logger.error(f"Failed to delete S3 key '{storage_key}': {exc}")
-            raise exc
+        return False
 
     def file_exists(self, storage_key: str) -> bool:
         """Check if an object exists in the bucket."""
-        try:
-            self.s3_client.head_object(
-                Bucket=self.bucket_name,
-                Key=storage_key,
-            )
-            return True
-        except ClientError as exc:
-            if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):
-                return False
-            raise exc
+        client = self.s3_client
+        if client is not None:
+            try:
+                client.head_object(
+                    Bucket=self.bucket_name,
+                    Key=storage_key,
+                )
+                return True
+            except ClientError as exc:
+                if exc.response.get("Error", {}).get("Code") in ("404", "NoSuchKey"):
+                    return False
+                raise exc
+
+        target = LOCAL_STORAGE_DIR / self.bucket_name / storage_key
+        return target.is_file()
+
 
 
 def get_storage_service() -> StorageService:

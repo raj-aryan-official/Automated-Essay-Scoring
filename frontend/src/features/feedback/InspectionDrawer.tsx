@@ -121,7 +121,7 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="font-bold text-xs uppercase tracking-wider text-slate-200">
-                      {idx + 1}. {dim.dimension}
+                      {idx + 1}. {dim.dimension.charAt(0).toUpperCase() + dim.dimension.slice(1).toLowerCase()}
                     </span>
                     <span
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${severity.badgeClass}`}

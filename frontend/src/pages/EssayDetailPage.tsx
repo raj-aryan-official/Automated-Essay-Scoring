@@ -48,8 +48,10 @@ export const EssayDetailPage: React.FC = () => {
       const data = await getEssay(essayId);
       setEssay(data);
 
-      if (data.status === 'SCORED') {
+      if (data.status === 'SCORED' || data.status === 'FEEDBACK_READY') {
         await loadScore(essayId);
+      } else if (data.status === 'QUEUED' || data.status === 'PROCESSING') {
+        startEssayPolling(essayId);
       }
     } catch (err: any) {
       console.error('[EssayDetailPage] Error loading essay:', err);
@@ -85,13 +87,8 @@ export const EssayDetailPage: React.FC = () => {
       const dispatchRes = await dispatchScoring(id);
       console.log('[EssayDetailPage] Job dispatched:', dispatchRes);
 
-      // Start elapsed timer
-      elapsedTimerRef.current = setInterval(() => {
-        setPollSecondsElapsed((prev) => prev + 1);
-      }, 1000);
-
-      // Start polling worker status
-      startJobPolling(dispatchRes.job_id, id);
+      // Start polling worker status and essay status
+      startEssayPolling(id, dispatchRes.job_id);
     } catch (err: any) {
       console.error('[EssayDetailPage] Error dispatching scoring:', err);
       setError(err.response?.data?.detail || err.message || 'Failed to dispatch scoring job');
@@ -99,36 +96,56 @@ export const EssayDetailPage: React.FC = () => {
     }
   };
 
-  // 3. Poll GET /api/v1/jobs/{job_id} while QUEUED or PROCESSING
-  const startJobPolling = (jobId: string, essayId: string) => {
+  // 3. Poll while QUEUED or PROCESSING
+  const startEssayPolling = (essayId: string, jobId?: string) => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
-    pollTimerRef.current = setInterval(async () => {
+    setIsDispatching(true);
+    setPollSecondsElapsed(0);
+
+    elapsedTimerRef.current = window.setInterval(() => {
+      setPollSecondsElapsed((prev) => prev + 1);
+    }, 1000);
+
+    pollTimerRef.current = window.setInterval(async () => {
       try {
-        console.log(`[EssayDetailPage] Polling job ${jobId}...`);
-        const job = await getJobStatus(jobId);
-        setActiveJob(job);
+        if (jobId) {
+          try {
+            const job = await getJobStatus(jobId);
+            setActiveJob(job);
+            if (job.status === 'FAILED') {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+              if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+              setIsDispatching(false);
+              setError(`Scoring job failed: ${job.error_message || 'Worker execution failed'}`);
+              return;
+            }
+          } catch (jobErr) {
+            console.debug('Error checking job status:', jobErr);
+          }
+        }
 
-        if (job.status === 'COMPLETED') {
-          console.log('[EssayDetailPage] Job COMPLETED! Auto-transitioning to score view...');
+        const currentEssay = await getEssay(essayId);
+        setEssay(currentEssay);
+
+        if (currentEssay.status === 'SCORED' || currentEssay.status === 'FEEDBACK_READY') {
+          console.log('[EssayDetailPage] Essay reached scored state! Auto-transitioning to score view...');
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
           setIsDispatching(false);
-          // Auto-transition: fetch updated essay and score
-          const updatedEssay = await getEssay(essayId);
-          setEssay(updatedEssay);
           await loadScore(essayId);
-        } else if (job.status === 'FAILED') {
-          console.warn('[EssayDetailPage] Job FAILED:', job.error_message);
+        } else if (currentEssay.status === 'FAILED') {
+          console.warn('[EssayDetailPage] Essay status is FAILED');
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
 
           setIsDispatching(false);
-          setError(`Scoring job failed: ${job.error_message || 'Worker execution failed'}`);
+          setError('Scoring failed for this essay.');
         }
       } catch (pollErr: any) {
-        console.error('[EssayDetailPage] Error during job polling:', pollErr);
+        console.error('[EssayDetailPage] Error during polling:', pollErr);
       }
     }, 1500);
   };
@@ -173,7 +190,7 @@ export const EssayDetailPage: React.FC = () => {
           <span
             id="essay-status-pill"
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-              essay?.status === 'SCORED'
+              essay?.status === 'SCORED' || essay?.status === 'FEEDBACK_READY'
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                 : essay?.status === 'PROCESSING' || isDispatching
                 ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse'
@@ -185,7 +202,7 @@ export const EssayDetailPage: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3">
-          {essay?.status !== 'SCORED' && !isDispatching && (
+          {essay?.status !== 'SCORED' && essay?.status !== 'FEEDBACK_READY' && !isDispatching && (
             <button
               id="btn-dispatch-scoring"
               type="button"

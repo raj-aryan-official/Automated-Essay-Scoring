@@ -2,6 +2,7 @@
 
 import sys
 import uuid
+from uuid import UUID
 from pathlib import Path
 from typing import Generator
 import pytest
@@ -124,8 +125,8 @@ def test_stub_predict_score_bounds():
 
 
 def test_worker_successful_job_execution(db_session: Session, seed_essay: Essay):
-    """Verify worker processes a queued job to COMPLETED and sets essay status to SCORED."""
-    job = create_scoring_job(db_session, essay_id=seed_essay.id)
+    """Verify worker processes a queued job to COMPLETED and sets essay status to SCORED or FEEDBACK_READY."""
+    job = create_scoring_job(db_session, essay_id=UUID(str(seed_essay.id)))
     assert job.status == "QUEUED"
     assert job.attempts == 0
     assert job.completed_at is None
@@ -139,10 +140,10 @@ def test_worker_successful_job_execution(db_session: Session, seed_essay: Essay)
     assert completed_job.error_message is None
     assert completed_job.attempts == 1
 
-    # Verify essay transitioned to SCORED
+    # Verify essay transitioned to SCORED or FEEDBACK_READY
     essay_in_db = db_session.query(Essay).filter(Essay.id == seed_essay.id).first()
     assert essay_in_db is not None
-    assert essay_in_db.status == "SCORED"
+    assert essay_in_db.status in ("SCORED", "FEEDBACK_READY")
 
 
 def test_test_005_simulated_worker_crash_and_retries(db_session: Session, seed_essay: Essay):
@@ -160,7 +161,7 @@ def test_test_005_simulated_worker_crash_and_retries(db_session: Session, seed_e
     db_session.commit()
 
     # Create job with max_attempts=3
-    job = create_scoring_job(db_session, essay_id=seed_essay.id, max_attempts=3)
+    job = create_scoring_job(db_session, essay_id=UUID(str(seed_essay.id)), max_attempts=3)
     assert job.status == "QUEUED"
     assert job.attempts == 0
 
@@ -223,7 +224,7 @@ def test_worker_real_model_scoring_and_dimension_feedback_persistence(
     db_session.query(InferenceRun).delete()
     db_session.commit()
 
-    job = create_scoring_job(db_session, essay_id=seed_essay.id)
+    job = create_scoring_job(db_session, essay_id=UUID(str(seed_essay.id)))
     assert job.status == "QUEUED"
 
     # Execute worker with real scoring model and feedback generator
@@ -232,10 +233,10 @@ def test_worker_real_model_scoring_and_dimension_feedback_persistence(
     assert completed_job.status == "COMPLETED"
     assert completed_job.completed_at is not None
 
-    # Verify essay transitioned to SCORED
+    # Verify essay transitioned to SCORED or FEEDBACK_READY
     essay_scored = db_session.query(Essay).filter(Essay.id == seed_essay.id).first()
     assert essay_scored is not None
-    assert essay_scored.status == "SCORED"
+    assert essay_scored.status in ("SCORED", "FEEDBACK_READY")
 
     # Verify inference_run record
     inf_run = db_session.query(InferenceRun).filter(InferenceRun.essay_id == seed_essay.id).first()
@@ -263,7 +264,7 @@ def test_worker_real_model_scoring_and_dimension_feedback_persistence(
 
     for fb in feedbacks:
         assert fb.score_id == score.id
-        assert len(fb.feedback_text) > 0
+        assert len(str(fb.feedback_text)) > 0
         assert fb.sub_score is not None
         assert seed_prompt.rubric_min <= fb.sub_score <= seed_prompt.rubric_max
 

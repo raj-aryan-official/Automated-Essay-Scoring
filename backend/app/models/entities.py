@@ -42,6 +42,12 @@ def compile_jsonb_sqlite(type_, compiler, **kw):
     return "JSON"
 
 
+@compiles(UUID, "sqlite")
+def compile_uuid_sqlite(type_, compiler, **kw):
+    """Render PostgreSQL UUID as CHAR(36) for SQLite compatibility."""
+    return "CHAR(36)"
+
+
 
 class User(Base):
     __tablename__ = "users"

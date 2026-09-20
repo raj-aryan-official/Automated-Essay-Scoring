@@ -62,11 +62,13 @@ _scoring_model: Optional[EssayScoringModel] = None
 _feedback_generator: Optional[DimensionFeedbackGenerator] = None
 
 
-def get_scoring_model() -> EssayScoringModel:
-    """Lazily instantiate and return the singleton EssayScoringModel."""
+def get_scoring_model(prompt_id: Optional[str] = "1") -> EssayScoringModel:
+    """Lazily instantiate and return the singleton EssayScoringModel loaded with prompt checkpoint."""
     global _scoring_model
     if _scoring_model is None:
-        _scoring_model = BertEssayScoringModel()
+        ckpt_meta = REPO_ROOT / "inference" / "checkpoints" / (prompt_id or "1") / "checkpoint_metadata.json"
+        config_path = str(ckpt_meta) if ckpt_meta.is_file() else None
+        _scoring_model = BertEssayScoringModel(config_path=config_path)
     return _scoring_model
 
 
@@ -127,7 +129,8 @@ def process_job(
     - Generates pedagogical feedback for all three dimensions (grammar, coherence, argumentation)
       via DimensionFeedbackGenerator.generate_feedback().
     - Persists results into inference_runs, scores, and dimension_feedback tables matching the schema.
-    - On success: status=COMPLETED, completed_at=now, essay.status=SCORED.
+    - Transitions essay status: SCORED upon score persistence, then FEEDBACK_READY upon feedback persistence.
+    - On success: status=COMPLETED, completed_at=now, essay.status=FEEDBACK_READY.
     - On exception: records error_message, sets status=FAILED if attempts >= max_attempts
       else requeues as QUEUED for retry.
     """
@@ -178,14 +181,14 @@ def process_job(
             sub_scores = pred_dict.get("dimension_scores", {})
         else:
             # Real EssayScoringModel inference
-            model = scoring_model or get_scoring_model()
+            model = scoring_model or get_scoring_model(prompt_id_str)
             generator = feedback_gen or get_feedback_generator()
 
             prediction: ScorePrediction = model.predict_essay(raw_text, prompt_id=prompt_id_str)
             holistic_score = float(prediction.holistic_score)
-            rubric_band = str(prediction.rubric_band)
+            rubric_band = prediction.rubric_band
             confidence = float(prediction.confidence)
-            inference_ms = int(prediction.inference_ms or 200)
+            inference_ms = prediction.inference_ms or 200
             device_used = str(getattr(model, "device", "cpu"))
             sub_scores = prediction.dimension_scores or {}
 
@@ -210,7 +213,7 @@ def process_job(
                     version="v1.0.0",
                     framework="PyTorch",
                     architecture="BERT+RegressionHead",
-                    weights_storage_key="checkpoints/bert_aes_v1.pt",
+                    weights_storage_key=f"checkpoints/{prompt_id_str}/regression_head.pt",
                     metrics={},
                     status="PRODUCTION",
                 )
@@ -240,6 +243,10 @@ def process_job(
                 confidence=confidence,
             )
             db.add(score_record)
+
+            # Transition status to SCORED
+            setattr(essay, "status", "SCORED")
+            db.add(essay)
             db.flush()
 
             # Insert dimension_feedback rows for all three dimensions
@@ -254,6 +261,11 @@ def process_job(
                 )
                 db.add(dim_feedback)
 
+            # Transition status to FEEDBACK_READY
+            setattr(essay, "status", "FEEDBACK_READY")
+            db.add(essay)
+            db.flush()
+
         except Exception as model_rec_err:
             logger.debug(
                 f"Skipping model/score record persistence (e.g. test isolation): {model_rec_err}"
@@ -264,15 +276,17 @@ def process_job(
         setattr(job, "completed_at", datetime.now(timezone.utc))
         setattr(job, "error_message", None)
 
-        setattr(essay, "status", "SCORED")
+        if getattr(essay, "status", None) not in ("SCORED", "FEEDBACK_READY"):
+            setattr(essay, "status", "FEEDBACK_READY")
         db.add(essay)
         db.add(job)
         db.commit()
         db.refresh(job)
+        db.refresh(essay)
 
         logger.info(
             f"Job {job.id} COMPLETED successfully: "
-            f"score={holistic_score}, band={rubric_band}"
+            f"score={holistic_score}, band={rubric_band}, status={essay.status}"
         )
         return job
 

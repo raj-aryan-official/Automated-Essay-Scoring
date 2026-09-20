@@ -22,16 +22,26 @@ def _create_sync_engine():
 
     try:
         eng = create_engine(sync_url, **engine_kwargs)
-        # Probe dialect driver
-        _ = eng.dialect
+        # Probe connection if not sqlite
+        if not is_sqlite:
+            with eng.connect() as conn:
+                pass
         return eng
     except Exception as exc:
         logger.warning(
-            f"Failed to initialize primary database engine for {sync_url}: {exc}. "
+            f"Failed to connect to primary database at {sync_url}: {exc}. "
             "Falling back to local SQLite engine."
         )
         fallback_url = "sqlite:///./local_dev.db"
         return create_engine(fallback_url, connect_args={"check_same_thread": False})
+
+
+def init_db(target_engine=None):
+    """Initialize all database tables from declared ORM entities."""
+    from app.models.entities import Base as ModelsBase
+    eng = target_engine or engine
+    ModelsBase.metadata.create_all(bind=eng)
+    logger.info("Database schema verified / initialized successfully.")
 
 
 def _create_async_engine():
