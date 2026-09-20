@@ -35,46 +35,6 @@ from app.models.entities import (
 )
 
 
-@pytest.fixture(scope="session")
-def test_engine():
-    eng = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    User.__table__.create(bind=eng)
-    Prompt.__table__.create(bind=eng)
-    Essay.__table__.create(bind=eng)
-    Job.__table__.create(bind=eng)
-    ModelEntity.__table__.create(bind=eng)
-    InferenceRun.__table__.create(bind=eng)
-    Score.__table__.create(bind=eng)
-    DimensionFeedback.__table__.create(bind=eng)
-    return eng
-
-
-@pytest.fixture
-def db_session(test_engine):
-    TestingSessionLocal = sessionmaker(
-        autocommit=False, autoflush=False, bind=test_engine
-    )
-    session = TestingSessionLocal()
-    yield session
-    session.rollback()
-    session.close()
-
-
-@pytest.fixture
-def client(db_session):
-    def override_get_db():
-        yield db_session
-
-    app.dependency_overrides[get_db] = override_get_db
-    with TestClient(app) as c:
-        yield c
-    app.dependency_overrides.clear()
-
-
 @pytest.fixture
 def seed_data(db_session):
     uid = uuid.uuid4().hex[:8]

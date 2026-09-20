@@ -33,79 +33,11 @@ for p in (str(BACKEND_DIR), str(INFERENCE_DIR)):
 
 from app.api.deps import get_db
 from app.main import app
+# app/services/storage import if needed
 from app.models.entities import Essay, Job, Prompt, User
 from app.services.job_service import claim_next_job, create_scoring_job, get_job_by_id
-from app.services.storage import StorageService, get_storage_service
+from app.services.storage import StorageService
 from worker import poll_and_process_once, process_job
-
-
-@pytest.fixture(scope="session")
-def test_engine():
-    """Create in-memory SQLite engine with StaticPool for thread-safe test isolation."""
-    eng = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    # Create required tables
-    User.__table__.create(bind=eng)
-    Prompt.__table__.create(bind=eng)
-    Essay.__table__.create(bind=eng)
-    Job.__table__.create(bind=eng)
-    return eng
-
-
-@pytest.fixture
-def db_session(test_engine) -> Generator[Session, None, None]:
-    """Provide a transactional database session rolled back after each test."""
-    TestingSession = sessionmaker(bind=test_engine, expire_on_commit=False)
-    session = TestingSession()
-    try:
-        yield session
-    finally:
-        session.close()
-
-
-@pytest.fixture
-def client(test_engine) -> Generator[TestClient, None, None]:
-    """FastAPI TestClient with get_db and get_storage_service overridden."""
-    TestingSession = sessionmaker(bind=test_engine, expire_on_commit=False)
-
-    def _override_get_db():
-        session = TestingSession()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    def _override_get_storage():
-        return StorageService(endpoint_url=None)
-
-    app.dependency_overrides[get_db] = _override_get_db
-    app.dependency_overrides[get_storage_service] = _override_get_storage
-    test_client = TestClient(app)
-    try:
-        yield test_client
-    finally:
-        app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def seed_prompt(db_session: Session) -> Prompt:
-    """Seed a sample prompt for testing."""
-    existing = db_session.query(Prompt).filter(Prompt.asap_set_id == 1).first()
-    if existing:
-        return existing
-    prompt = Prompt(
-        id=uuid.uuid4(),
-        asap_set_id=1,
-        title="Prompt 1: Technology in society",
-        rubric_min=2.0,
-        rubric_max=12.0,
-    )
-    db_session.add(prompt)
-    db_session.commit()
-    return prompt
 
 
 @pytest.fixture

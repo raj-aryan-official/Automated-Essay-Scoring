@@ -294,7 +294,7 @@ async def submit_essay(
                 storage_bucket = storage.bucket_name
 
     # Ensure user exists for foreign key constraint
-    user = current_user if current_user else _get_or_create_user(db, submitted_by_id)
+    user = _get_or_create_user(db, submitted_by_id) if submitted_by_id else current_user
 
     # Persist the essay record with status=SUBMITTED
     essay = Essay(

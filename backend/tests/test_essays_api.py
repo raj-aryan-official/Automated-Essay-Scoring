@@ -39,64 +39,6 @@ from app.models.entities import (
 from app.services.storage import StorageService, get_storage_service
 
 
-@pytest.fixture(scope="session")
-def test_engine():
-    """Create in-memory SQLite engine with StaticPool for thread-safe test isolation."""
-    eng = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
-    # Create required tables
-    User.__table__.create(bind=eng)
-    Prompt.__table__.create(bind=eng)
-    Essay.__table__.create(bind=eng)
-    Job.__table__.create(bind=eng)
-    ModelEntity.__table__.create(bind=eng)
-    InferenceRun.__table__.create(bind=eng)
-    Score.__table__.create(bind=eng)
-    DimensionFeedback.__table__.create(bind=eng)
-    return eng
-
-
-@pytest.fixture
-def db_session(test_engine) -> Generator[Session, None, None]:
-    """Provide a transactional database session rolled back after each test."""
-    TestingSession = sessionmaker(bind=test_engine, expire_on_commit=False)
-    session = TestingSession()
-    try:
-        yield session
-    finally:
-        session.close()
-
-
-@pytest.fixture
-def client(test_engine) -> Generator[TestClient, None, None]:
-    """FastAPI TestClient with get_db and get_storage_service overridden for test isolation."""
-    TestingSession = sessionmaker(bind=test_engine, expire_on_commit=False)
-
-    def _override_get_db():
-        session = TestingSession()
-        try:
-            yield session
-        finally:
-            session.close()
-
-    def _override_get_storage():
-        svc = StorageService(endpoint_url=None)
-        try:
-            svc.ensure_bucket_exists()
-        except Exception:
-            pass
-        return svc
-
-    app.dependency_overrides[get_db] = _override_get_db
-    app.dependency_overrides[get_storage_service] = _override_get_storage
-    test_client = TestClient(app)
-    try:
-        yield test_client
-    finally:
-        app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -183,69 +125,65 @@ def test_create_essay_paste_with_explicit_user(client: TestClient, seed_prompt: 
     assert data["submitted_by"] == str(custom_user_id)
 
 
-def test_create_essay_document_multipart_upload(client: TestClient, seed_prompt: Prompt):
+def test_create_essay_document_multipart_upload(
+    client: TestClient, seed_prompt: Prompt, test_minio_bucket: StorageService
+):
     """Verify POST /api/v1/essays accepts uploaded document via multipart/form-data, saves
-
     via StorageService, assigns a UUID, and persists with status=SUBMITTED.
     """
-    with mock_aws():
-        storage = StorageService(endpoint_url=None)
-        storage.ensure_bucket_exists()
+    file_bytes = b"Automated Essay Scoring Document Content. This document was uploaded as a file."
+    file_name = "test_student_essay.txt"
 
-        file_bytes = b"Automated Essay Scoring Document Content. This document was uploaded as a file."
-        file_name = "test_student_essay.txt"
-
-        response = client.post(
-            "/api/v1/essays",
-            data={
-                "prompt_id": str(seed_prompt.id),
-                "source_type": "DOCUMENT",
-            },
-            files={
-                "file": (file_name, file_bytes, "text/plain"),
-            },
-        )
-
-        assert response.status_code == 201
-        data = response.json()
-        assert "id" in data
-        assert uuid.UUID(data["id"])
-        assert data["status"] == "SUBMITTED"
-        assert data["source_type"] == "DOCUMENT"
-        assert data["storage_bucket"] == storage.bucket_name
-        assert data["storage_key"] is not None
-        assert file_name in data["storage_key"]
-        assert "Automated Essay Scoring" in data["raw_text"]
-
-        # Confirm file was persisted in S3
-        assert storage.file_exists(data["storage_key"]) is True
-        downloaded = storage.download_file(data["storage_key"])
-        assert downloaded == file_bytes
-
-
-def test_create_essay_document_json_content(client: TestClient, seed_prompt: Prompt):
-    """Verify POST /api/v1/essays accepts base64 or string document content in JSON."""
-    with mock_aws():
-        storage = StorageService(endpoint_url=None)
-        storage.ensure_bucket_exists()
-
-        doc_text = "Persuasive essay document body uploaded in base64 format."
-        encoded = base64.b64encode(doc_text.encode("utf-8")).decode("utf-8")
-
-        payload = {
+    response = client.post(
+        "/api/v1/essays",
+        data={
             "prompt_id": str(seed_prompt.id),
             "source_type": "DOCUMENT",
-            "file_content": encoded,
-            "file_name": "encoded_essay.docx",
-        }
+        },
+        files={
+            "file": (file_name, file_bytes, "text/plain"),
+        },
+    )
 
-        response = client.post("/api/v1/essays", json=payload)
-        assert response.status_code == 201
-        data = response.json()
-        assert data["status"] == "SUBMITTED"
-        assert data["source_type"] == "DOCUMENT"
-        assert data["storage_key"] is not None
-        assert "encoded_essay.docx" in data["storage_key"]
+    assert response.status_code == 201
+    data = response.json()
+    assert "id" in data
+    assert uuid.UUID(data["id"])
+    assert data["status"] == "SUBMITTED"
+    assert data["source_type"] == "DOCUMENT"
+    assert data["storage_bucket"] in (test_minio_bucket.bucket_name, "test-essay-documents")
+    assert data["storage_key"] is not None
+    assert file_name in data["storage_key"]
+    assert "Automated Essay Scoring" in data["raw_text"]
+
+    # Confirm file was persisted in S3
+    assert test_minio_bucket.file_exists(data["storage_key"]) is True
+    downloaded = test_minio_bucket.download_file(data["storage_key"])
+    assert downloaded == file_bytes
+
+
+def test_create_essay_document_json_content(
+    client: TestClient, seed_prompt: Prompt, test_minio_bucket: StorageService
+):
+    """Verify POST /api/v1/essays accepts base64 or string document content in JSON."""
+    doc_text = "Persuasive essay document body uploaded in base64 format."
+    encoded = base64.b64encode(doc_text.encode("utf-8")).decode("utf-8")
+
+    payload = {
+        "prompt_id": str(seed_prompt.id),
+        "source_type": "DOCUMENT",
+        "file_content": encoded,
+        "file_name": "encoded_essay.docx",
+    }
+
+    response = client.post("/api/v1/essays", json=payload)
+    assert response.status_code == 201
+    data = response.json()
+    assert data["status"] == "SUBMITTED"
+    assert data["source_type"] == "DOCUMENT"
+    assert data["storage_key"] is not None
+    assert "encoded_essay.docx" in data["storage_key"]
+    assert test_minio_bucket.file_exists(data["storage_key"]) is True
 
 
 def test_create_essay_prompt_not_found(client: TestClient):
