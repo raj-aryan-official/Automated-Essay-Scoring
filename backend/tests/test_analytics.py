@@ -75,7 +75,11 @@ def viewer_token(db_session: Session) -> str:
         db_session.commit()
         db_session.refresh(user)
 
-    return create_access_token(subject=str(user.id), role=user.role, email=user.email)
+    return create_access_token(
+        subject=str(user.id),
+        role=str(user.role),
+        email=str(user.email) if user.email else None,
+    )
 
 
 def test_evaluation_unauthenticated_returns_401(client: TestClient):

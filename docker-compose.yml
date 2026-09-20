@@ -15,10 +15,13 @@ services:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations/schema.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aes_user} -d ${POSTGRES_DB:-aes_db}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-aes_user} -d $${POSTGRES_DB:-aes_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    networks:
+      - aes_network
 
   minio:
     image: minio/minio:latest
@@ -38,12 +41,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+      start_period: 5s
+    networks:
+      - aes_network
 
   minio-init:
     image: minio/mc:latest
     container_name: aes_minio_init
     depends_on:
-      - minio
+      minio:
+        condition: service_healthy
     entrypoint: >
       /bin/sh -c "
       until /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER:-minioadmin} $${MINIO_ROOT_PASSWORD:-minioadmin}; do
@@ -52,12 +59,14 @@ services:
       done;
       /usr/bin/mc mb --ignore-existing myminio/${S3_BUCKET:-essay-documents};
       /usr/bin/mc anonymous set download myminio/${S3_BUCKET:-essay-documents} || true;
-      echo 'Default bucket ready.';
+      echo 'Default storage bucket ready.';
       exit 0;
       "
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    networks:
+      - aes_network
 
   backend:
     build:
@@ -69,38 +78,74 @@ services:
       postgres:
         condition: service_healthy
       minio:
-        condition: service_started
-    env_file:
-      - .env.example
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     environment:
+      PROJECT_NAME: "Automated Essay Scoring"
+      ENVIRONMENT: "production"
+      DEBUG: "False"
+      BACKEND_HOST: "0.0.0.0"
+      BACKEND_PORT: 8000
+      API_V1_STR: "/api/v1"
+      SECRET_KEY: ${SECRET_KEY:-replace_with_secure_random_secret_key}
+      JWT_SECRET: ${JWT_SECRET:-replace_with_secure_random_secret_key}
+      ACCESS_TOKEN_EXPIRE_MINUTES: 1440
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-aes_user}:${POSTGRES_PASSWORD:-aes_password}@postgres:5432/${POSTGRES_DB:-aes_db}
       DATABASE_SYNC_URL: postgresql://${POSTGRES_USER:-aes_user}:${POSTGRES_PASSWORD:-aes_password}@postgres:5432/${POSTGRES_DB:-aes_db}
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-aes_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aes_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aes_db}
       S3_ENDPOINT: http://minio:9000
       S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-essay-documents}
       S3_BUCKET_NAME: ${S3_BUCKET:-essay-documents}
+      S3_REGION: us-east-1
+      BACKEND_CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173","http://127.0.0.1:3000","http://127.0.0.1:5173"]'
     ports:
       - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - aes_network
 
-  inference-worker:
+  gpu-worker:
     build:
       context: ./inference
       dockerfile: Dockerfile.gpu
-    container_name: aes_inference_worker
+    container_name: aes_gpu_worker
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       minio:
-        condition: service_started
-    env_file:
-      - .env.example
+        condition: service_healthy
+      backend:
+        condition: service_healthy
     environment:
       DATABASE_SYNC_URL: postgresql://${POSTGRES_USER:-aes_user}:${POSTGRES_PASSWORD:-aes_password}@postgres:5432/${POSTGRES_DB:-aes_db}
       S3_ENDPOINT: http://minio:9000
       S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-essay-documents}
       S3_BUCKET_NAME: ${S3_BUCKET:-essay-documents}
+      MODEL_VERSION: ${MODEL_VERSION:-aes-bert-v1.0}
+      MODEL_BASE_NAME: ${MODEL_BASE_NAME:-bert-base-uncased}
+      INFERENCE_DEVICE: ${INFERENCE_DEVICE:-cpu}
+      CONFIDENCE_THRESHOLD: ${CONFIDENCE_THRESHOLD:-0.75}
+      BATCH_SIZE: ${BATCH_SIZE:-8}
+      WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-2.0}
+    networks:
+      - aes_network
 
   frontend:
     build:
@@ -109,10 +154,23 @@ services:
     container_name: aes_frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - aes_network
 
 volumes:
   postgres_data:
   minio_data:
+
+networks:
+  aes_network:
+    driver: bridge

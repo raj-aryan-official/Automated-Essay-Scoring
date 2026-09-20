@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, Union
 if not hasattr(bcrypt, "__about__"):
     class _About:
         __version__ = getattr(bcrypt, "__version__", "5.0.0")
-    bcrypt.__about__ = _About()
+    setattr(bcrypt, "__about__", _About())
 
 _orig_hashpw = bcrypt.hashpw
 def _safe_hashpw(password, salt):

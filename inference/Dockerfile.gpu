@@ -4,8 +4,14 @@ WORKDIR /workspace
 
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    HOME=/home/workeruser \
+    TRANSFORMERS_CACHE=/workspace/.cache \
+    HF_HOME=/workspace/.cache \
+    TORCH_HOME=/workspace/.cache \
+    PATH="/home/workeruser/.local/bin:$PATH"
 
+# Install system dependencies and Python 3.11
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
     python3.11-dev \
@@ -16,12 +22,26 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Point python and python3 to python3.11
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.11 1 \
     && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 
+# Create non-root system group and user
+RUN groupadd -g 1001 workergroup && \
+    useradd -u 1001 -g workergroup -m -s /bin/bash workeruser
+
+# Install Python requirements
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY . .
+# Create cache directories for huggingface/torch with appropriate ownership
+RUN mkdir -p /workspace/.cache /home/workeruser/.cache && \
+    chown -R workeruser:workergroup /workspace /home/workeruser
+
+# Copy inference application code with non-root ownership
+COPY --chown=workeruser:workergroup . .
+
+# Switch to non-root user
+USER workeruser
 
 CMD ["python", "worker.py"]
