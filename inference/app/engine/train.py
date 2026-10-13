@@ -13,14 +13,14 @@ Implements lightweight fine-tuning of BERT encoders using PEFT LoRA adapters:
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import json
 import logging
 import math
 import os
-from pathlib import Path
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 try:
     import yaml  # type: ignore
@@ -42,6 +42,7 @@ try:
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, Dataset
+
     TORCH_AVAILABLE = True
     _TrainModuleBase = nn.Module
 except ImportError:
@@ -58,6 +59,7 @@ try:
         AutoTokenizer,
         get_linear_schedule_with_warmup,
     )
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     AutoModel = None  # type: ignore
@@ -67,6 +69,7 @@ except ImportError:
 
 try:
     from peft import LoraConfig, TaskType, get_peft_model  # type: ignore
+
     PEFT_AVAILABLE = True
 except ImportError:
     LoraConfig = None  # type: ignore
@@ -76,6 +79,7 @@ except ImportError:
 
 try:
     from torch.utils.tensorboard import SummaryWriter  # type: ignore
+
     TENSORBOARD_AVAILABLE = True
 except ImportError:
     SummaryWriter = None  # type: ignore
@@ -85,11 +89,11 @@ except ImportError:
 class TensorBoardLogger:
     """Robust logger that writes to TensorBoard SummaryWriter if available, with file logging fallback."""
 
-    def __init__(self, log_dir: Union[str, Path]) -> None:
+    def __init__(self, log_dir: str | Path) -> None:
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         self.writer = None
-        self.scalar_history: List[Dict[str, Any]] = []
+        self.scalar_history: list[dict[str, Any]] = []
 
         if TENSORBOARD_AVAILABLE and SummaryWriter is not None:
             try:
@@ -99,12 +103,14 @@ class TensorBoardLogger:
 
     def add_scalar(self, tag: str, scalar_value: float, global_step: int) -> None:
         """Log scalar value for a given tag and step."""
-        self.scalar_history.append({
-            "tag": tag,
-            "value": float(scalar_value),
-            "step": int(global_step),
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        })
+        self.scalar_history.append(
+            {
+                "tag": tag,
+                "value": float(scalar_value),
+                "step": global_step,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
         if self.writer is not None:
             try:
@@ -116,11 +122,16 @@ class TensorBoardLogger:
         try:
             log_file = self.log_dir / "scalars.jsonl"
             with open(log_file, "a", encoding="utf-8") as f:
-                f.write(json.dumps({
-                    "tag": tag,
-                    "value": float(scalar_value),
-                    "step": int(global_step),
-                }) + "\n")
+                f.write(
+                    json.dumps(
+                        {
+                            "tag": tag,
+                            "value": float(scalar_value),
+                            "step": global_step,
+                        }
+                    )
+                    + "\n"
+                )
         except Exception:
             pass
 
@@ -136,7 +147,13 @@ class TensorBoardLogger:
 class EssayTorchDataset:
     """PyTorch Dataset wrapper for ASAP essays with normalized [0, 1] target scores."""
 
-    def __init__(self, texts: List[str], targets: List[float], tokenizer: Any, max_length: int = 512) -> None:
+    def __init__(
+        self,
+        texts: list[str],
+        targets: list[float],
+        tokenizer: Any,
+        max_length: int = 512,
+    ) -> None:
         self.texts = texts
         self.targets = targets
         self.tokenizer = tokenizer
@@ -145,8 +162,8 @@ class EssayTorchDataset:
     def __len__(self) -> int:
         return len(self.texts)
 
-    def __getitem__(self, idx: int) -> Dict[str, Any]:
-        text = str(self.texts[idx])
+    def __getitem__(self, idx: int) -> dict[str, Any]:
+        text = self.texts[idx]
         target = float(self.targets[idx])
 
         if self.tokenizer is not None and callable(self.tokenizer):
@@ -160,7 +177,11 @@ class EssayTorchDataset:
             return {
                 "input_ids": encoded["input_ids"].squeeze(0),
                 "attention_mask": encoded["attention_mask"].squeeze(0),
-                "target": torch.tensor(target, dtype=torch.float32) if torch is not None else target,
+                "target": (
+                    torch.tensor(target, dtype=torch.float32)
+                    if torch is not None
+                    else target
+                ),
             }
         return {"text": text, "target": target}
 
@@ -187,7 +208,12 @@ class BertLoRAEssayRegressor(_TrainModuleBase):  # type: ignore[misc]
                     encoder = loader(base_model_name)
 
             # 2. Apply LoRA/PEFT adapter if available
-            if PEFT_AVAILABLE and encoder is not None and LoraConfig is not None and get_peft_model is not None:
+            if (
+                PEFT_AVAILABLE
+                and encoder is not None
+                and LoraConfig is not None
+                and get_peft_model is not None
+            ):
                 lora_config = LoraConfig(
                     r=lora_r,
                     lora_alpha=lora_alpha,
@@ -196,7 +222,9 @@ class BertLoRAEssayRegressor(_TrainModuleBase):  # type: ignore[misc]
                     target_modules=["query", "value"],
                 )
                 self.encoder = get_peft_model(encoder, lora_config)
-                logger.info(f"Applied LoRA adapter (r={lora_r}, alpha={lora_alpha}) to BERT encoder.")
+                logger.info(
+                    f"Applied LoRA adapter (r={lora_r}, alpha={lora_alpha}) to BERT encoder."
+                )
             else:
                 self.encoder = encoder
 
@@ -218,10 +246,12 @@ class BertLoRAEssayRegressor(_TrainModuleBase):  # type: ignore[misc]
 
         self.hidden_dim = hidden_dim
 
-    def forward(self, input_ids: Any, attention_mask: Optional[Any] = None) -> Any:
+    def forward(self, input_ids: Any, attention_mask: Any | None = None) -> Any:
         """Forward pass through LoRA BERT encoder and regression head, followed by Sigmoid."""
         if self.encoder is not None and torch is not None and callable(self.encoder):
-            outputs: Any = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+            outputs: Any = self.encoder(
+                input_ids=input_ids, attention_mask=attention_mask
+            )
             if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
                 cls_rep = outputs.pooler_output
             elif hasattr(outputs, "last_hidden_state"):
@@ -243,7 +273,7 @@ class PromptTrainer:
     def __init__(
         self,
         prompt_id: int,
-        config_path: Optional[Union[str, Path]] = None,
+        config_path: str | Path | None = None,
         base_model: str = "bert-base-uncased",
         epochs: int = 5,
         batch_size: int = 8,
@@ -255,10 +285,10 @@ class PromptTrainer:
         lora_dropout: float = 0.05,
         hidden_dim: int = 256,
         max_sequence_length: int = 512,
-        checkpoint_dir: Optional[Union[str, Path]] = None,
-        log_dir: Optional[Union[str, Path]] = None,
-        dataset_path: Optional[Union[str, Path]] = None,
-        device: Optional[str] = None,
+        checkpoint_dir: str | Path | None = None,
+        log_dir: str | Path | None = None,
+        dataset_path: str | Path | None = None,
+        device: str | None = None,
     ) -> None:
         self.prompt_id = prompt_id
         self.base_model = base_model
@@ -280,16 +310,29 @@ class PromptTrainer:
 
         # Establish paths
         repo_root = Path(__file__).resolve().parent.parent.parent
-        self.checkpoint_dir = Path(checkpoint_dir) if checkpoint_dir else repo_root / "checkpoints" / str(self.prompt_id)
+        self.checkpoint_dir = (
+            Path(checkpoint_dir)
+            if checkpoint_dir
+            else repo_root / "checkpoints" / str(self.prompt_id)
+        )
         self.checkpoint_dir.mkdir(parents=True, exist_ok=True)
 
-        self.log_dir = Path(log_dir) if log_dir else repo_root / "runs" / f"prompt_{self.prompt_id}"
+        self.log_dir = (
+            Path(log_dir)
+            if log_dir
+            else repo_root / "runs" / f"prompt_{self.prompt_id}"
+        )
         self.log_dir.mkdir(parents=True, exist_ok=True)
 
         # Device selection
         if device:
             self.device = device
-        elif TORCH_AVAILABLE and torch is not None and hasattr(torch, "cuda") and torch.cuda.is_available():
+        elif (
+            TORCH_AVAILABLE
+            and torch is not None
+            and hasattr(torch, "cuda")
+            and torch.cuda.is_available()
+        ):
             self.device = "cuda"
         else:
             self.device = "cpu"
@@ -297,22 +340,26 @@ class PromptTrainer:
         self.tb_logger = TensorBoardLogger(self.log_dir)
         self.best_val_loss = float("inf")
 
-    def _load_yaml_config(self, config_path: Union[str, Path]) -> None:
+    def _load_yaml_config(self, config_path: str | Path) -> None:
         """Load hyperparameters from configuration file."""
         if yaml is None:
             logger.warning("PyYAML is not installed. Skipping YAML config loading.")
             return
         try:
-            with open(config_path, "r", encoding="utf-8") as f:
+            with open(config_path, encoding="utf-8") as f:
                 cfg = yaml.safe_load(f)
             if "model" in cfg:
                 self.base_model = cfg["model"].get("base_model", self.base_model)
-                self.max_sequence_length = int(cfg["model"].get("max_sequence_length", self.max_sequence_length))
+                self.max_sequence_length = int(
+                    cfg["model"].get("max_sequence_length", self.max_sequence_length)
+                )
                 self.hidden_dim = int(cfg["model"].get("hidden_dim", self.hidden_dim))
             if "training" in cfg:
                 t_cfg = cfg["training"]
                 self.batch_size = int(t_cfg.get("batch_size", self.batch_size))
-                self.learning_rate = float(t_cfg.get("learning_rate", self.learning_rate))
+                self.learning_rate = float(
+                    t_cfg.get("learning_rate", self.learning_rate)
+                )
                 self.weight_decay = float(t_cfg.get("weight_decay", self.weight_decay))
                 self.epochs = int(t_cfg.get("epochs", self.epochs))
                 self.warmup_ratio = float(t_cfg.get("warmup_ratio", self.warmup_ratio))
@@ -323,14 +370,18 @@ class PromptTrainer:
         except Exception as e:
             logger.warning(f"Failed to parse config file '{config_path}': {e}")
 
-    def load_data(self) -> Tuple[Any, Any, Any]:
+    def load_data(self) -> tuple[Any, Any, Any]:
         """Load and split ASAP dataset for prompt_id."""
         df = None
         if self.dataset_path and os.path.isfile(self.dataset_path):
             df = load_asap_dataset(self.dataset_path)
         else:
             # Check default inference/data path
-            default_data = Path(__file__).resolve().parent.parent.parent / "data" / "asap_essays.tsv"
+            default_data = (
+                Path(__file__).resolve().parent.parent.parent
+                / "data"
+                / "asap_essays.tsv"
+            )
             if default_data.is_file():
                 try:
                     df = load_asap_dataset(default_data)
@@ -338,7 +389,9 @@ class PromptTrainer:
                     df = None
 
         if df is None:
-            logger.info(f"Creating sample dataset for prompt {self.prompt_id} fine-tuning.")
+            logger.info(
+                f"Creating sample dataset for prompt {self.prompt_id} fine-tuning."
+            )
             df = create_sample_asap_dataset(samples_per_set=40)
 
         train_df, val_df, test_df = split_prompt_dataset(
@@ -355,9 +408,9 @@ class PromptTrainer:
         )
         return train_df, val_df, test_df
 
-    def train(self) -> Dict[str, Any]:
+    def train(self) -> dict[str, Any]:
         """Execute per-prompt fine-tuning loop."""
-        start_time = time.perf_counter()
+        time.perf_counter()
         logger.info(
             f"Starting fine-tuning for prompt {self.prompt_id} on {self.device} "
             f"(epochs={self.epochs}, batch_size={self.batch_size}, lr={self.learning_rate})"
@@ -366,16 +419,24 @@ class PromptTrainer:
         train_df, val_df, _ = self.load_data()
 
         # Check if full PyTorch + PEFT training is available in environment
-        if TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE and PEFT_AVAILABLE and torch is not None and AutoTokenizer is not None:
+        if (
+            TORCH_AVAILABLE
+            and TRANSFORMERS_AVAILABLE
+            and PEFT_AVAILABLE
+            and torch is not None
+            and AutoTokenizer is not None
+        ):
             try:
                 return self._train_torch(train_df, val_df)
             except Exception as e:
-                logger.warning(f"Error during PyTorch training execution: {e}. Falling back to simulation mode.")
+                logger.warning(
+                    f"Error during PyTorch training execution: {e}. Falling back to simulation mode."
+                )
                 return self._train_simulation(train_df, val_df)
         else:
             return self._train_simulation(train_df, val_df)
 
-    def _train_torch(self, train_df: Any, val_df: Any) -> Dict[str, Any]:
+    def _train_torch(self, train_df: Any, val_df: Any) -> dict[str, Any]:
         """Execute full PyTorch + PEFT LoRA training loop."""
         assert torch is not None and nn is not None and AutoTokenizer is not None
         assert DataLoader is not None and get_linear_schedule_with_warmup is not None
@@ -411,13 +472,17 @@ class PromptTrainer:
         val_loader = DataLoader(val_ds, batch_size=self.batch_size, shuffle=False)
 
         # Optimizer & Warmup Scheduler
-        optimizer = torch.optim.AdamW(model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay)
+        optimizer = torch.optim.AdamW(
+            model.parameters(), lr=self.learning_rate, weight_decay=self.weight_decay
+        )
         total_steps = len(train_loader) * self.epochs
         warmup_steps = max(1, int(total_steps * self.warmup_ratio))
-        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps)
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
+        )
 
         criterion = nn.MSELoss()
-        history: List[Dict[str, float]] = []
+        history: list[dict[str, float]] = []
 
         for epoch in range(1, self.epochs + 1):
             # Training phase
@@ -452,7 +517,11 @@ class PromptTrainer:
                     running_val_loss += loss.item() * len(targets)
 
             epoch_val_loss = running_val_loss / max(1, len(val_ds))
-            current_lr = scheduler.get_last_lr()[0] if hasattr(scheduler, "get_last_lr") else self.learning_rate
+            current_lr = (
+                scheduler.get_last_lr()[0]
+                if hasattr(scheduler, "get_last_lr")
+                else self.learning_rate
+            )
 
             # Log to TensorBoard
             self.tb_logger.add_scalar("loss/train", epoch_train_loss, epoch)
@@ -467,13 +536,17 @@ class PromptTrainer:
             # Save checkpoint if validation loss improves
             if epoch_val_loss < self.best_val_loss:
                 self.best_val_loss = epoch_val_loss
-                self._save_checkpoint(epoch, epoch_train_loss, epoch_val_loss, model=model)
+                self._save_checkpoint(
+                    epoch, epoch_train_loss, epoch_val_loss, model=model
+                )
 
-            history.append({
-                "epoch": epoch,
-                "train_loss": epoch_train_loss,
-                "val_loss": epoch_val_loss,
-            })
+            history.append(
+                {
+                    "epoch": epoch,
+                    "train_loss": epoch_train_loss,
+                    "val_loss": epoch_val_loss,
+                }
+            )
 
         self.tb_logger.close()
         return {
@@ -484,10 +557,12 @@ class PromptTrainer:
             "checkpoint_dir": str(self.checkpoint_dir),
         }
 
-    def _train_simulation(self, train_df: Any, val_df: Any) -> Dict[str, Any]:
+    def _train_simulation(self, train_df: Any, val_df: Any) -> dict[str, Any]:
         """Deterministic simulation of per-prompt training loop for constrained host environments."""
-        logger.info(f"Running deterministic LoRA training simulation for prompt {self.prompt_id}.")
-        history: List[Dict[str, float]] = []
+        logger.info(
+            f"Running deterministic LoRA training simulation for prompt {self.prompt_id}."
+        )
+        history: list[dict[str, float]] = []
 
         base_loss = 0.080
         for epoch in range(1, self.epochs + 1):
@@ -515,13 +590,17 @@ class PromptTrainer:
             # Checkpoint trigger on improving validation loss
             if epoch_val_loss < self.best_val_loss:
                 self.best_val_loss = epoch_val_loss
-                self._save_checkpoint(epoch, epoch_train_loss, epoch_val_loss, model=None)
+                self._save_checkpoint(
+                    epoch, epoch_train_loss, epoch_val_loss, model=None
+                )
 
-            history.append({
-                "epoch": epoch,
-                "train_loss": epoch_train_loss,
-                "val_loss": epoch_val_loss,
-            })
+            history.append(
+                {
+                    "epoch": epoch,
+                    "train_loss": epoch_train_loss,
+                    "val_loss": epoch_val_loss,
+                }
+            )
 
         self.tb_logger.close()
         return {
@@ -537,7 +616,7 @@ class PromptTrainer:
         epoch: int,
         train_loss: float,
         val_loss: float,
-        model: Optional[Any] = None,
+        model: Any | None = None,
     ) -> None:
         """Save best checkpoint and metadata."""
         logger.info(
@@ -550,11 +629,15 @@ class PromptTrainer:
         if model is not None and torch is not None:
             try:
                 # Save LoRA adapter
-                if hasattr(model, "encoder") and hasattr(model.encoder, "save_pretrained"):
+                if hasattr(model, "encoder") and hasattr(
+                    model.encoder, "save_pretrained"
+                ):
                     model.encoder.save_pretrained(self.checkpoint_dir / "lora_adapter")
 
                 # Save regression head weights
-                if hasattr(model, "regression_head") and hasattr(model.regression_head, "state_dict"):
+                if hasattr(model, "regression_head") and hasattr(
+                    model.regression_head, "state_dict"
+                ):
                     head_file = self.checkpoint_dir / "regression_head.pt"
                     torch.save(model.regression_head.state_dict(), head_file)
             except Exception as e:
@@ -563,7 +646,9 @@ class PromptTrainer:
             # Write checkpoint placeholder files
             head_file = self.checkpoint_dir / "regression_head.pt"
             if not head_file.exists():
-                head_file.write_text("AES_REGRESSION_HEAD_WEIGHTS_PLACEHOLDER", encoding="utf-8")
+                head_file.write_text(
+                    "AES_REGRESSION_HEAD_WEIGHTS_PLACEHOLDER", encoding="utf-8"
+                )
 
         # 2. Save comprehensive checkpoint metadata
         metadata = {
@@ -585,7 +670,9 @@ class PromptTrainer:
                 "hidden_dim": self.hidden_dim,
                 "max_sequence_length": self.max_sequence_length,
             },
-            "rubric": ASAP_RUBRIC_CONFIG.get(self.prompt_id, {"min_score": 2.0, "max_score": 12.0}),
+            "rubric": ASAP_RUBRIC_CONFIG.get(
+                self.prompt_id, {"min_score": 2.0, "max_score": 12.0}
+            ),
             "saved_at": datetime.now(timezone.utc).isoformat(),
             "status": "IMPROVED",
         }
@@ -600,10 +687,10 @@ def train_prompt(
     epochs: int = 5,
     batch_size: int = 8,
     learning_rate: float = 2e-5,
-    checkpoint_dir: Optional[Union[str, Path]] = None,
-    log_dir: Optional[Union[str, Path]] = None,
-    config_path: Optional[Union[str, Path]] = None,
-) -> Dict[str, Any]:
+    checkpoint_dir: str | Path | None = None,
+    log_dir: str | Path | None = None,
+    config_path: str | Path | None = None,
+) -> dict[str, Any]:
     """Convenience functional interface to train a model for a specific ASAP prompt."""
     trainer = PromptTrainer(
         prompt_id=prompt_id,
@@ -619,17 +706,31 @@ def train_prompt(
 
 def main() -> None:
     """CLI entrypoint for per-prompt training."""
-    parser = argparse.ArgumentParser(description="Per-prompt LoRA/PEFT Fine-Tuning for Automated Essay Scoring")
-    parser.add_argument("--prompt_id", type=int, default=1, help="ASAP Prompt ID (1 to 8)")
-    parser.add_argument("--epochs", type=int, default=5, help="Number of training epochs")
+    parser = argparse.ArgumentParser(
+        description="Per-prompt LoRA/PEFT Fine-Tuning for Automated Essay Scoring"
+    )
+    parser.add_argument(
+        "--prompt_id", type=int, default=1, help="ASAP Prompt ID (1 to 8)"
+    )
+    parser.add_argument(
+        "--epochs", type=int, default=5, help="Number of training epochs"
+    )
     parser.add_argument("--batch_size", type=int, default=8, help="Training batch size")
     parser.add_argument("--lr", type=float, default=2e-5, help="Peak learning rate")
-    parser.add_argument("--checkpoint_dir", type=str, default=None, help="Directory to save checkpoints")
-    parser.add_argument("--log_dir", type=str, default=None, help="TensorBoard log directory")
-    parser.add_argument("--config", type=str, default=None, help="Path to YAML model configuration file")
+    parser.add_argument(
+        "--checkpoint_dir", type=str, default=None, help="Directory to save checkpoints"
+    )
+    parser.add_argument(
+        "--log_dir", type=str, default=None, help="TensorBoard log directory"
+    )
+    parser.add_argument(
+        "--config", type=str, default=None, help="Path to YAML model configuration file"
+    )
 
     args = parser.parse_args()
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    )
 
     result = train_prompt(
         prompt_id=args.prompt_id,

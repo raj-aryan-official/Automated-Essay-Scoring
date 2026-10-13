@@ -15,7 +15,7 @@ Data matches Section 10.3 (ASAP Ground Truth Mapping):
 import logging
 import os
 import sys
-from typing import Any, Dict, List
+from typing import Any
 
 # Ensure backend root is on sys.path for direct script execution
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -23,16 +23,19 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
 from uuid import UUID
+
 from sqlalchemy.exc import SQLAlchemyError
 
 from app.core.database import SessionLocal, init_db
 from app.models.entities import Prompt
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
+)
 logger = logging.getLogger("seed_prompts")
 
 # Authentic ASAP prompt specifications with deterministic UUIDs matching frontend
-ASAP_PROMPTS_DATA: List[Dict[str, Any]] = [
+ASAP_PROMPTS_DATA: list[dict[str, Any]] = [
     {
         "id": UUID("11111111-1111-1111-1111-111111111111"),
         "asap_set_id": 1,
@@ -158,5 +161,5 @@ def seed_prompts() -> int:
 if __name__ == "__main__":
     try:
         seed_prompts()
-    except Exception as e:
+    except Exception:
         sys.exit(1)

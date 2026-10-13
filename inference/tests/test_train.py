@@ -13,8 +13,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import pytest
 
+import pytest
 from app.engine.train import (
     BertLoRAEssayRegressor,
     PromptTrainer,
@@ -105,7 +105,7 @@ def test_train_prompt_and_checkpoints(tmp_path: Path):
     meta_path = ckpt_dir / "checkpoint_metadata.json"
     assert meta_path.is_file()
 
-    with open(meta_path, "r", encoding="utf-8") as f:
+    with open(meta_path, encoding="utf-8") as f:
         meta = json.load(f)
 
     assert meta["prompt_id"] == 1

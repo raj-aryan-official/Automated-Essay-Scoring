@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import csv
 import logging
-import math
-from pathlib import Path
 import random
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from pathlib import Path
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -46,11 +46,11 @@ class SimpleSeries(list):
         val_set = set(values)
         return SimpleSeries([x in val_set for x in self])
 
-    def unique(self) -> List[Any]:
+    def unique(self) -> list[Any]:
         return list(dict.fromkeys(self))
 
-    def value_counts(self) -> Dict[Any, int]:
-        counts: Dict[Any, int] = {}
+    def value_counts(self) -> dict[Any, int]:
+        counts: dict[Any, int] = {}
         for item in self:
             counts[item] = counts.get(item, 0) + 1
         return counts
@@ -80,7 +80,7 @@ class SimpleSeriesStrAccessor:
 class SimpleDataFrame:
     """Lightweight fallback for pd.DataFrame when pandas is unavailable."""
 
-    def __init__(self, records: List[Dict[str, Any]]) -> None:
+    def __init__(self, records: list[dict[str, Any]]) -> None:
         self._records = [dict(r) for r in records]
 
     def __len__(self) -> int:
@@ -91,7 +91,7 @@ class SimpleDataFrame:
         return len(self._records) == 0
 
     @property
-    def columns(self) -> List[str]:
+    def columns(self) -> list[str]:
         return list(self._records[0].keys()) if self._records else []
 
     def __getitem__(self, key: Any) -> Any:
@@ -99,14 +99,14 @@ class SimpleDataFrame:
             vals = [r.get(key) for r in self._records]
             return SimpleSeries(vals)
         if isinstance(key, (list, tuple, SimpleSeries)):
-            filtered = [r for r, mask in zip(self._records, key) if mask]
+            filtered = [r for r, mask in zip(self._records, key, strict=False) if mask]
             return SimpleDataFrame(filtered)
         raise KeyError(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         if hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
             vals = list(value)
-            for r, v in zip(self._records, vals):
+            for r, v in zip(self._records, vals, strict=False):
                 r[key] = v
         else:
             for r in self._records:
@@ -115,28 +115,27 @@ class SimpleDataFrame:
     def copy(self) -> SimpleDataFrame:
         return SimpleDataFrame(self._records)
 
-    def apply(self, func: Any, axis: int = 1) -> List[Any]:
+    def apply(self, func: Any, axis: int = 1) -> list[Any]:
         return [func(r) for r in self._records]
 
     def reset_index(self, drop: bool = True) -> SimpleDataFrame:
         return self
 
-    def dropna(self, subset: Optional[List[str]] = None) -> SimpleDataFrame:
+    def dropna(self, subset: list[str] | None = None) -> SimpleDataFrame:
         if not subset:
             return self
         filtered = [
-            r for r in self._records
-            if all(r.get(k) is not None for k in subset)
+            r for r in self._records if all(r.get(k) is not None for k in subset)
         ]
         return SimpleDataFrame(filtered)
 
-    def to_dict(self, orient: str = "records") -> List[Dict[str, Any]]:
+    def to_dict(self, orient: str = "records") -> list[dict[str, Any]]:
         return [dict(r) for r in self._records]
 
 
 # Official ASAP prompt rubric score ranges and genres
 # Set 1: 2–12, Set 2: 1–6, Set 3: 0–3, Set 4: 0–3, Set 5: 0–4, Set 6: 0–4, Set 7: 0–30, Set 8: 0–60
-ASAP_RUBRIC_CONFIG: Dict[int, Dict[str, Any]] = {
+ASAP_RUBRIC_CONFIG: dict[int, dict[str, Any]] = {
     1: {"min_score": 2.0, "max_score": 12.0, "genre": "persuasive"},
     2: {"min_score": 1.0, "max_score": 6.0, "genre": "persuasive"},
     3: {"min_score": 0.0, "max_score": 3.0, "genre": "source-dependent"},
@@ -148,7 +147,7 @@ ASAP_RUBRIC_CONFIG: Dict[int, Dict[str, Any]] = {
 }
 
 
-def get_prompt_rubric(essay_set: int) -> Dict[str, Any]:
+def get_prompt_rubric(essay_set: int) -> dict[str, Any]:
     """Retrieve rubric min, max, and genre for a specific ASAP essay set."""
     if essay_set not in ASAP_RUBRIC_CONFIG:
         raise ValueError(
@@ -195,7 +194,7 @@ def inverse_rescale_score(
     normalized_score: Any,
     essay_set: int,
     clip: bool = True,
-    round_decimals: Optional[int] = None,
+    round_decimals: int | None = None,
 ) -> Any:
     """Map normalized score [0, 1] back to the prompt's original rubric scale.
 
@@ -234,7 +233,7 @@ def inverse_rescale_score(
 
 
 def load_asap_dataset(
-    file_path: Optional[Union[str, Path]] = None,
+    file_path: str | Path | None = None,
 ) -> Any:
     """Load ASAP essay dataset from disk.
 
@@ -248,7 +247,9 @@ def load_asap_dataset(
         Validated DataFrame with added 'scaled_score' column.
     """
     if file_path is None:
-        file_path = Path(__file__).resolve().parent.parent.parent / "data" / "asap_essays.tsv"
+        file_path = (
+            Path(__file__).resolve().parent.parent.parent / "data" / "asap_essays.tsv"
+        )
     else:
         file_path = Path(file_path)
 
@@ -272,14 +273,20 @@ def load_asap_dataset(
                 continue
 
         if df is None:
-            raise ValueError(f"Failed to decode dataset file at {file_path} with standard encodings.")
+            raise ValueError(
+                f"Failed to decode dataset file at {file_path} with standard encodings."
+            )
 
         required_cols = {"essay_id", "essay_set", "essay", "domain1_score"}
         missing_cols = required_cols - set(df.columns)
         if missing_cols:
-            raise ValueError(f"Dataset at {file_path} is missing required columns: {missing_cols}.")
+            raise ValueError(
+                f"Dataset at {file_path} is missing required columns: {missing_cols}."
+            )
 
-        df = df.dropna(subset=["essay_id", "essay_set", "essay", "domain1_score"]).copy()
+        df = df.dropna(
+            subset=["essay_id", "essay_set", "essay", "domain1_score"]
+        ).copy()
         df["essay_id"] = df["essay_id"].astype(int)
         df["essay_set"] = df["essay_set"].astype(int)
         df["essay"] = df["essay"].astype(str).str.strip()
@@ -294,13 +301,16 @@ def load_asap_dataset(
         return getattr(pd, "DataFrame")(df)
 
     # Pure-Python CSV/TSV loading fallback
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     for encoding in ["utf-8", "latin1", "cp1252"]:
         try:
-            with open(file_path, "r", encoding=encoding) as f:
+            with open(file_path, encoding=encoding) as f:
                 reader = csv.DictReader(f, delimiter=delimiter)
                 for row in reader:
-                    if not all(k in row for k in ["essay_id", "essay_set", "essay", "domain1_score"]):
+                    if not all(
+                        k in row
+                        for k in ["essay_id", "essay_set", "essay", "domain1_score"]
+                    ):
                         continue
                     try:
                         eid = int(row["essay_id"])
@@ -308,13 +318,15 @@ def load_asap_dataset(
                         score = float(row["domain1_score"])
                         text = str(row["essay"]).strip()
                         if eset in ASAP_RUBRIC_CONFIG:
-                            records.append({
-                                "essay_id": eid,
-                                "essay_set": eset,
-                                "essay": text,
-                                "domain1_score": score,
-                                "scaled_score": rescale_score(score, eset),
-                            })
+                            records.append(
+                                {
+                                    "essay_id": eid,
+                                    "essay_set": eset,
+                                    "essay": text,
+                                    "domain1_score": score,
+                                    "scaled_score": rescale_score(score, eset),
+                                }
+                            )
                     except (ValueError, TypeError):
                         continue
             break
@@ -331,7 +343,7 @@ def split_prompt_dataset(
     val_size: float = 0.1,
     test_size: float = 0.1,
     random_state: int = 42,
-) -> Tuple[Any, Any, Any]:
+) -> tuple[Any, Any, Any]:
     """Produce stratified train/val/test splits (80/10/10) for a specific essay_set."""
     total = train_size + val_size + test_size
     if abs(total - 1.0) > 1e-5:
@@ -341,7 +353,11 @@ def split_prompt_dataset(
         prompt_df = df[df["essay_set"] == essay_set].copy()
     else:
         # SimpleDataFrame or list of records
-        prompt_records = [r for r in df.to_dict() if int(r.get("essay_set", 0)) == essay_set] if hasattr(df, "to_dict") else []
+        prompt_records = (
+            [r for r in df.to_dict() if int(r.get("essay_set", 0)) == essay_set]
+            if hasattr(df, "to_dict")
+            else []
+        )
         prompt_df = SimpleDataFrame(prompt_records)
 
     n_samples = len(prompt_df)
@@ -351,7 +367,11 @@ def split_prompt_dataset(
         )
 
     # Use sklearn if available
-    if pd is not None and train_test_split is not None and isinstance(prompt_df, getattr(pd, "DataFrame", ())):
+    if (
+        pd is not None
+        and train_test_split is not None
+        and isinstance(prompt_df, getattr(pd, "DataFrame", ()))
+    ):
         class_counts = prompt_df["domain1_score"].value_counts()
         can_stratify = (class_counts.min() >= 2) and (len(class_counts) > 1)
         stratify_col = prompt_df["domain1_score"] if can_stratify else None
@@ -394,8 +414,8 @@ def split_prompt_dataset(
     n_val = max(1, int(n_samples * val_size))
 
     train_recs = shuffled[:n_train]
-    val_recs = shuffled[n_train:n_train + n_val]
-    test_recs = shuffled[n_train + n_val:]
+    val_recs = shuffled[n_train : n_train + n_val]
+    test_recs = shuffled[n_train + n_val :]
     if not test_recs:
         test_recs = [val_recs[-1]]
 
@@ -412,7 +432,7 @@ def get_all_prompt_splits(
     val_size: float = 0.1,
     test_size: float = 0.1,
     random_state: int = 42,
-) -> Dict[int, Dict[str, Any]]:
+) -> dict[int, dict[str, Any]]:
     """Produce train, val, and test splits for all available essay sets in the DataFrame."""
     splits = {}
     if hasattr(df, "unique"):
@@ -446,18 +466,33 @@ def create_sample_asap_dataset(
 ) -> Any:
     """Generate a synthetic ASAP dataset spanning all 8 prompts for testing and scaffolding."""
     rng = random.Random(random_state)
-    records: List[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     essay_id = 1
 
     prompt_topics = {
         1: ("computers and technology in education", "digital learning"),
-        2: ("censorship and book removal from public libraries", "intellectual freedom"),
+        2: (
+            "censorship and book removal from public libraries",
+            "intellectual freedom",
+        ),
         3: ("the cyclist facing intense physical desert terrain", "stamina and grit"),
         4: ("the hibiscus plant and nostalgic emotional heritage", "cultural identity"),
-        5: ("Narciso Rodriguez and his familial design inspiration", "fashion and heritage"),
-        6: ("the historic dirigibles and lighter-than-air navigation", "aeronautical engineering"),
-        7: ("patience and overcoming difficult personal challenges", "character development"),
-        8: ("laughter and humorous moments diffusing interpersonal awkwardness", "social cohesion"),
+        5: (
+            "Narciso Rodriguez and his familial design inspiration",
+            "fashion and heritage",
+        ),
+        6: (
+            "the historic dirigibles and lighter-than-air navigation",
+            "aeronautical engineering",
+        ),
+        7: (
+            "patience and overcoming difficult personal challenges",
+            "character development",
+        ),
+        8: (
+            "laughter and humorous moments diffusing interpersonal awkwardness",
+            "social cohesion",
+        ),
     }
 
     high_phrases = [
@@ -480,7 +515,9 @@ def create_sample_asap_dataset(
         min_s = int(rubric["min_score"])
         max_s = int(rubric["max_score"])
         possible_scores = list(range(min_s, max_s + 1)) if max_s > min_s else [min_s]
-        topic, theme = prompt_topics.get(essay_set, ("general topics", "critical thinking"))
+        topic, theme = prompt_topics.get(
+            essay_set, ("general topics", "critical thinking")
+        )
 
         for _ in range(samples_per_set):
             score = float(rng.choice(possible_scores))
@@ -506,16 +543,17 @@ def create_sample_asap_dataset(
 
             essay_text = " ".join(body_parts)
 
-            records.append({
-                "essay_id": essay_id,
-                "essay_set": essay_set,
-                "essay": essay_text,
-                "domain1_score": score,
-                "scaled_score": scaled,
-            })
+            records.append(
+                {
+                    "essay_id": essay_id,
+                    "essay_set": essay_set,
+                    "essay": essay_text,
+                    "domain1_score": score,
+                    "scaled_score": scaled,
+                }
+            )
             essay_id += 1
 
     if pd is not None:
         return getattr(pd, "DataFrame")(records)
     return SimpleDataFrame(records)
-

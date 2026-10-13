@@ -14,8 +14,9 @@ Covers:
 
 import sys
 import uuid
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -33,6 +34,7 @@ for p in (str(BACKEND_DIR), str(INFERENCE_DIR)):
 
 from app.api.deps import get_db
 from app.main import app
+
 # app/services/storage import if needed
 from app.models.entities import Essay, Job, Prompt, User
 from app.services.job_service import claim_next_job, create_scoring_job, get_job_by_id
@@ -55,7 +57,9 @@ def sample_essay(client: TestClient, seed_prompt: Prompt) -> dict:
     return res.json()
 
 
-def test_score_essay_success(client: TestClient, sample_essay: dict, db_session: Session):
+def test_score_essay_success(
+    client: TestClient, sample_essay: dict, db_session: Session
+):
     """Verify POST /api/v1/essays/{id}/score creates a QUEUED job and returns HTTP 202."""
     essay_id = sample_essay["id"]
 
@@ -70,7 +74,9 @@ def test_score_essay_success(client: TestClient, sample_essay: dict, db_session:
     assert data["job_type"] == "SCORING"
 
     # Verify job persistence in database
-    job_in_db = db_session.query(Job).filter(Job.id == uuid.UUID(data["job_id"])).first()
+    job_in_db = (
+        db_session.query(Job).filter(Job.id == uuid.UUID(data["job_id"])).first()
+    )
     assert job_in_db is not None
     assert job_in_db.job_type == "SCORING"
     assert job_in_db.status == "QUEUED"
@@ -78,7 +84,9 @@ def test_score_essay_success(client: TestClient, sample_essay: dict, db_session:
     assert job_in_db.max_attempts == 3
 
     # Verify essay status updated to QUEUED
-    essay_in_db = db_session.query(Essay).filter(Essay.id == uuid.UUID(essay_id)).first()
+    essay_in_db = (
+        db_session.query(Essay).filter(Essay.id == uuid.UUID(essay_id)).first()
+    )
     assert essay_in_db is not None
     assert essay_in_db.status == "QUEUED"
 
@@ -133,7 +141,9 @@ def test_claim_next_job_empty_queue(db_session: Session):
     assert claimed is None
 
 
-def test_claim_next_job_status_transition(db_session: Session, seed_prompt: Prompt, client: TestClient):
+def test_claim_next_job_status_transition(
+    db_session: Session, seed_prompt: Prompt, client: TestClient
+):
     """Verify claim_next_job() transitions job status to PROCESSING and sets started_at."""
     res = client.post(
         "/api/v1/essays",
@@ -277,4 +287,3 @@ def test_test_005_simulated_worker_crash_and_retries(
 
     # Confirm queue is now empty
     assert poll_and_process_once(db_session) is None
-

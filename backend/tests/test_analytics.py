@@ -1,13 +1,9 @@
 """Unit and integration tests for /api/v1/analytics endpoints."""
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from app.api.deps import get_db
 from app.core.security import create_access_token
+from app.main import app
 from app.models.entities import (
     DimensionFeedback,
     Essay,
@@ -18,7 +14,10 @@ from app.models.entities import (
     Score,
     User,
 )
-from app.main import app
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 @pytest.fixture(scope="session")
@@ -94,7 +93,9 @@ def test_jobs_unauthenticated_returns_401(client: TestClient):
     assert res.status_code == 401
 
 
-def test_evaluation_endpoint_returns_200_and_valid_payload(client: TestClient, viewer_token: str):
+def test_evaluation_endpoint_returns_200_and_valid_payload(
+    client: TestClient, viewer_token: str
+):
     """Verify GET /api/v1/analytics/evaluation returns complete QWK, loss curves, and job counts."""
     headers = {"Authorization": f"Bearer {viewer_token}"}
     res = client.get("/api/v1/analytics/evaluation", headers=headers)
@@ -145,7 +146,9 @@ def test_evaluation_endpoint_returns_200_and_valid_payload(client: TestClient, v
     assert jc["total"] >= 0
 
 
-def test_jobs_endpoint_returns_live_counts(client: TestClient, viewer_token: str, db_session: Session):
+def test_jobs_endpoint_returns_live_counts(
+    client: TestClient, viewer_token: str, db_session: Session
+):
     """Verify GET /api/v1/analytics/jobs returns live database counts."""
     headers = {"Authorization": f"Bearer {viewer_token}"}
     res = client.get("/api/v1/analytics/jobs", headers=headers)
@@ -157,4 +160,7 @@ def test_jobs_endpoint_returns_live_counts(client: TestClient, viewer_token: str
     assert "completed" in data
     assert "failed" in data
     assert "total" in data
-    assert data["total"] == data["queued"] + data["processing"] + data["completed"] + data["failed"]
+    assert (
+        data["total"]
+        == data["queued"] + data["processing"] + data["completed"] + data["failed"]
+    )

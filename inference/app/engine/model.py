@@ -16,15 +16,12 @@ import json
 import logging
 import math
 import os
-from pathlib import Path
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import Any
 
 from app.engine.feedback import RuleBasedDimensionFeedbackGenerator
 from app.engine.interfaces import (
-    DimensionFeedbackGenerator,
     EssayScoringModel,
-    RubricBand,
     ScorePrediction,
 )
 
@@ -33,7 +30,7 @@ logger = logging.getLogger(__name__)
 # Official ASAP rubric boundaries:
 # Set 1: [2, 12], Set 2: [1, 6], Set 3: [0, 3], Set 4: [0, 3]
 # Set 5: [0, 4],  Set 6: [0, 4], Set 7: [0, 30], Set 8: [0, 60]
-DEFAULT_ASAP_RUBRICS: Dict[str, Dict[str, float]] = {
+DEFAULT_ASAP_RUBRICS: dict[str, dict[str, float]] = {
     "1": {"min_score": 2.0, "max_score": 12.0},
     "2": {"min_score": 1.0, "max_score": 6.0},
     "3": {"min_score": 0.0, "max_score": 3.0},
@@ -48,6 +45,7 @@ DEFAULT_ASAP_RUBRICS: Dict[str, Dict[str, float]] = {
 try:
     import torch
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
     _ModuleBase = nn.Module
 except ImportError:
@@ -58,6 +56,7 @@ except ImportError:
 
 try:
     from transformers import AutoConfig, AutoModel, AutoTokenizer  # type: ignore
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     AutoConfig = None  # type: ignore
@@ -72,16 +71,16 @@ except ImportError:
 
 try:
     import onnxruntime as ort
+
     ORT_AVAILABLE = True
 except ImportError:
     ort = None  # type: ignore
     ORT_AVAILABLE = False
 
 
-
 class BertRegressionHead(_ModuleBase):  # type: ignore[misc]
     """Two-layer dense regression head on pooled [CLS] representation (Section 10.2).
-    
+
     Architecture:
         Input (768) -> Dense(768 -> hidden_dim) -> Activation (GELU/ReLU) -> Dropout(p) -> Dense(hidden_dim -> 1)
     """
@@ -95,7 +94,11 @@ class BertRegressionHead(_ModuleBase):  # type: ignore[misc]
     ) -> None:
         if nn is not None and _ModuleBase is not object:
             super().__init__()
-            act_layer = nn.GELU() if (activation.lower() == "gelu" and hasattr(nn, "GELU")) else nn.ReLU()
+            act_layer = (
+                nn.GELU()
+                if (activation.lower() == "gelu" and hasattr(nn, "GELU"))
+                else nn.ReLU()
+            )
             self.dense1 = nn.Linear(input_dim, hidden_dim)
             self.activation = act_layer
             self.dropout = nn.Dropout(dropout_prob)
@@ -113,14 +116,19 @@ class BertRegressionHead(_ModuleBase):  # type: ignore[misc]
 
     def forward(self, features: Any) -> Any:
         """Execute regression head forward pass.
-        
+
         Args:
             features: Tensor of pooled [CLS] representations of shape (batch_size, input_dim).
-            
+
         Returns:
             Tensor of shape (batch_size, 1) representing unscaled regression logits.
         """
-        if self.dense1 is not None and self.activation is not None and self.dropout is not None and self.dense2 is not None:
+        if (
+            self.dense1 is not None
+            and self.activation is not None
+            and self.dropout is not None
+            and self.dense2 is not None
+        ):
             x = self.dense1(features)
             x = self.activation(x)
             x = self.dropout(x)
@@ -162,17 +170,17 @@ class BertEssayScoringModel(EssayScoringModel):
     def __init__(
         self,
         model_name_or_path: str = "bert-base-uncased",
-        weights_path: Optional[str] = None,
-        config_path: Optional[str] = None,
-        device: Optional[str] = None,
+        weights_path: str | None = None,
+        config_path: str | None = None,
+        device: str | None = None,
         max_length: int = 512,
         hidden_dim: int = 256,
         dropout_prob: float = 0.1,
         activation: str = "gelu",
         scaling_method: str = "sigmoid",
-        prompt_rubrics: Optional[Dict[str, Dict[str, float]]] = None,
+        prompt_rubrics: dict[str, dict[str, float]] | None = None,
         use_onnx: bool = False,
-        onnx_model_path: Optional[str] = None,
+        onnx_model_path: str | None = None,
     ) -> None:
         self.model_name_or_path = model_name_or_path
         self.max_length = max_length
@@ -186,12 +194,17 @@ class BertEssayScoringModel(EssayScoringModel):
 
         self.use_onnx = use_onnx
         self.onnx_model_path = onnx_model_path
-        self.ort_session: Optional[Any] = None
+        self.ort_session: Any | None = None
 
         # Device selection
         if device is not None:
             self.device = device
-        elif TORCH_AVAILABLE and torch is not None and hasattr(torch, "cuda") and torch.cuda.is_available():
+        elif (
+            TORCH_AVAILABLE
+            and torch is not None
+            and hasattr(torch, "cuda")
+            and torch.cuda.is_available()
+        ):
             self.device = "cuda"
         else:
             self.device = "cpu"
@@ -224,7 +237,9 @@ class BertEssayScoringModel(EssayScoringModel):
     def load_onnx_model(self, onnx_model_path: str) -> None:
         """Initialize ONNX Runtime InferenceSession from exported model file."""
         if not ORT_AVAILABLE or ort is None:
-            logger.warning("onnxruntime is not available in environment. Cannot load ONNX model.")
+            logger.warning(
+                "onnxruntime is not available in environment. Cannot load ONNX model."
+            )
             return
 
         resolved_path = os.path.abspath(onnx_model_path)
@@ -233,18 +248,29 @@ class BertEssayScoringModel(EssayScoringModel):
 
         try:
             session_options = ort.SessionOptions()
-            session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            session_options.graph_optimization_level = (
+                ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            )
             self.ort_session = ort.InferenceSession(resolved_path, session_options)
             self.use_onnx = True
             self.onnx_model_path = resolved_path
             self.is_loaded = True
-            logger.info(f"Successfully initialized ONNX Runtime session from '{resolved_path}'.")
+            logger.info(
+                f"Successfully initialized ONNX Runtime session from '{resolved_path}'."
+            )
         except Exception as e:
-            logger.warning(f"Failed to initialize ONNX Runtime session from '{resolved_path}': {e}")
+            logger.warning(
+                f"Failed to initialize ONNX Runtime session from '{resolved_path}': {e}"
+            )
 
     def _initialize_default_components(self) -> None:
         """Initialize default encoder and tokenizer if dependencies are available."""
-        if TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE and AutoTokenizer is not None and AutoModel is not None:
+        if (
+            TRANSFORMERS_AVAILABLE
+            and TORCH_AVAILABLE
+            and AutoTokenizer is not None
+            and AutoModel is not None
+        ):
             try:
                 tokenizer_loader = getattr(AutoTokenizer, "from_pretrained", None)
                 model_loader = getattr(AutoModel, "from_pretrained", None)
@@ -255,7 +281,9 @@ class BertEssayScoringModel(EssayScoringModel):
                         self.encoder.to(self.device)
                         self.regression_head.to(self.device)
                 self.is_loaded = True
-                logger.info(f"Loaded BERT model from '{self.model_name_or_path}' on device '{self.device}'.")
+                logger.info(
+                    f"Loaded BERT model from '{self.model_name_or_path}' on device '{self.device}'."
+                )
             except Exception as e:
                 logger.warning(
                     f"Could not load Hugging Face pretrained model '{self.model_name_or_path}': {e}. "
@@ -267,22 +295,28 @@ class BertEssayScoringModel(EssayScoringModel):
 
     def load_model(self, weights_path: str, config_path: str) -> None:
         """Initialize BERT encoder weights and regression head config (Section 9.1).
-        
+
         Args:
             weights_path: Path to model weights (e.g. PyTorch state dict, checkpoint, or HF directory).
             config_path: Path to model configuration file (JSON/YAML).
         """
-        logger.info(f"Initializing model with weights='{weights_path}', config='{config_path}'")
+        logger.info(
+            f"Initializing model with weights='{weights_path}', config='{config_path}'"
+        )
 
         # 0. Route to ONNX loader if weights_path points to an ONNX model file
-        if weights_path and (weights_path.endswith(".onnx") or "onnx" in weights_path.lower() and os.path.isfile(weights_path)):
+        if weights_path and (
+            weights_path.endswith(".onnx")
+            or "onnx" in weights_path.lower()
+            and os.path.isfile(weights_path)
+        ):
             self.load_onnx_model(weights_path)
             return
 
         # 1. Parse configuration if provided
         if config_path and os.path.isfile(config_path):
             try:
-                with open(config_path, "r", encoding="utf-8") as f:
+                with open(config_path, encoding="utf-8") as f:
                     config_data = json.load(f)
                 if "hidden_dim" in config_data:
                     self.hidden_dim = int(config_data["hidden_dim"])
@@ -292,21 +326,35 @@ class BertEssayScoringModel(EssayScoringModel):
                     self.scaling_method = str(config_data["scaling_method"])
                 if "prompt_rubrics" in config_data:
                     self.prompt_rubrics.update(config_data["prompt_rubrics"])
-                logger.info(f"Updated configuration from '{config_path}': {config_data}")
+                logger.info(
+                    f"Updated configuration from '{config_path}': {config_data}"
+                )
             except Exception as err:
                 logger.warning(f"Error parsing config file '{config_path}': {err}")
 
         # 2. Load weights if provided and PyTorch is available
-        if weights_path and os.path.exists(weights_path) and TORCH_AVAILABLE and torch is not None:
+        if (
+            weights_path
+            and os.path.exists(weights_path)
+            and TORCH_AVAILABLE
+            and torch is not None
+        ):
             try:
-                if os.path.isdir(weights_path) and TRANSFORMERS_AVAILABLE and AutoTokenizer is not None and AutoModel is not None:
+                if (
+                    os.path.isdir(weights_path)
+                    and TRANSFORMERS_AVAILABLE
+                    and AutoTokenizer is not None
+                    and AutoModel is not None
+                ):
                     tokenizer_loader = getattr(AutoTokenizer, "from_pretrained", None)
                     model_loader = getattr(AutoModel, "from_pretrained", None)
                     if callable(tokenizer_loader) and callable(model_loader):
                         self.tokenizer = tokenizer_loader(weights_path)
                         self.encoder = model_loader(weights_path)
                 elif os.path.isfile(weights_path):
-                    state_dict = torch.load(weights_path, map_location=self.device)
+                    state_dict = torch.load(
+                        weights_path, map_location=self.device, weights_only=True
+                    )  # nosec B614
                     self.regression_head.load_state_dict(state_dict, strict=False)
                 logger.info(f"Successfully loaded model weights from '{weights_path}'.")
             except Exception as err:
@@ -314,22 +362,32 @@ class BertEssayScoringModel(EssayScoringModel):
 
         self.is_loaded = True
 
-    def get_rubric_bounds(self, prompt_id: str) -> Tuple[float, float]:
+    def get_rubric_bounds(self, prompt_id: str) -> tuple[float, float]:
         """Retrieve rubric min and max for the requested prompt ID."""
         clean_id = prompt_id.strip()
         if clean_id in self.prompt_rubrics:
             rubric = self.prompt_rubrics[clean_id]
-            return float(rubric.get("min_score", 2.0)), float(rubric.get("max_score", 12.0))
+            return float(rubric.get("min_score", 2.0)), float(
+                rubric.get("max_score", 12.0)
+            )
 
         # Check numeric ASAP set extraction (e.g. "set_1" -> "1")
         for num_str, rubric in self.prompt_rubrics.items():
-            if num_str == clean_id or f"set_{num_str}" == clean_id.lower() or f"prompt_{num_str}" == clean_id.lower():
-                return float(rubric.get("min_score", 2.0)), float(rubric.get("max_score", 12.0))
+            if (
+                num_str == clean_id
+                or f"set_{num_str}" == clean_id.lower()
+                or f"prompt_{num_str}" == clean_id.lower()
+            ):
+                return float(rubric.get("min_score", 2.0)), float(
+                    rubric.get("max_score", 12.0)
+                )
 
         # Default fallback bounds (ASAP Prompt 1 standard: [2.0, 12.0])
         return 2.0, 12.0
 
-    def compute_rubric_band(self, score: float, min_score: float, max_score: float) -> str:
+    def compute_rubric_band(
+        self, score: float, min_score: float, max_score: float
+    ) -> str:
         """Categorize a rescaled holistic score into standard rubric bands."""
         if max_score <= min_score:
             return "Proficient"
@@ -344,7 +402,9 @@ class BertEssayScoringModel(EssayScoringModel):
         else:
             return "Below Basic"
 
-    def _scale_score(self, raw_logit: float, min_score: float, max_score: float) -> float:
+    def _scale_score(
+        self, raw_logit: float, min_score: float, max_score: float
+    ) -> float:
         """Rescale regression logit into prompt rubric range using sigmoid or linear scaling."""
         if self.scaling_method == "sigmoid":
             # Sigmoid activation: 1 / (1 + e^(-logit))
@@ -374,11 +434,11 @@ class BertEssayScoringModel(EssayScoringModel):
 
     def predict_essay(self, essay_text: str, prompt_id: str) -> ScorePrediction:
         """Execute single-essay inference yielding rescaled score, rubric band, and confidence (Section 9.1).
-        
+
         Args:
             essay_text: The raw textual body of the submitted essay.
             prompt_id: Identifier of the prompt/rubric definition.
-            
+
         Returns:
             ScorePrediction instance containing holistic_score, rubric_band, confidence, and dimension_scores.
         """
@@ -419,22 +479,34 @@ class BertEssayScoringModel(EssayScoringModel):
                     attention_mask = encoded["attention_mask"].astype(np.int64)
                 else:
                     # Token sequence encoding fallback
-                    tokens = [hash(w) % 30000 for w in clean_text.split()][:self.max_length]
+                    tokens = [hash(w) % 30000 for w in clean_text.split()][
+                        : self.max_length
+                    ]
                     input_ids = np.zeros((1, self.max_length), dtype=np.int64)
                     attention_mask = np.zeros((1, self.max_length), dtype=np.int64)
-                    input_ids[0, :len(tokens)] = tokens
-                    attention_mask[0, :len(tokens)] = 1
+                    input_ids[0, : len(tokens)] = tokens
+                    attention_mask[0, : len(tokens)] = 1
 
                 ort_inputs = {"input_ids": input_ids, "attention_mask": attention_mask}
                 ort_outputs = self.ort_session.run(None, ort_inputs)
                 out_arr = ort_outputs[0]
-                raw_logit = float(out_arr[0][0] if getattr(out_arr, "ndim", 1) > 1 else out_arr[0])
+                raw_logit = float(
+                    out_arr[0][0] if getattr(out_arr, "ndim", 1) > 1 else out_arr[0]
+                )
             except Exception as e:
-                logger.warning(f"Error during ONNX runtime forward pass: {e}. Falling back to deterministic features.")
+                logger.warning(
+                    f"Error during ONNX runtime forward pass: {e}. Falling back to deterministic features."
+                )
                 raw_logit = self._fallback_logit(clean_text)
 
         # 2. Execute inference through PyTorch BERT + Regression Head if available
-        elif TORCH_AVAILABLE and TRANSFORMERS_AVAILABLE and self.encoder is not None and self.tokenizer is not None and torch is not None:
+        elif (
+            TORCH_AVAILABLE
+            and TRANSFORMERS_AVAILABLE
+            and self.encoder is not None
+            and self.tokenizer is not None
+            and torch is not None
+        ):
             try:
                 # Tokenize with WordPiece tokenizer, truncation to max_length (512), and padding
                 inputs = self.tokenizer(
@@ -456,7 +528,10 @@ class BertEssayScoringModel(EssayScoringModel):
                     outputs = self.encoder(**inputs)
 
                     # Extract pooled [CLS] representation (index 0)
-                    if hasattr(outputs, "pooler_output") and outputs.pooler_output is not None:
+                    if (
+                        hasattr(outputs, "pooler_output")
+                        and outputs.pooler_output is not None
+                    ):
                         cls_rep = outputs.pooler_output
                     elif hasattr(outputs, "last_hidden_state"):
                         cls_rep = outputs.last_hidden_state[:, 0, :]
@@ -467,7 +542,9 @@ class BertEssayScoringModel(EssayScoringModel):
                     logits = self.regression_head(cls_rep)
                     raw_logit = float(logits.squeeze().cpu().item())
             except Exception as e:
-                logger.warning(f"Error during PyTorch model forward pass: {e}. Using deterministic fallback.")
+                logger.warning(
+                    f"Error during PyTorch model forward pass: {e}. Using deterministic fallback."
+                )
                 raw_logit = self._fallback_logit(clean_text)
         else:
             # Deterministic text-feature fallback when PyTorch/Transformers runtime is unavailable
@@ -518,4 +595,5 @@ class BertEssayScoringModel(EssayScoringModel):
 
 class RuleBasedFeedbackGenerator(RuleBasedDimensionFeedbackGenerator):
     """Implementation of DimensionFeedbackGenerator producing pedagogical feedback."""
+
     pass

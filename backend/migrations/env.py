@@ -2,8 +2,8 @@ import os
 import sys
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config, pool
 from alembic import context
+from sqlalchemy import engine_from_config, pool
 
 # Ensure backend root is on sys.path
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -12,7 +12,6 @@ if BASE_DIR not in sys.path:
 
 from app.core.config import settings
 from app.core.database import Base
-import app.models  # Ensures all models are registered in Base.metadata
 
 config = context.config
 
@@ -23,7 +22,9 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Override sqlalchemy.url with project settings if present
-database_url = getattr(settings, "DATABASE_SYNC_URL", None) or config.get_main_option("sqlalchemy.url")
+database_url = getattr(settings, "DATABASE_SYNC_URL", None) or config.get_main_option(
+    "sqlalchemy.url"
+)
 config.set_main_option("sqlalchemy.url", str(database_url))
 
 

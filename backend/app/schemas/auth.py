@@ -1,6 +1,7 @@
 """Pydantic validation schemas for authentication and tokens."""
 
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -12,7 +13,9 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str = Field(..., description="Signed JWT Bearer access token")
     token_type: str = Field("bearer", description="Token authorization type")
-    role: str = Field(..., description="User role (ADMIN, TEACHER, ML_ENGINEER, VIEWER)")
+    role: str = Field(
+        ..., description="User role (ADMIN, TEACHER, ML_ENGINEER, VIEWER)"
+    )
     email: str = Field(..., description="User email address")
     user_id: UUID = Field(..., description="User unique identifier")
 
@@ -22,6 +25,8 @@ class TokenResponse(BaseModel):
 class UserResponse(BaseModel):
     id: UUID = Field(..., description="User unique identifier")
     email: str = Field(..., description="User email address")
-    role: str = Field(..., description="User role (ADMIN, TEACHER, ML_ENGINEER, VIEWER)")
+    role: str = Field(
+        ..., description="User role (ADMIN, TEACHER, ML_ENGINEER, VIEWER)"
+    )
 
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)

@@ -15,8 +15,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import pytest
 
+import pytest
 from app.dataset.asap_adapter import (
     ASAP_RUBRIC_CONFIG,
     create_sample_asap_dataset,
@@ -30,8 +30,10 @@ from app.eval.evaluate import (
     evaluate_all_prompts,
     evaluate_prompt,
     load_prompt_checkpoint,
-    main as eval_main,
     render_evaluation_table,
+)
+from app.eval.evaluate import (
+    main as eval_main,
 )
 from app.eval.qwk import (
     build_confusion_matrix,
@@ -41,10 +43,10 @@ from app.eval.qwk import (
     quadratic_weighted_kappa,
 )
 
-
 # ============================================================================
 # Section 12.1 QWK Formula & Matrix Math Tests
 # ============================================================================
+
 
 def test_weight_matrix_quadratic_scaling():
     """Verify w_ij = (i - j)^2 / (N - 1)^2 exactly per Section 12.1."""
@@ -83,27 +85,27 @@ def test_qwk_hand_calculated_matrix_verification():
     y_true = [0, 0, 1, 1, 2, 2]
     y_pred = [0, 1, 1, 1, 2, 1]
 
-    O = build_confusion_matrix(y_true, y_pred, min_score=0, max_score=2)
+    obs_matrix = build_confusion_matrix(y_true, y_pred, min_score=0, max_score=2)
     # Expected O matrix:
     # True 0: pred 0 -> 1, pred 1 -> 1, pred 2 -> 0 => [1, 1, 0]
     # True 1: pred 0 -> 0, pred 1 -> 2, pred 2 -> 0 => [0, 2, 0]
     # True 2: pred 0 -> 0, pred 1 -> 1, pred 2 -> 1 => [0, 1, 1]
-    assert O == [
+    assert obs_matrix == [
         [1.0, 1.0, 0.0],
         [0.0, 2.0, 0.0],
         [0.0, 1.0, 1.0],
     ]
 
-    E = build_expected_matrix(O)
+    exp_matrix = build_expected_matrix(obs_matrix)
     # r = [2, 2, 2], c = [1, 4, 1], n = 6
     # E_ij = r_i * c_j / 6:
     # Row 0: [2*1/6, 2*4/6, 2*1/6] = [1/3, 4/3, 1/3]
     # Row 1: [1/3, 4/3, 1/3]
     # Row 2: [1/3, 4/3, 1/3]
     for i in range(3):
-        assert E[i][0] == pytest.approx(2.0 * 1.0 / 6.0)
-        assert E[i][1] == pytest.approx(2.0 * 4.0 / 6.0)
-        assert E[i][2] == pytest.approx(2.0 * 1.0 / 6.0)
+        assert exp_matrix[i][0] == pytest.approx(2.0 * 1.0 / 6.0)
+        assert exp_matrix[i][1] == pytest.approx(2.0 * 4.0 / 6.0)
+        assert exp_matrix[i][2] == pytest.approx(2.0 * 1.0 / 6.0)
 
     # Weights for N=3, denom = 2^2 = 4:
     # W = [[0, 0.25, 1.0], [0.25, 0, 0.25], [1.0, 0.25, 0]]
@@ -151,7 +153,9 @@ def test_qwk_single_score_category_edge_case():
     qwk_match = quadratic_weighted_kappa([5, 5, 5], [5, 5, 5], min_score=5, max_score=5)
     assert qwk_match == 1.0
 
-    qwk_mismatch = quadratic_weighted_kappa([5, 5, 5], [4, 4, 4], min_score=5, max_score=5)
+    qwk_mismatch = quadratic_weighted_kappa(
+        [5, 5, 5], [4, 4, 4], min_score=5, max_score=5
+    )
     assert qwk_mismatch == 0.0
 
 
@@ -168,10 +172,13 @@ def test_compute_qwk_alias():
 # Checkpoint Loading & Pipeline Execution Tests
 # ============================================================================
 
+
 def test_load_prompt_checkpoint_auto_initialization(tmp_path: Path):
     """Verify load_prompt_checkpoint creates and loads checkpoint when missing."""
     ckpt_dir = tmp_path / "checkpoints"
-    meta, model = load_prompt_checkpoint(checkpoint_dir=ckpt_dir, prompt_id=1, auto_train_if_missing=True)
+    meta, model = load_prompt_checkpoint(
+        checkpoint_dir=ckpt_dir, prompt_id=1, auto_train_if_missing=True
+    )
 
     assert meta["prompt_id"] == 1
     assert meta["loss_metric"] == "MSE"
@@ -280,7 +287,9 @@ def test_render_evaluation_table():
     assert "GATE STATUS: PASS" in table
 
 
-def test_cli_execution_with_json_export(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+def test_cli_execution_with_json_export(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
     """Verify evaluate.py CLI execution exports JSON report and exits with code 0."""
     json_path = tmp_path / "eval_report.json"
     ckpt_dir = tmp_path / "checkpoints"
@@ -290,10 +299,14 @@ def test_cli_execution_with_json_export(tmp_path: Path, monkeypatch: pytest.Monk
         "sys.argv",
         [
             "evaluate.py",
-            "--checkpoint_dir", str(ckpt_dir),
-            "--prompts", "1,2",
-            "--target_qwk", "0.70",
-            "--output_json", str(json_path),
+            "--checkpoint_dir",
+            str(ckpt_dir),
+            "--prompts",
+            "1,2",
+            "--target_qwk",
+            "0.70",
+            "--output_json",
+            str(json_path),
         ],
     )
 
@@ -301,7 +314,7 @@ def test_cli_execution_with_json_export(tmp_path: Path, monkeypatch: pytest.Monk
     assert exit_code == 0
     assert json_path.is_file()
 
-    with open(json_path, "r", encoding="utf-8") as f:
+    with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
 
     assert data["all_passed"] is True

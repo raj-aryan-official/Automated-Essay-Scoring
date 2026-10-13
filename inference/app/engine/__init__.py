@@ -57,4 +57,3 @@ __all__ = [
     "BenchmarkReport",
     "LatencyMetrics",
 ]
-

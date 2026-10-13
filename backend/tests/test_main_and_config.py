@@ -3,6 +3,7 @@
 import os
 import sys
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -11,8 +12,8 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
+from app.api.deps import get_async_db, get_db
 from app.core.config import Settings, settings
-from app.api.deps import get_db, get_async_db
 from app.main import app
 
 
@@ -33,15 +34,24 @@ def test_settings_loaded():
 
 def test_settings_env_override(monkeypatch):
     """Verify settings pick up environment variables correctly."""
-    monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://custom_user:custom_pass@localhost:5432/custom_db")
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql+asyncpg://custom_user:custom_pass@localhost:5432/custom_db",
+    )
     monkeypatch.setenv("S3_ENDPOINT", "http://custom-s3:9000")
     monkeypatch.setenv("S3_BUCKET", "custom-bucket")
     monkeypatch.setenv("JWT_SECRET", "super-secret-jwt-key")
     monkeypatch.setenv("FRONTEND_ORIGIN", "http://myfrontend.local:3000")
 
     custom_settings = Settings()
-    assert custom_settings.DATABASE_URL == "postgresql+asyncpg://custom_user:custom_pass@localhost:5432/custom_db"
-    assert custom_settings.DATABASE_SYNC_URL == "postgresql://custom_user:custom_pass@localhost:5432/custom_db"
+    assert (
+        custom_settings.DATABASE_URL
+        == "postgresql+asyncpg://custom_user:custom_pass@localhost:5432/custom_db"
+    )
+    assert (
+        custom_settings.DATABASE_SYNC_URL
+        == "postgresql://custom_user:custom_pass@localhost:5432/custom_db"
+    )
     assert custom_settings.S3_ENDPOINT == "http://custom-s3:9000"
     assert custom_settings.S3_BUCKET == "custom-bucket"
     assert custom_settings.JWT_SECRET == "super-secret-jwt-key"
@@ -52,7 +62,9 @@ def test_openapi_docs_endpoint(client):
     """Verify OpenAPI documentation is served at /docs and schema at /openapi.json."""
     response = client.get("/docs")
     assert response.status_code == 200
-    assert "swagger-ui" in response.text.lower() or "html" in response.headers.get("content-type", "")
+    assert "swagger-ui" in response.text.lower() or "html" in response.headers.get(
+        "content-type", ""
+    )
 
     openapi_response = client.get("/openapi.json")
     assert openapi_response.status_code == 200
@@ -111,6 +123,7 @@ def test_get_db_dependency():
     assert session is not None
     # Verify session can execute simple statement
     from sqlalchemy import text
+
     result = session.execute(text("SELECT 1")).scalar()
     assert result == 1
     # Cleanup session
@@ -129,9 +142,12 @@ def test_legacy_docs_redirect(client):
 
 def test_reexports_and_imports():
     """Verify get_db and get_async_db are cleanly exportable across packages."""
-    from app.main import get_db as main_get_db, get_async_db as main_get_async_db
-    from app.core.database import get_db as db_get_db, get_async_db as db_get_async_db
-    from app.api.deps import get_db as deps_get_db, get_async_db as deps_get_async_db
+    from app.api.deps import get_async_db as deps_get_async_db
+    from app.api.deps import get_db as deps_get_db
+    from app.core.database import get_async_db as db_get_async_db
+    from app.core.database import get_db as db_get_db
+    from app.main import get_async_db as main_get_async_db
+    from app.main import get_db as main_get_db
 
     assert main_get_db is deps_get_db
     assert deps_get_db is db_get_db
@@ -161,6 +177,7 @@ def test_settings_aliases_and_fallbacks(monkeypatch):
 def test_readiness_probe_degraded(client):
     """Verify /api/v1/ready returns degraded status when database execution fails."""
     from unittest.mock import MagicMock
+
     from app.main import app
 
     mock_db = MagicMock()
@@ -176,4 +193,3 @@ def test_readiness_probe_degraded(client):
         assert "unavailable" in data["database"]
     finally:
         app.dependency_overrides.clear()
-

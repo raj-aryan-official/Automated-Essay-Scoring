@@ -1,7 +1,7 @@
 """Initial database schema migration.
 
 Revision ID: 0001_initial_schema
-Revises: 
+Revises:
 Create Date: 2026-09-14 13:20:00.000000
 
 Exact implementation of Section 7.2 Database Schema:
@@ -9,17 +9,18 @@ Exact implementation of Section 7.2 Database Schema:
 - Check constraints and foreign keys with cascading deletes
 - Indexes: idx_essays_status, idx_jobs_processing, idx_scores_lookup
 """
-from typing import Sequence, Union
 
-from alembic import op
+from collections.abc import Sequence
+
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
 # revision identifiers, used by Alembic.
 revision: str = "0001_initial_schema"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -80,8 +81,15 @@ def upgrade() -> None:
             primary_key=True,
             server_default=sa.text("uuid_generate_v4()"),
         ),
-        sa.Column("submitted_by", UUID(as_uuid=True), sa.ForeignKey("users.id"), nullable=False),
-        sa.Column("prompt_id", UUID(as_uuid=True), sa.ForeignKey("prompts.id"), nullable=False),
+        sa.Column(
+            "submitted_by",
+            UUID(as_uuid=True),
+            sa.ForeignKey("users.id"),
+            nullable=False,
+        ),
+        sa.Column(
+            "prompt_id", UUID(as_uuid=True), sa.ForeignKey("prompts.id"), nullable=False
+        ),
         sa.Column("raw_text", sa.Text(), nullable=False),
         sa.Column("source_type", sa.String(length=16), nullable=False),
         sa.Column("storage_bucket", sa.String(length=255), nullable=True),
@@ -165,9 +173,15 @@ def upgrade() -> None:
             server_default=sa.text("'QUEUED'"),
             nullable=False,
         ),
-        sa.Column("priority", sa.Integer(), server_default=sa.text("100"), nullable=False),
-        sa.Column("attempts", sa.Integer(), server_default=sa.text("0"), nullable=False),
-        sa.Column("max_attempts", sa.Integer(), server_default=sa.text("3"), nullable=False),
+        sa.Column(
+            "priority", sa.Integer(), server_default=sa.text("100"), nullable=False
+        ),
+        sa.Column(
+            "attempts", sa.Integer(), server_default=sa.text("0"), nullable=False
+        ),
+        sa.Column(
+            "max_attempts", sa.Integer(), server_default=sa.text("3"), nullable=False
+        ),
         sa.Column("error_message", sa.Text(), nullable=True),
         sa.Column(
             "queued_at",
@@ -203,8 +217,12 @@ def upgrade() -> None:
             sa.ForeignKey("essays.id", ondelete="CASCADE"),
             nullable=False,
         ),
-        sa.Column("model_id", UUID(as_uuid=True), sa.ForeignKey("models.id"), nullable=False),
-        sa.Column("job_id", UUID(as_uuid=True), sa.ForeignKey("jobs.id"), nullable=True),
+        sa.Column(
+            "model_id", UUID(as_uuid=True), sa.ForeignKey("models.id"), nullable=False
+        ),
+        sa.Column(
+            "job_id", UUID(as_uuid=True), sa.ForeignKey("jobs.id"), nullable=True
+        ),
         sa.Column("confidence_threshold", sa.Float(), nullable=False),
         sa.Column("device", sa.String(length=32), nullable=False),
         sa.Column("inference_ms", sa.BigInteger(), nullable=False),

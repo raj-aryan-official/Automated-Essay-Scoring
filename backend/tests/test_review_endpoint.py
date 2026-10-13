@@ -11,6 +11,7 @@ Covers:
 import sys
 import uuid
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -173,10 +174,16 @@ def test_review_valid_override_finalizes_essay(client, db_session, seed_data):
 
     # Verify database persistence
     db_session.expire_all()
-    essay = db_session.query(Essay).filter(Essay.id == seed_data["scored_essay"].id).first()
+    essay = (
+        db_session.query(Essay).filter(Essay.id == seed_data["scored_essay"].id).first()
+    )
     assert essay.status == "FINALIZED"
 
-    score = db_session.query(Score).filter(Score.essay_id == seed_data["scored_essay"].id).first()
+    score = (
+        db_session.query(Score)
+        .filter(Score.essay_id == seed_data["scored_essay"].id)
+        .first()
+    )
     assert score.reviewer_override_score == 10.5
     assert score.reviewer_override_reason == payload["reviewer_override_reason"]
     assert score.reviewer_override_at is not None

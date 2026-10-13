@@ -20,7 +20,9 @@ def check_environment() -> str:
     print(" Automated Essay Scoring — Compute Environment Verification")
     print("=" * 60)
     print(f"Python Version : {sys.version.split()[0]}")
-    print(f"OS Platform    : {platform.system()} {platform.release()} ({platform.machine()})")
+    print(
+        f"OS Platform    : {platform.system()} {platform.release()} ({platform.machine()})"
+    )
 
     try:
         import torch
@@ -37,16 +39,20 @@ def check_environment() -> str:
         current_device = torch.cuda.current_device()
         device_name = torch.cuda.get_device_name(current_device)
         cuda_version = torch.version.cuda
-        vram_gb = torch.cuda.get_device_properties(current_device).total_memory / (1024 ** 3)
+        vram_gb = torch.cuda.get_device_properties(current_device).total_memory / (
+            1024**3
+        )
 
         print("-" * 60)
-        print(f"[SUCCESS] CUDA is available!")
+        print("[SUCCESS] CUDA is available!")
         print(f"CUDA Version   : {cuda_version}")
         print(f"GPU Device(s)  : {device_count} detected")
         print(f"Active Device  : [{current_device}] {device_name}")
         print(f"Dedicated VRAM : {vram_gb:.2f} GB")
         print("-" * 60)
-        print("[INFO] GPU acceleration is active and ready for BERT training/inference.")
+        print(
+            "[INFO] GPU acceleration is active and ready for BERT training/inference."
+        )
         return "cuda"
     else:
         print("-" * 60)
@@ -55,7 +61,9 @@ def check_environment() -> str:
         print(f"CPU Processor  : {platform.processor() or 'Standard CPU'}")
         print(f"Logical Cores  : {os.cpu_count() or 'Unknown'}")
         print("-" * 60)
-        print("[NOTE] Inference will execute on CPU. Note that training and low-latency")
+        print(
+            "[NOTE] Inference will execute on CPU. Note that training and low-latency"
+        )
         print("scoring (<300ms) require an NVIDIA GPU with Tensor Cores.")
         print("For CUDA support, install PyTorch with CUDA enabled:")
         print("  pip install torch --index-url https://download.pytorch.org/whl/cu121")

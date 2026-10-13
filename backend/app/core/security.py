@@ -1,23 +1,30 @@
-import bcrypt
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional, Union
+from typing import Any
+
+import bcrypt
 
 # Fix passlib 1.7.4 compatibility with bcrypt >= 4.0.0 (Win ARM64 / modern wheels)
 if not hasattr(bcrypt, "__about__"):
+
     class _About:
         __version__ = getattr(bcrypt, "__version__", "5.0.0")
+
     setattr(bcrypt, "__about__", _About())
 
 _orig_hashpw = bcrypt.hashpw
+
+
 def _safe_hashpw(password, salt):
     if isinstance(password, (bytes, bytearray)) and len(password) > 72:
         password = password[:72]
     elif isinstance(password, str) and len(password.encode("utf-8")) > 72:
         password = password.encode("utf-8")[:72]
     return _orig_hashpw(password, salt)
+
+
 bcrypt.hashpw = _safe_hashpw
 
-from jose import JWTError, jwt
+from jose import jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
@@ -37,10 +44,10 @@ def get_password_hash(password: str) -> str:
 
 
 def create_access_token(
-    subject: Union[str, Any],
+    subject: str | Any,
     role: str,
-    email: Optional[str] = None,
-    expires_delta: Optional[timedelta] = None,
+    email: str | None = None,
+    expires_delta: timedelta | None = None,
 ) -> str:
     """Encode user identity, role, and expiration into a signed JWT."""
     if expires_delta:
@@ -50,7 +57,7 @@ def create_access_token(
             minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
         )
 
-    to_encode: Dict[str, Any] = {
+    to_encode: dict[str, Any] = {
         "sub": str(subject),
         "role": role,
         "exp": expire,
@@ -67,7 +74,7 @@ def create_access_token(
     return encoded_jwt
 
 
-def decode_access_token(token: str) -> Dict[str, Any]:
+def decode_access_token(token: str) -> dict[str, Any]:
     """Decode and validate a signed JWT. Raises JWTError if invalid or expired."""
     return jwt.decode(
         token,

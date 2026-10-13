@@ -6,10 +6,10 @@ Implements:
 - Job status retrieval and tracking
 """
 
-from datetime import datetime, timezone
 import logging
-from typing import Any, Optional, Union
 import uuid
+from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 def create_scoring_job(
     db: Session,
-    essay_id: Union[UUID, Any],
+    essay_id: UUID | Any,
     priority: int = 100,
     max_attempts: int = 3,
 ) -> Job:
     """Create and queue a new asynchronous scoring job for the specified essay.
-    
+
     Inserts a row into jobs (job_type=SCORING, status=QUEUED) and sets the
     associated essay's status to QUEUED.
     """
@@ -56,17 +56,17 @@ def create_scoring_job(
 
 def claim_next_job(
     db: Session,
-    job_type: Optional[str] = None,
-) -> Optional[Job]:
+    job_type: str | None = None,
+) -> Job | None:
     """Atomically claim the next queued job using PostgreSQL's FOR UPDATE SKIP LOCKED.
-    
+
     Query:
         SELECT id FROM jobs
         WHERE status = 'QUEUED'
         ORDER BY priority ASC, queued_at ASC
         FOR UPDATE SKIP LOCKED
         LIMIT 1;
-        
+
     Transitions the claimed job's status to PROCESSING, sets started_at timestamp,
     increments execution attempts count, and commits within the active transaction.
     Returns None if no jobs are currently queued.
@@ -98,10 +98,12 @@ def claim_next_job(
 
     db.commit()
     db.refresh(job)
-    logger.info(f"Claimed job {job.id} (type={job.job_type}, attempt={job.attempts}) for worker execution")
+    logger.info(
+        f"Claimed job {job.id} (type={job.job_type}, attempt={job.attempts}) for worker execution"
+    )
     return job
 
 
-def get_job_by_id(db: Session, job_id: UUID) -> Optional[Job]:
+def get_job_by_id(db: Session, job_id: UUID) -> Job | None:
     """Retrieve a job by UUID from the database."""
     return db.query(Job).filter(Job.id == job_id).first()

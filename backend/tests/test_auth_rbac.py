@@ -12,6 +12,7 @@ Covers:
 import sys
 import uuid
 from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -162,7 +163,9 @@ def test_rbac_viewer_forbidden_on_submit_essay(client, test_users):
 
 def test_rbac_teacher_allowed_on_submit_essay(client, db_session, test_users):
     teacher = test_users["TEACHER"]
-    token = create_access_token(subject=teacher.id, role=teacher.role, email=teacher.email)
+    token = create_access_token(
+        subject=teacher.id, role=teacher.role, email=teacher.email
+    )
 
     prompt = Prompt(
         id=uuid.uuid4(),

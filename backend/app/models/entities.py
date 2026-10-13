@@ -12,8 +12,6 @@ Exact mapping to Section 7.2 Database Schema:
 """
 
 import uuid
-from datetime import datetime
-from typing import Any, Dict, List, Optional
 
 from sqlalchemy import (
     BigInteger,
@@ -48,7 +46,6 @@ def compile_uuid_sqlite(type_, compiler, **kw):
     return "CHAR(36)"
 
 
-
 class User(Base):
     __tablename__ = "users"
 
@@ -75,7 +72,9 @@ class User(Base):
     )
 
     # Relationships
-    essays = relationship("Essay", back_populates="submitter", cascade="all, delete-orphan")
+    essays = relationship(
+        "Essay", back_populates="submitter", cascade="all, delete-orphan"
+    )
 
 
 class Prompt(Base):
@@ -153,7 +152,9 @@ class Essay(Base):
     submitter = relationship("User", back_populates="essays")
     prompt = relationship("Prompt", back_populates="essays")
     jobs = relationship("Job", back_populates="essay", cascade="all, delete-orphan")
-    inference_runs = relationship("InferenceRun", back_populates="essay", cascade="all, delete-orphan")
+    inference_runs = relationship(
+        "InferenceRun", back_populates="essay", cascade="all, delete-orphan"
+    )
     scores = relationship("Score", back_populates="essay", cascade="all, delete-orphan")
 
 
@@ -282,7 +283,9 @@ class InferenceRun(Base):
     essay = relationship("Essay", back_populates="inference_runs")
     model = relationship("ModelEntity", back_populates="inference_runs")
     job = relationship("Job", back_populates="inference_runs")
-    scores = relationship("Score", back_populates="inference_run", cascade="all, delete-orphan")
+    scores = relationship(
+        "Score", back_populates="inference_run", cascade="all, delete-orphan"
+    )
 
 
 class Score(Base):
@@ -306,7 +309,7 @@ class Score(Base):
     )
     holistic_score = Column(Float, nullable=False)  # REAL
     rubric_band = Column(String(32), nullable=False)
-    confidence = Column(Float, nullable=False)      # REAL
+    confidence = Column(Float, nullable=False)  # REAL
     reviewer_override_score = Column(Float, nullable=True)  # REAL
     reviewer_override_reason = Column(Text, nullable=True)
     reviewer_override_at = Column(DateTime(timezone=True), nullable=True)

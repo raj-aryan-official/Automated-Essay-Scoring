@@ -13,9 +13,10 @@ Verifies:
 from __future__ import annotations
 
 import json
+from dataclasses import FrozenInstanceError
 from pathlib import Path
-import pytest
 
+import pytest
 from app.engine import (
     BertEssayScoringModel,
     BertRegressionHead,
@@ -48,7 +49,7 @@ def test_interfaces_conformance(scoring_model: BertEssayScoringModel):
     assert band.label == "Proficient"
     assert band.min_score == 6.0
     assert band.max_score == 9.0
-    with pytest.raises(Exception):
+    with pytest.raises((FrozenInstanceError, AttributeError)):
         band.label = "Advanced"  # type: ignore (frozen dataclass)
 
 
@@ -104,7 +105,9 @@ def test_predict_essay_across_all_asap_prompts(
 
     # Ensure dimension scores also stay within the prompt range
     for dim_name, dim_score in prediction.dimension_scores.items():
-        assert expected_min <= dim_score <= expected_max, f"Dimension {dim_name} out of bounds"
+        assert (
+            expected_min <= dim_score <= expected_max
+        ), f"Dimension {dim_name} out of bounds"
 
 
 def test_predict_essay_empty_text(scoring_model: BertEssayScoringModel):
@@ -122,9 +125,7 @@ def test_load_model_configuration(tmp_path: Path):
         "hidden_dim": 128,
         "max_length": 256,
         "scaling_method": "linear",
-        "prompt_rubrics": {
-            "custom_9": {"min_score": 10.0, "max_score": 100.0}
-        },
+        "prompt_rubrics": {"custom_9": {"min_score": 10.0, "max_score": 100.0}},
     }
     config_file.write_text(json.dumps(config_payload), encoding="utf-8")
 
@@ -135,7 +136,9 @@ def test_load_model_configuration(tmp_path: Path):
     assert model.max_length == 256
     assert model.scaling_method == "linear"
 
-    pred = model.predict_essay("This is an essay for a custom prompt.", prompt_id="custom_9")
+    pred = model.predict_essay(
+        "This is an essay for a custom prompt.", prompt_id="custom_9"
+    )
     assert 10.0 <= pred.holistic_score <= 100.0
 
 
@@ -161,7 +164,9 @@ def test_feedback_generator():
     generator = RuleBasedFeedbackGenerator()
     assert isinstance(generator, DimensionFeedbackGenerator)
 
-    essay = "The author argues that censorship is detrimental. However, evidence is scarce."
+    essay = (
+        "The author argues that censorship is detrimental. However, evidence is scarce."
+    )
     grammar_fb = generator.generate_feedback(essay, "grammar")
     assert isinstance(grammar_fb, str) and len(grammar_fb) > 0
 

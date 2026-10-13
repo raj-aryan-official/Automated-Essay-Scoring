@@ -41,13 +41,12 @@ dist-ssr/
 *.local
 
 # Model Checkpoints, Weights & Cache
-checkpoints/
-weights/
 *.pt
 *.pth
 *.bin
 *.safetensors
 *.onnx
+weights/
 model_cache/
 huggingface/
 wandb/

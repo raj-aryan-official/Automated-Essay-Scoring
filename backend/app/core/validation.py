@@ -10,7 +10,6 @@ Enforces:
 
 import logging
 from pathlib import Path
-from typing import Optional, Set
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -27,7 +26,7 @@ MIN_ESSAY_WORDS: int = 2
 MAX_DOCUMENT_SIZE_BYTES: int = 20 * 1024 * 1024  # 20 MB
 
 # Allowed document MIME types
-ALLOWED_MIME_TYPES: Set[str] = {
+ALLOWED_MIME_TYPES: set[str] = {
     "text/plain",
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -39,7 +38,7 @@ ALLOWED_MIME_TYPES: Set[str] = {
 }
 
 # Allowed file extensions
-ALLOWED_EXTENSIONS: Set[str] = {
+ALLOWED_EXTENSIONS: set[str] = {
     ".txt",
     ".pdf",
     ".docx",
@@ -51,7 +50,7 @@ ALLOWED_EXTENSIONS: Set[str] = {
 
 def validate_prompt_exists(db: Session, prompt_id: UUID) -> Prompt:
     """Verify that referenced prompt exists in the database.
-    
+
     Returns Prompt instance if found, or raises HTTP 404.
     """
     prompt = db.query(Prompt).filter(Prompt.id == prompt_id).first()
@@ -63,9 +62,9 @@ def validate_prompt_exists(db: Session, prompt_id: UUID) -> Prompt:
     return prompt
 
 
-def validate_essay_text(raw_text: Optional[str]) -> str:
+def validate_essay_text(raw_text: str | None) -> str:
     """Validate essay text length and content.
-    
+
     - Rejects empty or whitespace-only submissions with HTTP 422.
     - Rejects near-empty submissions (< MIN_ESSAY_LENGTH chars or < MIN_ESSAY_WORDS words) with HTTP 422.
     - Rejects essays exceeding MAX_ESSAY_LENGTH characters with HTTP 413.
@@ -102,11 +101,11 @@ def validate_essay_text(raw_text: Optional[str]) -> str:
 
 def validate_document(
     file_bytes: bytes,
-    filename: Optional[str] = None,
-    content_type: Optional[str] = None,
+    filename: str | None = None,
+    content_type: str | None = None,
 ) -> None:
     """Validate uploaded document size and MIME type.
-    
+
     - Rejects documents exceeding MAX_DOCUMENT_SIZE_BYTES (20MB) with HTTP 413.
     - Rejects documents with disallowed MIME types or extensions with HTTP 415.
     """

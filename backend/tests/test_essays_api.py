@@ -10,8 +10,9 @@ Covers:
 import base64
 import sys
 import uuid
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
+
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
@@ -37,8 +38,6 @@ from app.models.entities import (
     User,
 )
 from app.services.storage import StorageService, get_storage_service
-
-
 
 
 @pytest.fixture
@@ -77,7 +76,9 @@ def seed_prompt_2(db_session: Session) -> Prompt:
     return prompt
 
 
-def test_create_essay_paste_success(client: TestClient, seed_prompt: Prompt, db_session: Session):
+def test_create_essay_paste_success(
+    client: TestClient, seed_prompt: Prompt, db_session: Session
+):
     """Verify POST /api/v1/essays accepts raw pasted text (source_type=PASTE), assigns a UUID,
 
     and persists the essay with status=SUBMITTED. Returns HTTP 201 with essay UUID.
@@ -103,13 +104,17 @@ def test_create_essay_paste_success(client: TestClient, seed_prompt: Prompt, db_
     assert "created_at" in data
 
     # Verify persistence in database
-    essay_in_db = db_session.query(Essay).filter(Essay.id == uuid.UUID(data["id"])).first()
+    essay_in_db = (
+        db_session.query(Essay).filter(Essay.id == uuid.UUID(data["id"])).first()
+    )
     assert essay_in_db is not None
     assert essay_in_db.status == "SUBMITTED"
     assert essay_in_db.raw_text == payload["raw_text"]
 
 
-def test_create_essay_paste_with_explicit_user(client: TestClient, seed_prompt: Prompt, db_session: Session):
+def test_create_essay_paste_with_explicit_user(
+    client: TestClient, seed_prompt: Prompt, db_session: Session
+):
     """Verify submitting with an explicit submitted_by UUID succeeds and links the user."""
     custom_user_id = uuid.uuid4()
     payload = {
@@ -151,7 +156,10 @@ def test_create_essay_document_multipart_upload(
     assert uuid.UUID(data["id"])
     assert data["status"] == "SUBMITTED"
     assert data["source_type"] == "DOCUMENT"
-    assert data["storage_bucket"] in (test_minio_bucket.bucket_name, "test-essay-documents")
+    assert data["storage_bucket"] in (
+        test_minio_bucket.bucket_name,
+        "test-essay-documents",
+    )
     assert data["storage_key"] is not None
     assert file_name in data["storage_key"]
     assert "Automated Essay Scoring" in data["raw_text"]
@@ -197,7 +205,9 @@ def test_create_essay_prompt_not_found(client: TestClient):
 
     response = client.post("/api/v1/essays", json=payload)
     assert response.status_code == 404
-    assert f"Prompt with id '{missing_prompt_id}' not found" in response.json()["detail"]
+    assert (
+        f"Prompt with id '{missing_prompt_id}' not found" in response.json()["detail"]
+    )
 
 
 def test_create_essay_empty_paste_rejected(client: TestClient, seed_prompt: Prompt):
@@ -300,7 +310,11 @@ def test_get_essay_by_id_document_download_url(client: TestClient, seed_prompt: 
                 "source_type": "DOCUMENT",
             },
             files={
-                "file": ("sample_essay.pdf", b"%PDF-1.4 sample binary content", "application/pdf"),
+                "file": (
+                    "sample_essay.pdf",
+                    b"%PDF-1.4 sample binary content",
+                    "application/pdf",
+                ),
             },
         )
         assert create_res.status_code == 201
@@ -374,7 +388,10 @@ def test_test_002_oversized_essay_rejected(client: TestClient, seed_prompt: Prom
 
     response = client.post("/api/v1/essays", json=payload)
     assert response.status_code == 413
-    assert "8,000" in response.json()["detail"] or "maximum" in response.json()["detail"].lower()
+    assert (
+        "8,000" in response.json()["detail"]
+        or "maximum" in response.json()["detail"].lower()
+    )
 
 
 def test_test_003_empty_submission_rejected(client: TestClient, seed_prompt: Prompt):
@@ -410,7 +427,10 @@ def test_test_006_unscored_edge_case_unsupported_prompt_id(client: TestClient):
 
     response = client.post("/api/v1/essays", json=payload)
     assert response.status_code == 404
-    assert f"Prompt with id '{unsupported_prompt_id}' not found" in response.json()["detail"]
+    assert (
+        f"Prompt with id '{unsupported_prompt_id}' not found"
+        in response.json()["detail"]
+    )
 
 
 def test_near_empty_essay_rejected(client: TestClient, seed_prompt: Prompt):
@@ -440,10 +460,15 @@ def test_document_oversized_rejected(client: TestClient, seed_prompt: Prompt):
         },
     )
     assert response.status_code == 413
-    assert "20MB" in response.json()["detail"] or "maximum" in response.json()["detail"].lower()
+    assert (
+        "20MB" in response.json()["detail"]
+        or "maximum" in response.json()["detail"].lower()
+    )
 
 
-def test_document_disallowed_mime_type_rejected(client: TestClient, seed_prompt: Prompt):
+def test_document_disallowed_mime_type_rejected(
+    client: TestClient, seed_prompt: Prompt
+):
     """Verify documents with disallowed MIME types are rejected with HTTP 415."""
     disallowed_files = [
         ("malicious.sh", b"#!/bin/bash\necho bad", "application/x-sh"),
@@ -465,7 +490,9 @@ def test_document_disallowed_mime_type_rejected(client: TestClient, seed_prompt:
         assert "Disallowed" in response.json()["detail"]
 
 
-def test_document_disallowed_extension_in_json_rejected(client: TestClient, seed_prompt: Prompt):
+def test_document_disallowed_extension_in_json_rejected(
+    client: TestClient, seed_prompt: Prompt
+):
     """Verify document submissions via JSON with disallowed extension are rejected with HTTP 415."""
     payload = {
         "prompt_id": str(seed_prompt.id),
@@ -483,7 +510,9 @@ def test_document_disallowed_extension_in_json_rejected(client: TestClient, seed
 # ---------------------------------------------------------------------------
 
 
-def test_get_essay_score_success(client: TestClient, seed_prompt: Prompt, db_session: Session):
+def test_get_essay_score_success(
+    client: TestClient, seed_prompt: Prompt, db_session: Session
+):
     """Verify GET /api/v1/essays/{id}/score returns full nested payload (Section 8.2).
 
     Expected fields: holisticScore, rubricBand, confidence, dimensions[], modelVersion.
@@ -622,5 +651,3 @@ def test_get_essay_score_not_scored_yet(client: TestClient, seed_prompt: Prompt)
     assert response.status_code == 404
     assert f"Score for essay '{essay_id}' not found" in response.json()["detail"]
     assert "SUBMITTED" in response.json()["detail"]
-
-

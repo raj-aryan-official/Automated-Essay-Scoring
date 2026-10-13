@@ -11,16 +11,15 @@ Fulfills Prompt 15 & Section 5.3 Non-Functional Requirements (NFRs):
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import json
 import logging
-import math
-import os
-from pathlib import Path
 import sys
 import time
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 # Ensure inference root is present in sys.path when executed directly as a script
 _inference_root = Path(__file__).resolve().parent.parent.parent
@@ -41,6 +40,7 @@ except ImportError:
 try:
     import onnx
     from onnx import TensorProto, helper
+
     ONNX_AVAILABLE = True
 except ImportError:
     onnx = None  # type: ignore
@@ -50,6 +50,7 @@ except ImportError:
 
 try:
     import onnxruntime as ort
+
     ORT_AVAILABLE = True
 except ImportError:
     ort = None  # type: ignore
@@ -58,6 +59,7 @@ except ImportError:
 try:
     import torch
     import torch.nn as nn
+
     TORCH_AVAILABLE = True
 except ImportError:
     torch = None  # type: ignore
@@ -96,8 +98,9 @@ def _build_fallback_onnx_graph(
 ) -> None:
     """Construct a valid ONNX computational graph using onnx.helper when PyTorch export is unavailable."""
     if not ONNX_AVAILABLE or onnx is None or helper is None or TensorProto is None:
-        raise RuntimeError("The 'onnx' library is required to build the ONNX model graph.")
-
+        raise RuntimeError(
+            "The 'onnx' library is required to build the ONNX model graph."
+        )
 
     # 1. Inputs: input_ids (int64) and attention_mask (int64) with dynamic batch and sequence dimensions
     input_ids = helper.make_tensor_value_info(
@@ -186,8 +189,8 @@ def _build_fallback_onnx_graph(
 
 
 def export_checkpoint_to_onnx(
-    checkpoint_dir: Union[str, Path],
-    output_path: Optional[Union[str, Path]] = None,
+    checkpoint_dir: str | Path,
+    output_path: str | Path | None = None,
     opset_version: int = 14,
     base_model: str = "bert-base-uncased",
     hidden_dim: int = 256,
@@ -222,16 +225,20 @@ def export_checkpoint_to_onnx(
 
     # Auto-initialize checkpoint if not already present
     if not meta_path.is_file() or not weights_path.is_file():
-        logger.info(f"Checkpoint artifacts missing in '{ckpt_dir}'. Training initial checkpoint...")
+        logger.info(
+            f"Checkpoint artifacts missing in '{ckpt_dir}'. Training initial checkpoint..."
+        )
         train_prompt(prompt_id=prompt_id, epochs=2, checkpoint_dir=ckpt_dir)
 
     # Load metadata if available
     metadata = {}
     if meta_path.is_file():
         try:
-            with open(meta_path, "r", encoding="utf-8") as f:
+            with open(meta_path, encoding="utf-8") as f:
                 metadata = json.load(f)
-            hidden_dim = metadata.get("hyperparameters", {}).get("hidden_dim", hidden_dim)
+            hidden_dim = metadata.get("hyperparameters", {}).get(
+                "hidden_dim", hidden_dim
+            )
             base_model = metadata.get("base_model", base_model)
         except Exception as e:
             logger.warning(f"Could not parse checkpoint metadata at '{meta_path}': {e}")
@@ -240,10 +247,15 @@ def export_checkpoint_to_onnx(
     exported_via_torch = False
     if TORCH_AVAILABLE and torch is not None and weights_path.is_file():
         try:
-            state_dict = torch.load(weights_path, map_location="cpu")
+            state_dict = torch.load(
+                weights_path, map_location="cpu", weights_only=True
+            )  # nosec B614
             if isinstance(state_dict, dict):
                 from app.engine.train import BertLoRAEssayRegressor
-                py_model = BertLoRAEssayRegressor(base_model_name=base_model, hidden_dim=hidden_dim)
+
+                py_model = BertLoRAEssayRegressor(
+                    base_model_name=base_model, hidden_dim=hidden_dim
+                )
                 py_model.regression_head.load_state_dict(state_dict, strict=False)
                 py_model.eval()
 
@@ -266,9 +278,13 @@ def export_checkpoint_to_onnx(
                     },
                 )
                 exported_via_torch = True
-                logger.info(f"Successfully exported PyTorch model to ONNX via torch.onnx at '{target_file}'.")
+                logger.info(
+                    f"Successfully exported PyTorch model to ONNX via torch.onnx at '{target_file}'."
+                )
         except Exception as e:
-            logger.warning(f"PyTorch ONNX export could not complete ({e}). Using native ONNX graph builder.")
+            logger.warning(
+                f"PyTorch ONNX export could not complete ({e}). Using native ONNX graph builder."
+            )
 
     # 2. If not exported via PyTorch, construct via ONNX computational graph builder
     if not exported_via_torch:
@@ -289,7 +305,9 @@ def export_checkpoint_to_onnx(
             outputs = session.run(None, dummy_input)
             out_tensor: Any = outputs[0]
             out_shape = out_tensor.shape if hasattr(out_tensor, "shape") else (1, 1)
-            logger.info(f"ONNX Runtime verification passed! Output tensor shape: {out_shape}.")
+            logger.info(
+                f"ONNX Runtime verification passed! Output tensor shape: {out_shape}."
+            )
         except Exception as err:
             logger.error(f"ONNX Runtime verification failed: {err}")
             raise
@@ -326,7 +344,9 @@ def _calculate_percentiles(latencies: Sequence[float]) -> LatencyMetrics:
     sorted_l = sorted(latencies)
     n = len(sorted_l)
     if n == 0:
-        return LatencyMetrics(p50=0.0, p95=0.0, mean=0.0, min_ms=0.0, max_ms=0.0, iterations=0)
+        return LatencyMetrics(
+            p50=0.0, p95=0.0, mean=0.0, min_ms=0.0, max_ms=0.0, iterations=0
+        )
 
     # 50th percentile (median)
     idx_50 = round(0.50 * (n - 1))
@@ -351,8 +371,8 @@ def _calculate_percentiles(latencies: Sequence[float]) -> LatencyMetrics:
 
 
 def benchmark_inference_paths(
-    onnx_model_path: Union[str, Path],
-    sample_essays: Optional[List[str]] = None,
+    onnx_model_path: str | Path,
+    sample_essays: list[str] | None = None,
     num_iterations: int = 50,
     prompt_id: int = 1,
     nfr_target_ms: float = 300.0,
@@ -391,7 +411,9 @@ def benchmark_inference_paths(
     model_pytorch = BertEssayScoringModel(use_onnx=False)
 
     # Initialize Model B: ONNX Runtime optimized inference model
-    model_onnx = BertEssayScoringModel(use_onnx=True, onnx_model_path=str(onnx_model_path))
+    model_onnx = BertEssayScoringModel(
+        use_onnx=True, onnx_model_path=str(onnx_model_path)
+    )
 
     # --- Warmup Phase ---
     for essay in sample_essays:
@@ -399,7 +421,7 @@ def benchmark_inference_paths(
         model_onnx.predict_essay(essay, str(prompt_id))
 
     # --- Benchmark Path A: PyTorch / Baseline ---
-    pytorch_latencies: List[float] = []
+    pytorch_latencies: list[float] = []
     for i in range(num_iterations):
         essay = sample_essays[i % len(sample_essays)]
         t0 = time.perf_counter()
@@ -408,7 +430,7 @@ def benchmark_inference_paths(
         pytorch_latencies.append((t1 - t0) * 1000.0)
 
     # --- Benchmark Path B: ONNX Runtime ---
-    onnx_latencies: List[float] = []
+    onnx_latencies: list[float] = []
     for i in range(num_iterations):
         essay = sample_essays[i % len(sample_essays)]
         t0 = time.perf_counter()
@@ -423,7 +445,6 @@ def benchmark_inference_paths(
     speedup = round(pt_metrics.p50 / max(0.001, ox_metrics.p50), 2)
     nfr_passed = ox_metrics.p95 <= nfr_target_ms
 
-
     return BenchmarkReport(
         pytorch_metrics=pt_metrics,
         onnx_metrics=ox_metrics,
@@ -436,13 +457,17 @@ def benchmark_inference_paths(
 
 def render_benchmark_table(report: BenchmarkReport) -> str:
     """Render a clean ASCII comparison table of benchmark results."""
-    lines: List[str] = []
+    lines: list[str] = []
     divider = "+-----------------------+------------+------------+------------+------------+------------+--------+"
-    header  = "| Path                  |  p50 (ms)  |  p95 (ms)  |  Mean (ms) |  Min (ms)  |  Max (ms)  | Status |"
+    header = "| Path                  |  p50 (ms)  |  p95 (ms)  |  Mean (ms) |  Min (ms)  |  Max (ms)  | Status |"
 
     lines.append("=" * 98)
-    lines.append("                   INFERENCE LATENCY BENCHMARK: PYTORCH vs ONNX RUNTIME                   ")
-    lines.append(f"                   Target: NFR <= {report.nfr_target_ms:.1f} ms per essay (Section 5.3)                   ")
+    lines.append(
+        "                   INFERENCE LATENCY BENCHMARK: PYTORCH vs ONNX RUNTIME                   "
+    )
+    lines.append(
+        f"                   Target: NFR <= {report.nfr_target_ms:.1f} ms per essay (Section 5.3)                   "
+    )
     lines.append("=" * 98)
     lines.append(divider)
     lines.append(header)
@@ -547,7 +572,9 @@ def main() -> int:
     else:
         out_onnx = ckpt_dir / "model.onnx"
 
-    logger.info(f"Exporting checkpoint for prompt {args.prompt_id} to ONNX at '{out_onnx}'...")
+    logger.info(
+        f"Exporting checkpoint for prompt {args.prompt_id} to ONNX at '{out_onnx}'..."
+    )
     exported_file = export_checkpoint_to_onnx(
         checkpoint_dir=ckpt_dir,
         output_path=out_onnx,
@@ -556,7 +583,9 @@ def main() -> int:
     logger.info(f"ONNX export completed successfully: {exported_file}")
 
     # Run latency benchmark comparing PyTorch/Baseline vs ONNX
-    logger.info(f"Running inference latency benchmark ({args.num_iterations} iterations)...")
+    logger.info(
+        f"Running inference latency benchmark ({args.num_iterations} iterations)..."
+    )
     report = benchmark_inference_paths(
         onnx_model_path=exported_file,
         num_iterations=args.num_iterations,

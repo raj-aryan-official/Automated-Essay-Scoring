@@ -12,8 +12,8 @@ Provides:
 
 import sys
 import uuid
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -93,6 +93,7 @@ def test_minio_bucket() -> Generator[StorageService, None, None]:
 # Seeded Users & JWT Authentication Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def teacher_user(db_session: Session) -> User:
     """Create or retrieve a test TEACHER user."""
@@ -147,7 +148,9 @@ def viewer_user(db_session: Session) -> User:
 @pytest.fixture
 def ml_engineer_user(db_session: Session) -> User:
     """Create or retrieve a test ML_ENGINEER user."""
-    user = db_session.query(User).filter(User.email == "test_engineer@aes.local").first()
+    user = (
+        db_session.query(User).filter(User.email == "test_engineer@aes.local").first()
+    )
     if not user:
         user = User(
             id=uuid.uuid4(),
@@ -163,22 +166,32 @@ def ml_engineer_user(db_session: Session) -> User:
 
 @pytest.fixture
 def teacher_token(teacher_user: User) -> str:
-    return create_access_token(subject=str(teacher_user.id), role=teacher_user.role, email=teacher_user.email)
+    return create_access_token(
+        subject=str(teacher_user.id), role=teacher_user.role, email=teacher_user.email
+    )
 
 
 @pytest.fixture
 def admin_token(admin_user: User) -> str:
-    return create_access_token(subject=str(admin_user.id), role=admin_user.role, email=admin_user.email)
+    return create_access_token(
+        subject=str(admin_user.id), role=admin_user.role, email=admin_user.email
+    )
 
 
 @pytest.fixture
 def viewer_token(viewer_user: User) -> str:
-    return create_access_token(subject=str(viewer_user.id), role=viewer_user.role, email=viewer_user.email)
+    return create_access_token(
+        subject=str(viewer_user.id), role=viewer_user.role, email=viewer_user.email
+    )
 
 
 @pytest.fixture
 def ml_engineer_token(ml_engineer_user: User) -> str:
-    return create_access_token(subject=str(ml_engineer_user.id), role=ml_engineer_user.role, email=ml_engineer_user.email)
+    return create_access_token(
+        subject=str(ml_engineer_user.id),
+        role=ml_engineer_user.role,
+        email=ml_engineer_user.email,
+    )
 
 
 @pytest.fixture
@@ -205,6 +218,7 @@ def ml_engineer_headers(ml_engineer_token: str) -> dict:
 # TestClient Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def client(
     db_session: Session,
@@ -212,6 +226,7 @@ def client(
     teacher_headers: dict,
 ) -> Generator[TestClient, None, None]:
     """TestClient configured with in-memory DB, mock MinIO, and default TEACHER auth."""
+
     def _override_get_db():
         yield db_session
 
@@ -234,6 +249,7 @@ def unauth_client(
     test_minio_bucket: StorageService,
 ) -> Generator[TestClient, None, None]:
     """TestClient with no Authorization header for unauthenticated security tests."""
+
     def _override_get_db():
         yield db_session
 
@@ -253,6 +269,7 @@ def unauth_client(
 # ---------------------------------------------------------------------------
 # Seeded Prompts & Models
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def seed_prompt(db_session: Session) -> Prompt:
@@ -276,7 +293,9 @@ def seed_prompt(db_session: Session) -> Prompt:
 @pytest.fixture
 def seed_model(db_session: Session, seed_prompt: Prompt) -> ModelEntity:
     """Seed an active ModelEntity record for testing."""
-    existing = db_session.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+    existing = (
+        db_session.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+    )
     if existing:
         return existing
     model = ModelEntity(

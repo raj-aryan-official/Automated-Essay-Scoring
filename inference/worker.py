@@ -14,16 +14,15 @@ On exception:
 - updates essay status=PROCESSING_FAILED if terminal failure, else QUEUED
 """
 
-from datetime import datetime, timezone
 import logging
 import os
-from pathlib import Path
 import random
 import sys
 import time
-from typing import Callable, Optional
 import uuid
-from uuid import UUID
+from collections.abc import Callable
+from datetime import datetime, timezone
+from pathlib import Path
 
 # Ensure backend and inference directories are on sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -34,11 +33,13 @@ for path in (str(BACKEND_DIR), str(INFERENCE_DIR)):
     if path not in sys.path:
         sys.path.insert(0, path)
 
-from sqlalchemy.orm import Session
-
 from app.core.database import SessionLocal
 from app.engine.feedback import RuleBasedDimensionFeedbackGenerator
-from app.engine.interfaces import DimensionFeedbackGenerator, EssayScoringModel, ScorePrediction
+from app.engine.interfaces import (
+    DimensionFeedbackGenerator,
+    EssayScoringModel,
+    ScorePrediction,
+)
 from app.engine.model import BertEssayScoringModel
 from app.models.entities import (
     DimensionFeedback,
@@ -46,10 +47,10 @@ from app.models.entities import (
     InferenceRun,
     Job,
     ModelEntity,
-    Prompt,
     Score,
 )
 from app.services.job_service import claim_next_job
+from sqlalchemy.orm import Session
 
 logging.basicConfig(
     level=logging.INFO,
@@ -58,15 +59,21 @@ logging.basicConfig(
 logger = logging.getLogger("inference_worker")
 
 # Module-level singletons for scoring and feedback generation
-_scoring_model: Optional[EssayScoringModel] = None
-_feedback_generator: Optional[DimensionFeedbackGenerator] = None
+_scoring_model: EssayScoringModel | None = None
+_feedback_generator: DimensionFeedbackGenerator | None = None
 
 
-def get_scoring_model(prompt_id: Optional[str] = "1") -> EssayScoringModel:
+def get_scoring_model(prompt_id: str | None = "1") -> EssayScoringModel:
     """Lazily instantiate and return the singleton EssayScoringModel loaded with prompt checkpoint."""
     global _scoring_model
     if _scoring_model is None:
-        ckpt_meta = REPO_ROOT / "inference" / "checkpoints" / (prompt_id or "1") / "checkpoint_metadata.json"
+        ckpt_meta = (
+            REPO_ROOT
+            / "inference"
+            / "checkpoints"
+            / (prompt_id or "1")
+            / "checkpoint_metadata.json"
+        )
         config_path = str(ckpt_meta) if ckpt_meta.is_file() else None
         _scoring_model = BertEssayScoringModel(config_path=config_path)
     return _scoring_model
@@ -118,9 +125,9 @@ def stub_predict_score(
 def process_job(
     job: Job,
     db: Session,
-    model_fn: Optional[Callable[[str, float, float], dict]] = None,
-    scoring_model: Optional[EssayScoringModel] = None,
-    feedback_gen: Optional[DimensionFeedbackGenerator] = None,
+    model_fn: Callable[[str, float, float], dict] | None = None,
+    scoring_model: EssayScoringModel | None = None,
+    feedback_gen: DimensionFeedbackGenerator | None = None,
 ) -> Job:
     """Execute inference for a claimed job.
 
@@ -138,7 +145,9 @@ def process_job(
         # 1. Fetch essay metadata
         essay = db.query(Essay).filter(Essay.id == job.essay_id).first()
         if not essay:
-            raise ValueError(f"Referenced essay '{job.essay_id}' not found in database.")
+            raise ValueError(
+                f"Referenced essay '{job.essay_id}' not found in database."
+            )
 
         raw_text: str = str(essay.raw_text or "")
         if not raw_text.strip():
@@ -184,7 +193,9 @@ def process_job(
             model = scoring_model or get_scoring_model(prompt_id_str)
             generator = feedback_gen or get_feedback_generator()
 
-            prediction: ScorePrediction = model.predict_essay(raw_text, prompt_id=prompt_id_str)
+            prediction: ScorePrediction = model.predict_essay(
+                raw_text, prompt_id=prompt_id_str
+            )
             holistic_score = float(prediction.holistic_score)
             rubric_band = prediction.rubric_band
             confidence = float(prediction.confidence)
@@ -257,7 +268,9 @@ def process_job(
                     score_id=score_record.id,
                     dimension=dim,
                     sub_score=float(sub_score) if sub_score is not None else None,
-                    feedback_text=feedback_by_dimension.get(dim, f"Assessment for {dim}."),
+                    feedback_text=feedback_by_dimension.get(
+                        dim, f"Assessment for {dim}."
+                    ),
                 )
                 db.add(dim_feedback)
 
@@ -291,7 +304,7 @@ def process_job(
         return job
 
     except Exception as exc:
-        logger.error(f"Execution error on job {job.id}: {exc}", exc_info=True)
+        logger.exception(f"Execution error on job {job.id}: {exc}")
         db.rollback()
 
         # Re-fetch job to update status in fresh transaction
@@ -309,7 +322,9 @@ def process_job(
         max_attempts = int(getattr(refreshed_job, "max_attempts", 3) or 3)
 
         # Update essay status accordingly
-        refreshed_essay = db.query(Essay).filter(Essay.id == refreshed_job.essay_id).first()
+        refreshed_essay = (
+            db.query(Essay).filter(Essay.id == refreshed_job.essay_id).first()
+        )
 
         # Check retry threshold
         if new_attempts >= max_attempts:
@@ -339,10 +354,10 @@ def process_job(
 
 def poll_and_process_once(
     db: Session,
-    model_fn: Optional[Callable[[str, float, float], dict]] = None,
-    scoring_model: Optional[EssayScoringModel] = None,
-    feedback_gen: Optional[DimensionFeedbackGenerator] = None,
-) -> Optional[Job]:
+    model_fn: Callable[[str, float, float], dict] | None = None,
+    scoring_model: EssayScoringModel | None = None,
+    feedback_gen: DimensionFeedbackGenerator | None = None,
+) -> Job | None:
     """Poll for the next queued scoring job, claim it atomically, and process it."""
     job = claim_next_job(db, job_type="SCORING")
     if not job:
@@ -358,21 +373,25 @@ def poll_and_process_once(
 
 def run_worker_daemon(
     poll_interval: float = 2.0,
-    max_iterations: Optional[int] = None,
+    max_iterations: int | None = None,
     session_factory=None,
-    model_fn: Optional[Callable[[str, float, float], dict]] = None,
-    scoring_model: Optional[EssayScoringModel] = None,
-    feedback_gen: Optional[DimensionFeedbackGenerator] = None,
+    model_fn: Callable[[str, float, float], dict] | None = None,
+    scoring_model: EssayScoringModel | None = None,
+    feedback_gen: DimensionFeedbackGenerator | None = None,
 ):
     """Long-running polling loop that continuously claims and executes scoring jobs."""
     factory = session_factory or SessionLocal
-    logger.info(f"Starting AES Inference Worker Daemon (polling every {poll_interval}s)...")
+    logger.info(
+        f"Starting AES Inference Worker Daemon (polling every {poll_interval}s)..."
+    )
 
     iterations = 0
     try:
         while True:
             if max_iterations is not None and iterations >= max_iterations:
-                logger.info(f"Worker reached max iterations ({max_iterations}). Exiting cleanly.")
+                logger.info(
+                    f"Worker reached max iterations ({max_iterations}). Exiting cleanly."
+                )
                 break
 
             iterations += 1
@@ -387,7 +406,7 @@ def run_worker_daemon(
                 if not job:
                     time.sleep(poll_interval)
             except Exception as loop_err:
-                logger.error(f"Unhandled error in polling loop: {loop_err}", exc_info=True)
+                logger.exception(f"Unhandled error in polling loop: {loop_err}")
                 time.sleep(poll_interval)
             finally:
                 db.close()

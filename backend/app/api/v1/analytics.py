@@ -9,9 +9,8 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -39,11 +38,11 @@ def _load_qwk_summary() -> QwkSummaryResponse:
     """Load QWK evaluation metrics from week7_evaluation.json or return fallback."""
     if _EVALUATION_JSON_PATH.exists():
         try:
-            with open(_EVALUATION_JSON_PATH, "r", encoding="utf-8") as f:
+            with open(_EVALUATION_JSON_PATH, encoding="utf-8") as f:
                 data = json.load(f)
 
             prompt_results_raw = data.get("prompt_results", {})
-            prompts: List[PromptQwkResult] = []
+            prompts: list[PromptQwkResult] = []
 
             for pid_str, res in prompt_results_raw.items():
                 prompts.append(
@@ -66,7 +65,9 @@ def _load_qwk_summary() -> QwkSummaryResponse:
                 average_qwk=float(data.get("average_qwk", 0.0)),
                 target_qwk=float(data.get("target_qwk", 0.70)),
                 all_passed=bool(data.get("all_passed", False)),
-                evaluated_prompts_count=int(data.get("evaluated_prompts_count", len(prompts))),
+                evaluated_prompts_count=int(
+                    data.get("evaluated_prompts_count", len(prompts))
+                ),
                 passed_prompts_count=int(data.get("passed_prompts_count", 0)),
                 failed_prompts_count=int(data.get("failed_prompts_count", 0)),
                 timestamp=data.get("timestamp"),
@@ -82,9 +83,19 @@ def _load_qwk_summary() -> QwkSummaryResponse:
             qwk=0.98 if i != 7 else 0.93,
             target_qwk=0.70,
             passed=True,
-            genre="persuasive" if i <= 2 else ("source-dependent" if i <= 6 else "narrative"),
+            genre=(
+                "persuasive"
+                if i <= 2
+                else ("source-dependent" if i <= 6 else "narrative")
+            ),
             rubric_min=2.0 if i == 1 else (1.0 if i == 2 else 0.0),
-            rubric_max=12.0 if i == 1 else (6.0 if i == 2 else (30.0 if i == 7 else (60.0 if i == 8 else 4.0))),
+            rubric_max=(
+                12.0
+                if i == 1
+                else (
+                    6.0 if i == 2 else (30.0 if i == 7 else (60.0 if i == 8 else 4.0))
+                )
+            ),
             n_test_samples=4,
         )
         for i in range(1, 9)
@@ -100,18 +111,18 @@ def _load_qwk_summary() -> QwkSummaryResponse:
     )
 
 
-def _load_loss_curves() -> Dict[str, List[LossCurvePoint]]:
+def _load_loss_curves() -> dict[str, list[LossCurvePoint]]:
     """Parse scalars.jsonl files for each prompt and return aggregated loss curve points."""
-    loss_curves: Dict[str, List[LossCurvePoint]] = {}
+    loss_curves: dict[str, list[LossCurvePoint]] = {}
 
     for prompt_id in range(1, 9):
         pid_str = str(prompt_id)
         scalars_path = _INFERENCE_RUNS_DIR / f"prompt_{prompt_id}" / "scalars.jsonl"
-        points_by_step: Dict[int, Dict[str, float]] = {}
+        points_by_step: dict[int, dict[str, float]] = {}
 
         if scalars_path.exists():
             try:
-                with open(scalars_path, "r", encoding="utf-8") as f:
+                with open(scalars_path, encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if not line:
@@ -137,7 +148,7 @@ def _load_loss_curves() -> Dict[str, List[LossCurvePoint]]:
                 logger.warning(f"Error reading {scalars_path}: {e}")
 
         if points_by_step:
-            points: List[LossCurvePoint] = []
+            points: list[LossCurvePoint] = []
             for step in sorted(points_by_step.keys()):
                 d = points_by_step[step]
                 points.append(
@@ -152,8 +163,12 @@ def _load_loss_curves() -> Dict[str, List[LossCurvePoint]]:
         else:
             # Synthetic fallback curve if scalars not present
             loss_curves[pid_str] = [
-                LossCurvePoint(step=1, train_loss=0.06563, val_loss=0.07399, learning_rate=1e-5),
-                LossCurvePoint(step=2, train_loss=0.04795, val_loss=0.05454, learning_rate=1e-5),
+                LossCurvePoint(
+                    step=1, train_loss=0.06563, val_loss=0.07399, learning_rate=1e-5
+                ),
+                LossCurvePoint(
+                    step=2, train_loss=0.04795, val_loss=0.05454, learning_rate=1e-5
+                ),
             ]
 
     return loss_curves

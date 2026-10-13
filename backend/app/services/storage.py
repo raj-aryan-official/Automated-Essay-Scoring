@@ -2,9 +2,9 @@
 
 import io
 import logging
-import os
 from pathlib import Path
-from typing import BinaryIO, Optional, Union
+from typing import BinaryIO
+
 import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
@@ -23,11 +23,11 @@ class StorageService:
 
     def __init__(
         self,
-        endpoint_url: Union[str, None, object] = _DEFAULT,
-        bucket_name: Optional[str] = None,
-        access_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
-        region_name: Optional[str] = None,
+        endpoint_url: str | None | object = _DEFAULT,
+        bucket_name: str | None = None,
+        access_key: str | None = None,
+        secret_key: str | None = None,
+        region_name: str | None = None,
     ):
         if endpoint_url is _DEFAULT:
             self.endpoint_url = (
@@ -44,19 +44,13 @@ class StorageService:
             or "essay-documents"
         )
         self.access_key = (
-            access_key
-            or getattr(settings, "S3_ACCESS_KEY", None)
-            or "minioadmin"
+            access_key or getattr(settings, "S3_ACCESS_KEY", None) or "minioadmin"
         )
         self.secret_key = (
-            secret_key
-            or getattr(settings, "S3_SECRET_KEY", None)
-            or "minioadmin"
+            secret_key or getattr(settings, "S3_SECRET_KEY", None) or "minioadmin"
         )
         self.region_name = (
-            region_name
-            or getattr(settings, "S3_REGION", None)
-            or "us-east-1"
+            region_name or getattr(settings, "S3_REGION", None) or "us-east-1"
         )
 
         endpoint = str(self.endpoint_url) if self.endpoint_url else None
@@ -69,7 +63,9 @@ class StorageService:
                 endpoint_url=endpoint,
                 config=Config(
                     signature_version="s3v4",
-                    s3={"addressing_style": "path"},  # Path-style addressing required for MinIO
+                    s3={
+                        "addressing_style": "path"
+                    },  # Path-style addressing required for MinIO
                     connect_timeout=1,
                     read_timeout=1,
                 ),
@@ -100,16 +96,22 @@ class StorageService:
                     client.create_bucket(**create_kwargs)
                     logger.info(f"Created S3 bucket '{self.bucket_name}'.")
                 except Exception as create_exc:
-                    logger.warning(f"Could not create S3 bucket: {create_exc}. Using local directory.")
-                    (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(parents=True, exist_ok=True)
+                    logger.warning(
+                        f"Could not create S3 bucket: {create_exc}. Using local directory."
+                    )
+                    (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(
+                        parents=True, exist_ok=True
+                    )
             else:
-                (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(parents=True, exist_ok=True)
+                (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(
+                    parents=True, exist_ok=True
+                )
 
     def upload_file(
         self,
-        file_bytes: Union[bytes, BinaryIO, io.BytesIO],
+        file_bytes: bytes | BinaryIO | io.BytesIO,
         key: str,
-        content_type: Optional[str] = None,
+        content_type: str | None = None,
     ) -> str:
         """Upload raw bytes or file-like object to S3 or fallback to local storage."""
         extra_args = {}
@@ -145,7 +147,9 @@ class StorageService:
                 logger.info(f"Uploaded file to '{self.bucket_name}/{key}'.")
                 return key
             except Exception as exc:
-                logger.warning(f"S3 upload failed ({exc}). Falling back to local storage for key '{key}'.")
+                logger.warning(
+                    f"S3 upload failed ({exc}). Falling back to local storage for key '{key}'."
+                )
 
         # Local filesystem fallback
         target = LOCAL_STORAGE_DIR / self.bucket_name / key
@@ -194,7 +198,9 @@ class StorageService:
         target = LOCAL_STORAGE_DIR / self.bucket_name / storage_key
         if target.is_file():
             return target.read_bytes()
-        raise FileNotFoundError(f"Storage key '{storage_key}' not found locally or in S3.")
+        raise FileNotFoundError(
+            f"Storage key '{storage_key}' not found locally or in S3."
+        )
 
     def delete_file(self, storage_key: str) -> bool:
         """Delete an object from the bucket.
@@ -240,7 +246,6 @@ class StorageService:
 
         target = LOCAL_STORAGE_DIR / self.bucket_name / storage_key
         return target.is_file()
-
 
 
 def get_storage_service() -> StorageService:

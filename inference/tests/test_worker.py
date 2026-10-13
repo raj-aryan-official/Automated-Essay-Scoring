@@ -2,9 +2,10 @@
 
 import sys
 import uuid
-from uuid import UUID
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator
+from uuid import UUID
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -146,7 +147,9 @@ def test_worker_successful_job_execution(db_session: Session, seed_essay: Essay)
     assert essay_in_db.status in ("SCORED", "FEEDBACK_READY")
 
 
-def test_test_005_simulated_worker_crash_and_retries(db_session: Session, seed_essay: Essay):
+def test_test_005_simulated_worker_crash_and_retries(
+    db_session: Session, seed_essay: Essay
+):
     """TEST-005: Async Worker Crash & Job Retries.
 
     Scenario: Simulated worker crash / exception during model execution.
@@ -161,7 +164,9 @@ def test_test_005_simulated_worker_crash_and_retries(db_session: Session, seed_e
     db_session.commit()
 
     # Create job with max_attempts=3
-    job = create_scoring_job(db_session, essay_id=UUID(str(seed_essay.id)), max_attempts=3)
+    job = create_scoring_job(
+        db_session, essay_id=UUID(str(seed_essay.id)), max_attempts=3
+    )
     assert job.status == "QUEUED"
     assert job.attempts == 0
 
@@ -239,7 +244,11 @@ def test_worker_real_model_scoring_and_dimension_feedback_persistence(
     assert essay_scored.status in ("SCORED", "FEEDBACK_READY")
 
     # Verify inference_run record
-    inf_run = db_session.query(InferenceRun).filter(InferenceRun.essay_id == seed_essay.id).first()
+    inf_run = (
+        db_session.query(InferenceRun)
+        .filter(InferenceRun.essay_id == seed_essay.id)
+        .first()
+    )
     assert inf_run is not None
     assert inf_run.job_id == job.id
     assert inf_run.inference_ms >= 0
@@ -267,4 +276,3 @@ def test_worker_real_model_scoring_and_dimension_feedback_persistence(
         assert len(str(fb.feedback_text)) > 0
         assert fb.sub_score is not None
         assert seed_prompt.rubric_min <= fb.sub_score <= seed_prompt.rubric_max
-

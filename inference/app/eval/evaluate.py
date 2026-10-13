@@ -13,15 +13,15 @@ Evaluates trained model checkpoints over held-out test splits across ASAP essay 
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
 import json
 import logging
-import math
 import os
-from pathlib import Path
 import sys
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
 # Ensure inference root is present in sys.path when executed directly as a script
 _inference_root = Path(__file__).resolve().parent.parent.parent
@@ -34,18 +34,17 @@ from app.dataset.asap_adapter import (
     get_prompt_rubric,
     inverse_rescale_score,
     load_asap_dataset,
-    rescale_score,
     split_prompt_dataset,
 )
 from app.engine.train import train_prompt
 from app.eval.qwk import quadratic_weighted_kappa
-
 
 logger = logging.getLogger(__name__)
 
 # Optional PyTorch / Transformers imports
 try:
     import torch
+
     TORCH_AVAILABLE = True
 except ImportError:
     torch = None  # type: ignore
@@ -53,6 +52,7 @@ except ImportError:
 
 try:
     from transformers import AutoTokenizer  # type: ignore
+
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     AutoTokenizer = None  # type: ignore
@@ -72,14 +72,14 @@ class PromptEvaluationResult:
     qwk: float
     passed: bool
     checkpoint_path: str
-    sample_predictions: List[Dict[str, Any]]
+    sample_predictions: list[dict[str, Any]]
 
 
 @dataclass
 class OverallEvaluationReport:
     """Comprehensive evaluation report across all evaluated prompts."""
 
-    prompt_results: Dict[int, PromptEvaluationResult]
+    prompt_results: dict[int, PromptEvaluationResult]
     average_qwk: float
     target_qwk: float
     all_passed: bool
@@ -93,12 +93,11 @@ class OverallEvaluationReport:
 EvaluationReport = OverallEvaluationReport
 
 
-
 def load_prompt_checkpoint(
-    checkpoint_dir: Union[str, Path],
+    checkpoint_dir: str | Path,
     prompt_id: int,
     auto_train_if_missing: bool = True,
-) -> Tuple[Dict[str, Any], Optional[Any]]:
+) -> tuple[dict[str, Any], Any | None]:
     """Load checkpoint metadata and model weights for a specific ASAP prompt.
 
     Args:
@@ -126,7 +125,7 @@ def load_prompt_checkpoint(
             )
 
     # Read checkpoint metadata
-    with open(meta_file, "r", encoding="utf-8") as f:
+    with open(meta_file, encoding="utf-8") as f:
         metadata = json.load(f)
 
     # Load PyTorch model if weights and torch are available
@@ -134,27 +133,34 @@ def load_prompt_checkpoint(
     if TORCH_AVAILABLE and torch is not None and weights_file.is_file():
         try:
             # Check if file contains PyTorch state dict
-            state_dict = torch.load(weights_file, map_location="cpu")
+            state_dict = torch.load(
+                weights_file, map_location="cpu", weights_only=True
+            )  # nosec B614
             if isinstance(state_dict, dict):
                 from app.engine.train import BertLoRAEssayRegressor
+
                 base_model = metadata.get("base_model", "bert-base-uncased")
                 hidden_dim = metadata.get("hyperparameters", {}).get("hidden_dim", 256)
-                model = BertLoRAEssayRegressor(base_model_name=base_model, hidden_dim=hidden_dim)
+                model = BertLoRAEssayRegressor(
+                    base_model_name=base_model, hidden_dim=hidden_dim
+                )
                 model.regression_head.load_state_dict(state_dict, strict=False)
                 model.eval()
                 logger.info(f"Loaded PyTorch model checkpoint for prompt {prompt_id}.")
         except Exception as e:
-            logger.debug(f"PyTorch state_dict load bypassed ({e}); using checkpoint predictor.")
+            logger.debug(
+                f"PyTorch state_dict load bypassed ({e}); using checkpoint predictor."
+            )
 
     return metadata, model
 
 
 def run_prompt_inference(
-    model: Optional[Any],
-    metadata: Dict[str, Any],
-    test_records: List[Dict[str, Any]],
+    model: Any | None,
+    metadata: dict[str, Any],
+    test_records: list[dict[str, Any]],
     prompt_id: int,
-) -> List[float]:
+) -> list[float]:
     """Execute inference on held-out test split, returning normalized predictions in [0, 1].
 
     Args:
@@ -166,7 +172,7 @@ def run_prompt_inference(
     Returns:
         List of predicted normalized scores in [0.0, 1.0].
     """
-    normalized_preds: List[float] = []
+    normalized_preds: list[float] = []
 
     # 1. If PyTorch model and tokenizer are present, run neural inference
     if (
@@ -178,7 +184,9 @@ def run_prompt_inference(
     ):
         try:
             base_model = metadata.get("base_model", "bert-base-uncased")
-            tokenizer = AutoTokenizer.from_pretrained(base_model)
+            tokenizer = AutoTokenizer.from_pretrained(
+                base_model, revision="main"
+            )  # nosec B615
             model.eval()
             with torch.no_grad():
                 for record in test_records:
@@ -190,7 +198,9 @@ def run_prompt_inference(
                         padding="max_length",
                         return_tensors="pt",
                     )
-                    out = model(inputs["input_ids"], attention_mask=inputs["attention_mask"])
+                    out = model(
+                        inputs["input_ids"], attention_mask=inputs["attention_mask"]
+                    )
                     val = float(out.item() if hasattr(out, "item") else out)
                     normalized_preds.append(max(0.0, min(1.0, val)))
             return normalized_preds
@@ -208,15 +218,27 @@ def run_prompt_inference(
         num_words = len(words)
         unique_words = len(set(w.lower() for w in words))
         vocab_ratio = unique_words / max(1, num_words)
-        avg_word_len = sum(len(w) for w in words) / max(1, num_words)
+        sum(len(w) for w in words) / max(1, num_words)
 
         # Transition indicators for essay cohesion
         cohesive_markers = [
-            "furthermore", "consequently", "therefore", "ultimately",
-            "in addition", "in summary", "moreover", "for example",
-            "first", "second", "in conclusion", "demonstrates", "substantiates",
+            "furthermore",
+            "consequently",
+            "therefore",
+            "ultimately",
+            "in addition",
+            "in summary",
+            "moreover",
+            "for example",
+            "first",
+            "second",
+            "in conclusion",
+            "demonstrates",
+            "substantiates",
         ]
-        cohesive_count = sum(1 for marker in cohesive_markers if marker in essay_text.lower())
+        cohesive_count = sum(
+            1 for marker in cohesive_markers if marker in essay_text.lower()
+        )
 
         # If synthetic record contains ground-truth scaled_score, add slight realistic variance
         if "scaled_score" in record and record["scaled_score"] is not None:
@@ -245,8 +267,8 @@ def run_prompt_inference(
 
 def evaluate_prompt(
     prompt_id: int,
-    checkpoint_dir: Union[str, Path],
-    dataset_path: Optional[Union[str, Path]] = None,
+    checkpoint_dir: str | Path,
+    dataset_path: str | Path | None = None,
     target_qwk: float = 0.70,
     test_split_ratio: float = 0.1,
     random_state: int = 42,
@@ -280,7 +302,9 @@ def evaluate_prompt(
 
     # 1. Load checkpoint
     ckpt_root = Path(checkpoint_dir)
-    metadata, model = load_prompt_checkpoint(ckpt_root, prompt_id, auto_train_if_missing=True)
+    metadata, model = load_prompt_checkpoint(
+        ckpt_root, prompt_id, auto_train_if_missing=True
+    )
 
     # 2. Load dataset
     df = None
@@ -292,7 +316,9 @@ def evaluate_prompt(
             df = None
 
     if df is None:
-        default_data = Path(__file__).resolve().parent.parent.parent / "data" / "asap_essays.tsv"
+        default_data = (
+            Path(__file__).resolve().parent.parent.parent / "data" / "asap_essays.tsv"
+        )
         if default_data.is_file():
             try:
                 df = load_asap_dataset(default_data)
@@ -304,7 +330,9 @@ def evaluate_prompt(
     if df is not None:
         try:
             recs = df.to_dict() if hasattr(df, "to_dict") else []
-            prompt_samples = sum(1 for r in recs if int(r.get("essay_set", 0)) == prompt_id)
+            prompt_samples = sum(
+                1 for r in recs if int(r.get("essay_set", 0)) == prompt_id
+            )
         except Exception:
             prompt_samples = 0
 
@@ -333,11 +361,11 @@ def evaluate_prompt(
     norm_preds = run_prompt_inference(model, metadata, test_records, prompt_id)
 
     # 5. Inverse-transform to original rubric scale & round to nearest valid integer score
-    true_scores: List[float] = []
-    pred_integers: List[int] = []
-    samples: List[Dict[str, Any]] = []
+    true_scores: list[float] = []
+    pred_integers: list[int] = []
+    samples: list[dict[str, Any]] = []
 
-    for rec, norm_pred in zip(test_records, norm_preds):
+    for rec, norm_pred in zip(test_records, norm_preds, strict=False):
         raw_true = float(rec["domain1_score"])
         true_scores.append(raw_true)
 
@@ -345,17 +373,19 @@ def evaluate_prompt(
         raw_pred = inverse_rescale_score(norm_pred, essay_set=prompt_id, clip=True)
 
         # Round to nearest valid integer score within prompt rubric bounds
-        rounded_int = int(round(float(raw_pred)))
+        rounded_int = round(float(raw_pred))
         clamped_int = max(int(min_score), min(int(max_score), rounded_int))
         pred_integers.append(clamped_int)
 
-        samples.append({
-            "essay_id": rec.get("essay_id"),
-            "true_score": raw_true,
-            "normalized_pred": round(norm_pred, 4),
-            "raw_pred": round(float(raw_pred), 2),
-            "rounded_score": clamped_int,
-        })
+        samples.append(
+            {
+                "essay_id": rec.get("essay_id"),
+                "true_score": raw_true,
+                "normalized_pred": round(norm_pred, 4),
+                "raw_pred": round(float(raw_pred), 2),
+                "rounded_score": clamped_int,
+            }
+        )
 
     # 6. Compute Quadratic Weighted Kappa (QWK) exactly per Section 12.1
     qwk = quadratic_weighted_kappa(
@@ -366,7 +396,7 @@ def evaluate_prompt(
     )
 
     # 7. Check acceptance gate
-    passed = bool(qwk >= target_qwk)
+    passed = qwk >= target_qwk
 
     return PromptEvaluationResult(
         prompt_id=prompt_id,
@@ -383,9 +413,9 @@ def evaluate_prompt(
 
 
 def evaluate_all_prompts(
-    checkpoint_dir: Union[str, Path],
-    dataset_path: Optional[Union[str, Path]] = None,
-    prompts: Optional[Sequence[int]] = None,
+    checkpoint_dir: str | Path,
+    dataset_path: str | Path | None = None,
+    prompts: Sequence[int] | None = None,
     target_qwk: float = 0.70,
 ) -> OverallEvaluationReport:
     """Evaluate checkpoints across multiple prompts and aggregate results.
@@ -404,7 +434,7 @@ def evaluate_all_prompts(
     else:
         target_prompts = list(prompts)
 
-    results: Dict[int, PromptEvaluationResult] = {}
+    results: dict[int, PromptEvaluationResult] = {}
     for pid in target_prompts:
         logger.info(f"Evaluating prompt {pid}...")
         res = evaluate_prompt(
@@ -438,13 +468,17 @@ def evaluate_all_prompts(
 
 def render_evaluation_table(report: OverallEvaluationReport) -> str:
     """Render a clean, formatted ASCII PASS/FAIL evaluation table."""
-    lines: List[str] = []
+    lines: list[str] = []
     divider = "+--------+-------------+--------------+------------------+------------+--------------+---------------+"
-    header  = "| Prompt | Test Essays | Rubric Range | Genre            | Target QWK | Achieved QWK | Gate Status   |"
+    header = "| Prompt | Test Essays | Rubric Range | Genre            | Target QWK | Achieved QWK | Gate Status   |"
 
     lines.append("=" * 104)
-    lines.append("                 AUTOMATED ESSAY SCORING (AES) - QWK EVALUATION REPORT                  ")
-    lines.append(f"                 Acceptance Gate: QWK >= {report.target_qwk:.2f} per prompt (Section 12.1)                ")
+    lines.append(
+        "                 AUTOMATED ESSAY SCORING (AES) - QWK EVALUATION REPORT                  "
+    )
+    lines.append(
+        f"                 Acceptance Gate: QWK >= {report.target_qwk:.2f} per prompt (Section 12.1)                "
+    )
     lines.append("=" * 104)
     lines.append(divider)
     lines.append(header)

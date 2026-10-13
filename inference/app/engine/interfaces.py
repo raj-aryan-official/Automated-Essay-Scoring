@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -30,9 +30,9 @@ class ScorePrediction:
     holistic_score: float
     rubric_band: str
     confidence: float
-    dimension_scores: Dict[str, Any] = field(default_factory=dict)
-    raw_score: Optional[float] = None
-    inference_ms: Optional[int] = None
+    dimension_scores: dict[str, Any] = field(default_factory=dict)
+    raw_score: float | None = None
+    inference_ms: int | None = None
 
 
 class EssayScoringModel(ABC):

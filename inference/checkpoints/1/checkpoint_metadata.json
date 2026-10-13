@@ -1,0 +1,25 @@
+{
+  "prompt_id": 1,
+  "base_model": "bert-base-uncased",
+  "epochs_completed": 5,
+  "best_epoch": 5,
+  "val_loss": 0.042,
+  "loss_metric": "MSE",
+  "hyperparameters": {
+    "batch_size": 8,
+    "learning_rate": 2e-05,
+    "weight_decay": 0.01,
+    "warmup_ratio": 0.1,
+    "lora_r": 8,
+    "lora_alpha": 16,
+    "lora_dropout": 0.1,
+    "hidden_dim": 256,
+    "max_sequence_length": 512
+  },
+  "rubric": {
+    "min_score": 2.0,
+    "max_score": 12.0
+  },
+  "saved_at": "2026-09-20T19:00:00+00:00",
+  "status": "IMPROVED"
+}

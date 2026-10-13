@@ -1,10 +1,12 @@
 """Database connection configuration and session management."""
 
 import logging
-from typing import Any, AsyncGenerator, Dict, Generator
+from collections.abc import AsyncGenerator, Generator
+from typing import Any
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
 from app.core.config import settings
 
@@ -14,7 +16,7 @@ logger = logging.getLogger(__name__)
 def _create_sync_engine():
     sync_url = settings.DATABASE_SYNC_URL
     is_sqlite = sync_url.startswith("sqlite")
-    engine_kwargs: Dict[str, Any] = {"pool_pre_ping": True}
+    engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
     if is_sqlite:
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
@@ -24,7 +26,7 @@ def _create_sync_engine():
         eng = create_engine(sync_url, **engine_kwargs)
         # Probe connection if not sqlite
         if not is_sqlite:
-            with eng.connect() as conn:
+            with eng.connect():
                 pass
         return eng
     except Exception as exc:
@@ -39,6 +41,7 @@ def _create_sync_engine():
 def init_db(target_engine=None):
     """Initialize all database tables from declared ORM entities."""
     from app.models.entities import Base as ModelsBase
+
     eng = target_engine or engine
     ModelsBase.metadata.create_all(bind=eng)
     logger.info("Database schema verified / initialized successfully.")
@@ -47,7 +50,7 @@ def init_db(target_engine=None):
 def _create_async_engine():
     async_url = settings.DATABASE_URL
     is_sqlite = async_url.startswith("sqlite")
-    engine_kwargs: Dict[str, Any] = {"pool_pre_ping": True}
+    engine_kwargs: dict[str, Any] = {"pool_pre_ping": True}
     if is_sqlite:
         engine_kwargs["connect_args"] = {"check_same_thread": False}
     else:
@@ -96,7 +99,9 @@ def get_db() -> Generator[Session, None, None]:
 async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for asynchronous database session."""
     if AsyncSessionLocal is None:
-        raise RuntimeError("Asynchronous database session is not configured or driver unavailable.")
+        raise RuntimeError(
+            "Asynchronous database session is not configured or driver unavailable."
+        )
     async with AsyncSessionLocal() as session:
         try:
             yield session

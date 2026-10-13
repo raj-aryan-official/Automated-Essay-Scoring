@@ -3,6 +3,7 @@
 import io
 import sys
 from pathlib import Path
+
 import pytest
 from moto import mock_aws
 

@@ -1,7 +1,6 @@
 """Common dependencies for FastAPI endpoints: database sessions and RBAC authentication."""
 
-from typing import Callable, List, Optional
-import uuid
+from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import Depends, HTTPException, status
@@ -33,12 +32,12 @@ def get_current_user(
     )
     try:
         payload = decode_access_token(token)
-        user_id_raw: Optional[str] = payload.get("sub")
+        user_id_raw: str | None = payload.get("sub")
         if not user_id_raw:
             raise credentials_exception
-        user_id = UUID(str(user_id_raw))
+        user_id = UUID(user_id_raw)
     except (JWTError, ValueError):
-        raise credentials_exception
+        raise credentials_exception from None
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -46,12 +45,13 @@ def get_current_user(
     return user
 
 
-def require_roles(allowed_roles: List[str]) -> Callable[[User], User]:
+def require_roles(allowed_roles: list[str]) -> Callable[[User], User]:
     """Dependency factory enforcing role-based access control (RBAC).
 
     ADMIN role always possesses superuser privileges and is unconditionally authorized.
     Otherwise, the user's role must match one of the allowed_roles.
     """
+
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
         # ADMIN has full access across all endpoints
         if current_user.role == "ADMIN":

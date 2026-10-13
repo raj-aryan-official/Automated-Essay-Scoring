@@ -19,8 +19,8 @@ adherence to the quadratic penalty weighting defined in Section 12.1.
 
 from __future__ import annotations
 
-import math
-from typing import Any, List, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any
 
 try:
     import numpy as np
@@ -28,7 +28,7 @@ except ImportError:
     np = None  # type: ignore
 
 
-def _to_list(values: Any) -> List[float]:
+def _to_list(values: Any) -> list[float]:
     """Convert input sequence/series/array to a Python list of floats."""
     if hasattr(values, "tolist") and callable(getattr(values, "tolist")):
         return [float(x) for x in values.tolist()]
@@ -36,11 +36,11 @@ def _to_list(values: Any) -> List[float]:
 
 
 def build_confusion_matrix(
-    y_true: Sequence[Union[int, float]],
-    y_pred: Sequence[Union[int, float]],
+    y_true: Sequence[int | float],
+    y_pred: Sequence[int | float],
     min_score: int,
     max_score: int,
-) -> List[List[float]]:
+) -> list[list[float]]:
     """Construct observed score-pair matrix O of shape (N, N).
 
     Args:
@@ -55,7 +55,7 @@ def build_confusion_matrix(
     N = int(max_score - min_score + 1)
     matrix = [[0.0] * N for _ in range(N)]
 
-    for t, p in zip(y_true, y_pred):
+    for t, p in zip(y_true, y_pred, strict=False):
         # Round to nearest integer category and clamp within rubric bounds
         ti = int(round(float(t))) - min_score
         pi = int(round(float(p))) - min_score
@@ -67,8 +67,8 @@ def build_confusion_matrix(
 
 
 def build_expected_matrix(
-    observed_matrix: List[List[float]],
-) -> List[List[float]]:
+    observed_matrix: list[list[float]],
+) -> list[list[float]]:
     """Construct expected matrix E under random agreement: E_ij = (r_i * c_j) / n.
 
     Args:
@@ -94,7 +94,7 @@ def build_expected_matrix(
     return expected
 
 
-def build_weight_matrix(num_categories: int) -> List[List[float]]:
+def build_weight_matrix(num_categories: int) -> list[list[float]]:
     """Construct quadratic weight matrix w_ij = (i - j)^2 / (N - 1)^2.
 
     Args:
@@ -108,18 +108,15 @@ def build_weight_matrix(num_categories: int) -> List[List[float]]:
         return [[0.0]]
 
     denom = float((N - 1) ** 2)
-    weights = [
-        [float((i - j) ** 2) / denom for j in range(N)]
-        for i in range(N)
-    ]
+    weights = [[float((i - j) ** 2) / denom for j in range(N)] for i in range(N)]
     return weights
 
 
 def quadratic_weighted_kappa(
-    y_true: Sequence[Union[int, float]],
-    y_pred: Sequence[Union[int, float]],
-    min_score: Optional[Union[int, float]] = None,
-    max_score: Optional[Union[int, float]] = None,
+    y_true: Sequence[int | float],
+    y_pred: Sequence[int | float],
+    min_score: int | float | None = None,
+    max_score: int | float | None = None,
 ) -> float:
     """Compute Quadratic Weighted Kappa (QWK) exactly per Section 12.1.
 
@@ -169,7 +166,10 @@ def quadratic_weighted_kappa(
 
     # If only one possible score category exists, agreement is trivially perfect if matched
     if max_score == min_score:
-        all_match = all(int(round(t)) == int(round(p)) for t, p in zip(true_list, pred_list))
+        all_match = all(
+            int(round(t)) == int(round(p))
+            for t, p in zip(true_list, pred_list, strict=False)
+        )
         return 1.0 if all_match else 0.0
 
     N = max_score - min_score + 1

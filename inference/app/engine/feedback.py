@@ -13,49 +13,96 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from app.engine.interfaces import DimensionFeedbackGenerator
 
 logger = logging.getLogger(__name__)
 
 # Common transition keywords grouped by discourse category
-DISCOURSE_TRANSITIONS: Dict[str, List[str]] = {
+DISCOURSE_TRANSITIONS: dict[str, list[str]] = {
     "additive": [
-        "furthermore", "moreover", "in addition", "additionally",
-        "also", "similarly", "likewise", "not only",
+        "furthermore",
+        "moreover",
+        "in addition",
+        "additionally",
+        "also",
+        "similarly",
+        "likewise",
+        "not only",
     ],
     "contrastive": [
-        "however", "on the other hand", "nevertheless", "in contrast",
-        "conversely", "yet", "although", "even though", "whereas", "while",
+        "however",
+        "on the other hand",
+        "nevertheless",
+        "in contrast",
+        "conversely",
+        "yet",
+        "although",
+        "even though",
+        "whereas",
+        "while",
     ],
     "causal": [
-        "therefore", "consequently", "as a result", "in conclusion",
-        "thus", "hence", "because of this", "for this reason",
+        "therefore",
+        "consequently",
+        "as a result",
+        "in conclusion",
+        "thus",
+        "hence",
+        "because of this",
+        "for this reason",
     ],
     "sequential": [
-        "first", "second", "third", "finally", "subsequently",
-        "initially", "next", "to begin with", "in summary", "ultimately",
+        "first",
+        "second",
+        "third",
+        "finally",
+        "subsequently",
+        "initially",
+        "next",
+        "to begin with",
+        "in summary",
+        "ultimately",
     ],
 }
 
 # Rhetorical claim & evidence indicators
-EVIDENCE_MARKERS: List[str] = [
-    "for example", "for instance", "specifically", "such as",
-    "according to", "evidence shows", "research demonstrates",
-    "data illustrates", "as shown by", "illustrated by", "to illustrate",
+EVIDENCE_MARKERS: list[str] = [
+    "for example",
+    "for instance",
+    "specifically",
+    "such as",
+    "according to",
+    "evidence shows",
+    "research demonstrates",
+    "data illustrates",
+    "as shown by",
+    "illustrated by",
+    "to illustrate",
 ]
 
-CLAIM_MARKERS: List[str] = [
-    "i argue", "i believe", "in my opinion", "the main reason",
-    "the central argument", "clearly shows", "it is evident",
-    "demonstrates that", "substantiates that", "proves that",
+CLAIM_MARKERS: list[str] = [
+    "i argue",
+    "i believe",
+    "in my opinion",
+    "the main reason",
+    "the central argument",
+    "clearly shows",
+    "it is evident",
+    "demonstrates that",
+    "substantiates that",
+    "proves that",
 ]
 
-ANALYSIS_MARKERS: List[str] = [
-    "this demonstrates", "this illustrates", "this reveals",
-    "this explains why", "this implies", "which indicates",
-    "the significance of this", "as a consequence",
+ANALYSIS_MARKERS: list[str] = [
+    "this demonstrates",
+    "this illustrates",
+    "this reveals",
+    "this explains why",
+    "this implies",
+    "which indicates",
+    "the significance of this",
+    "as a consequence",
 ]
 
 
@@ -65,7 +112,9 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
     def __init__(self) -> None:
         """Initialize heuristic pattern matchers."""
         self._sentence_splitter = re.compile(r"(?<=[.!?])\s+")
-        self._duplicate_word_pattern = re.compile(r"\b([a-zA-Z]{2,})\s+\1\b", re.IGNORECASE)
+        self._duplicate_word_pattern = re.compile(
+            r"\b([a-zA-Z]{2,})\s+\1\b", re.IGNORECASE
+        )
 
     def generate_feedback(self, essay_text: str, dimension: str) -> str:
         """Produce dimension-specific feedback text (grammar / coherence / argumentation).
@@ -94,7 +143,9 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
             return self._analyze_grammar(clean_text)
         elif "coherence" in dim_lower or "organi" in dim_lower or "flow" in dim_lower:
             return self._analyze_coherence(clean_text)
-        elif "argument" in dim_lower or "evidence" in dim_lower or "reason" in dim_lower:
+        elif (
+            "argument" in dim_lower or "evidence" in dim_lower or "reason" in dim_lower
+        ):
             return self._analyze_argumentation(clean_text)
         else:
             return (
@@ -105,8 +156,8 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
     def generate_all_feedback(
         self,
         essay_text: str,
-        holistic_band: Optional[str] = None,
-    ) -> Dict[str, str]:
+        holistic_band: str | None = None,
+    ) -> dict[str, str]:
         """Generate comprehensive feedback for all three primary rubric dimensions.
 
         Args:
@@ -118,8 +169,12 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
         """
         return {
             "grammar": self._analyze_grammar(essay_text, holistic_band=holistic_band),
-            "coherence": self._analyze_coherence(essay_text, holistic_band=holistic_band),
-            "argumentation": self._analyze_argumentation(essay_text, holistic_band=holistic_band),
+            "coherence": self._analyze_coherence(
+                essay_text, holistic_band=holistic_band
+            ),
+            "argumentation": self._analyze_argumentation(
+                essay_text, holistic_band=holistic_band
+            ),
         }
 
     def score_dimensions(
@@ -128,7 +183,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
         holistic_score: float,
         min_score: float,
         max_score: float,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Layer auxiliary dimension scores onto the holistic BERT score.
 
         Modulates the holistic score by +/- 5% based on dimension-specific heuristic signals,
@@ -148,16 +203,22 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
         word_count = max(1, len(words))
 
         # 1. Grammar signal: capitalization and duplicate word ratio
-        sentences = [s.strip() for s in self._sentence_splitter.split(clean_text) if s.strip()]
+        sentences = [
+            s.strip() for s in self._sentence_splitter.split(clean_text) if s.strip()
+        ]
         cap_errors = sum(1 for s in sentences if s and not s[0].isupper())
         duplicate_count = len(self._duplicate_word_pattern.findall(clean_text))
-        grammar_factor = 1.0 - (min(0.08, (cap_errors * 0.02) + (duplicate_count * 0.03)))
+        grammar_factor = 1.0 - (
+            min(0.08, (cap_errors * 0.02) + (duplicate_count * 0.03))
+        )
 
         # 2. Coherence signal: transition density
         text_lower = clean_text.lower()
         transition_count = sum(
-            1 for group in DISCOURSE_TRANSITIONS.values()
-            for marker in group if marker in text_lower
+            1
+            for group in DISCOURSE_TRANSITIONS.values()
+            for marker in group
+            if marker in text_lower
         )
         transition_density = (transition_count / word_count) * 100.0
         if transition_density >= 2.0:
@@ -181,7 +242,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
             argumentation_factor = 1.00
 
         # Compute and clamp calibrated scores
-        span = max(0.1, max_score - min_score)
+        max(0.1, max_score - min_score)
         g_score = max(min_score, min(max_score, holistic_score * grammar_factor))
         c_score = max(min_score, min(max_score, holistic_score * coherence_factor))
         a_score = max(min_score, min(max_score, holistic_score * argumentation_factor))
@@ -196,12 +257,14 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
     # Private Diagnostic Analyzers
     # ========================================================================
 
-    def _analyze_grammar(self, text: str, holistic_band: Optional[str] = None) -> str:
+    def _analyze_grammar(self, text: str, holistic_band: str | None = None) -> str:
         """Evaluate sentence mechanics, capitalization, repeated words, and run-ons."""
-        sentences = [s.strip() for s in self._sentence_splitter.split(text) if s.strip()]
-        num_sentences = max(1, len(sentences))
+        sentences = [
+            s.strip() for s in self._sentence_splitter.split(text) if s.strip()
+        ]
+        max(1, len(sentences))
         words = text.split()
-        num_words = len(words)
+        len(words)
 
         # Heuristic 1: Sentence capitalization
         uncapitalized = [s for s in sentences if s and not s[0].isupper()]
@@ -216,7 +279,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
         # Heuristic 4: Terminal punctuation
         lacks_terminal_punct = sum(1 for s in sentences if s and s[-1] not in ".!?")
 
-        feedback_parts: List[str] = []
+        feedback_parts: list[str] = []
 
         if uncap_count > 0:
             feedback_parts.append(
@@ -255,7 +318,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
 
         return " ".join(feedback_parts)
 
-    def _analyze_coherence(self, text: str, holistic_band: Optional[str] = None) -> str:
+    def _analyze_coherence(self, text: str, holistic_band: str | None = None) -> str:
         """Evaluate paragraph organization, discourse connectives, and logical transitions."""
         # Detect paragraphs
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n|\n", text) if p.strip()]
@@ -264,7 +327,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
         num_words = max(1, len(words))
 
         text_lower = text.lower()
-        found_transitions: Dict[str, List[str]] = {}
+        found_transitions: dict[str, list[str]] = {}
         total_transitions = 0
 
         for category, keywords in DISCOURSE_TRANSITIONS.items():
@@ -274,7 +337,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
                 total_transitions += len(matches)
 
         density = (total_transitions / num_words) * 100.0
-        feedback_parts: List[str] = []
+        feedback_parts: list[str] = []
 
         # Check paragraph structure
         if num_words >= 60 and num_paragraphs <= 1:
@@ -309,7 +372,9 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
 
         return " ".join(feedback_parts)
 
-    def _analyze_argumentation(self, text: str, holistic_band: Optional[str] = None) -> str:
+    def _analyze_argumentation(
+        self, text: str, holistic_band: str | None = None
+    ) -> str:
         """Evaluate thesis clarity, evidence integration, and deductive reasoning."""
         text_lower = text.lower()
         words = text.split()
@@ -319,7 +384,7 @@ class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
         claim_hits = [m for m in CLAIM_MARKERS if m in text_lower]
         analysis_hits = [m for m in ANALYSIS_MARKERS if m in text_lower]
 
-        feedback_parts: List[str] = []
+        feedback_parts: list[str] = []
 
         # Claim / Thesis check
         if claim_hits:

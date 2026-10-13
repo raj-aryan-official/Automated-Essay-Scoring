@@ -1,10 +1,9 @@
 """Essay submission and retrieval API endpoints."""
 
 import base64
-from datetime import datetime, timezone
 import logging
-from typing import List, Optional
 import uuid
+from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -17,11 +16,8 @@ from app.core.validation import (
     validate_prompt_exists,
 )
 from app.models.entities import (
-    DimensionFeedback,
     Essay,
-    InferenceRun,
     ModelEntity,
-    Prompt,
     Score,
     User,
 )
@@ -55,7 +51,7 @@ def _is_base64(s: str) -> bool:
         return False
 
 
-def _get_or_create_user(db: Session, user_id: Optional[UUID] = None) -> User:
+def _get_or_create_user(db: Session, user_id: UUID | None = None) -> User:
     """Ensure a user exists for foreign key reference."""
     if user_id:
         user = db.query(User).filter(User.id == user_id).first()
@@ -93,9 +89,7 @@ def _get_or_create_user(db: Session, user_id: Optional[UUID] = None) -> User:
     openapi_extra={
         "requestBody": {
             "content": {
-                "application/json": {
-                    "schema": EssayCreate.model_json_schema()
-                },
+                "application/json": {"schema": EssayCreate.model_json_schema()},
                 "multipart/form-data": {
                     "schema": {
                         "type": "object",
@@ -134,9 +128,9 @@ async def submit_essay(
     prompt_id: UUID
     source_type: str
     raw_text: str = ""
-    submitted_by_id: Optional[UUID] = None
-    storage_bucket: Optional[str] = None
-    storage_key: Optional[str] = None
+    submitted_by_id: UUID | None = None
+    storage_bucket: str | None = None
+    storage_key: str | None = None
 
     if "multipart/form-data" in content_type:
         form = await request.form()
@@ -152,7 +146,7 @@ async def submit_essay(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Field 'prompt_id' must be a valid UUID.",
-            )
+            ) from None
 
         # Validate prompt exists BEFORE performing storage operations
         prompt = validate_prompt_exists(db, prompt_id)
@@ -161,9 +155,16 @@ async def submit_essay(
         upload_file = form.get("file")
 
         if not source_type_in:
-            source_type = SourceTypeEnum.DOCUMENT.value if upload_file else SourceTypeEnum.PASTE.value
+            source_type = (
+                SourceTypeEnum.DOCUMENT.value
+                if upload_file
+                else SourceTypeEnum.PASTE.value
+            )
         else:
-            if source_type_in not in (SourceTypeEnum.PASTE.value, SourceTypeEnum.DOCUMENT.value):
+            if source_type_in not in (
+                SourceTypeEnum.PASTE.value,
+                SourceTypeEnum.DOCUMENT.value,
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="source_type must be either 'PASTE' or 'DOCUMENT'.",
@@ -178,7 +179,7 @@ async def submit_essay(
                 raise HTTPException(
                     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                     detail="Field 'submitted_by' must be a valid UUID.",
-                )
+                ) from None
 
         form_raw_text = form.get("raw_text")
         if form_raw_text is not None:
@@ -191,10 +192,14 @@ async def submit_essay(
             if upload_file is not None and hasattr(upload_file, "read"):
                 file_bytes = await upload_file.read()
                 filename = getattr(upload_file, "filename", None) or "document"
-                file_content_type = getattr(upload_file, "content_type", "application/octet-stream")
+                file_content_type = getattr(
+                    upload_file, "content_type", "application/octet-stream"
+                )
 
                 # Validate document size (<= 20MB) and MIME type / extension
-                validate_document(file_bytes, filename=filename, content_type=file_content_type)
+                validate_document(
+                    file_bytes, filename=filename, content_type=file_content_type
+                )
 
                 if not raw_text.strip():
                     raw_text = file_bytes.decode("utf-8", errors="replace")
@@ -226,7 +231,7 @@ async def submit_essay(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid JSON request body.",
-            )
+            ) from None
 
         # Enforce max essay length check (8,000 chars) -> HTTP 413
         if body_json.get("raw_text") and len(str(body_json["raw_text"])) > 8000:
@@ -241,7 +246,7 @@ async def submit_essay(
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=str(val_err),
-            )
+            ) from val_err
 
         prompt_id = payload.prompt_id
         # Validate prompt exists BEFORE performing storage operations
@@ -266,7 +271,7 @@ async def submit_essay(
                         raise HTTPException(
                             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                             detail="Invalid base64 document content.",
-                        )
+                        ) from None
                 else:
                     file_bytes = content_str.encode("utf-8")
 
@@ -322,16 +327,16 @@ async def submit_essay(
 
 @router.get(
     "",
-    response_model=List[EssayResponse],
+    response_model=list[EssayResponse],
     summary="List submitted essays with optional filtering and pagination",
 )
 def list_essays(
     skip: int = Query(0, ge=0, description="Offset of records to skip"),
     limit: int = Query(50, ge=1, le=100, description="Maximum records to return"),
-    status_filter: Optional[str] = Query(
+    status_filter: str | None = Query(
         None, alias="status", description="Filter by status (e.g. SUBMITTED, SCORED)"
     ),
-    prompt_id: Optional[UUID] = Query(None, description="Filter by prompt UUID"),
+    prompt_id: UUID | None = Query(None, description="Filter by prompt UUID"),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_viewer),
 ):
@@ -368,7 +373,7 @@ def get_essay_by_id(
             detail=f"Essay with id '{essay_id}' not found.",
         )
 
-    download_url: Optional[str] = None
+    download_url: str | None = None
     if essay.storage_key:
         try:
             download_url = storage.get_presigned_url(str(essay.storage_key))
@@ -456,7 +461,9 @@ def get_essay_score(
     if score.inference_run and score.inference_run.model:
         model_version = score.inference_run.model.version
     else:
-        active_model = db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+        active_model = (
+            db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+        )
         if active_model:
             model_version = active_model.version
 
@@ -548,7 +555,9 @@ def review_essay(
     if score.inference_run and score.inference_run.model:
         model_version = score.inference_run.model.version
     else:
-        active_model = db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+        active_model = (
+            db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+        )
         if active_model:
             model_version = active_model.version
 
@@ -577,4 +586,3 @@ def review_essay(
         reviewerOverrideReason=score.reviewer_override_reason,
         reviewerOverrideAt=score.reviewer_override_at,
     )
-

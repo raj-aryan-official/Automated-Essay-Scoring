@@ -57,7 +57,7 @@ jobs:
       - name: Run ESLint
         working-directory: frontend
         run: |
-          npx eslint src/ --ext .ts,.tsx --max-warnings 20 || echo "ESLint completed with minor warnings."
+          npx --yes eslint src/ --ext .ts,.tsx --max-warnings 20 || echo "ESLint completed with minor warnings."
 
   # ----------------------------------------------------------------------------
   # 2. Security Linting (Bandit, Trivy)

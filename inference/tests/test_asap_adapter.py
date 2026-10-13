@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
 import pytest
 
 if TYPE_CHECKING:
@@ -111,9 +112,17 @@ def test_all_essay_sets_non_empty_splits(asap_dataframe: pd.DataFrame):
         assert len(test_df) > 0, f"essay_set {essay_set} test split is empty"
 
         # 2. Rescaled score range check in splits
-        for split_name, split_df in [("train", train_df), ("val", val_df), ("test", test_df)]:
-            assert (split_df["scaled_score"] >= 0.0).all(), f"{split_name} has scores < 0.0"
-            assert (split_df["scaled_score"] <= 1.0).all(), f"{split_name} has scores > 1.0"
+        for split_name, split_df in [
+            ("train", train_df),
+            ("val", val_df),
+            ("test", test_df),
+        ]:
+            assert (
+                split_df["scaled_score"] >= 0.0
+            ).all(), f"{split_name} has scores < 0.0"
+            assert (
+                split_df["scaled_score"] <= 1.0
+            ).all(), f"{split_name} has scores > 1.0"
 
         # 3. Disjoint index check
         train_ids = set(train_df["essay_id"])

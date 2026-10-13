@@ -2,7 +2,6 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -34,27 +33,27 @@ class EssayBase(BaseModel):
 
 
 class EssayCreate(EssayBase):
-    raw_text: Optional[str] = Field(
+    raw_text: str | None = Field(
         default=None,
         description="Raw essay text (required when source_type is PASTE)",
     )
-    submitted_by: Optional[UUID] = Field(
+    submitted_by: UUID | None = Field(
         default=None,
         description="User UUID submitting the essay (optional, defaults to current/default student)",
     )
-    storage_bucket: Optional[str] = Field(
+    storage_bucket: str | None = Field(
         default=None,
         description="Target S3/MinIO bucket (for DOCUMENT submissions)",
     )
-    storage_key: Optional[str] = Field(
+    storage_key: str | None = Field(
         default=None,
         description="Target S3/MinIO object key (for DOCUMENT submissions)",
     )
-    file_content: Optional[str] = Field(
+    file_content: str | None = Field(
         default=None,
         description="Optional base64 or raw string document content if sending JSON",
     )
-    file_name: Optional[str] = Field(
+    file_name: str | None = Field(
         default=None,
         description="Original document filename",
     )
@@ -63,10 +62,14 @@ class EssayCreate(EssayBase):
     def validate_source_and_content(self) -> "EssayCreate":
         if self.source_type == SourceTypeEnum.PASTE:
             if not (self.raw_text and self.raw_text.strip()):
-                raise ValueError("raw_text is required when source_type is PASTE and cannot be empty")
+                raise ValueError(
+                    "raw_text is required when source_type is PASTE and cannot be empty"
+                )
             stripped = self.raw_text.strip()
             if len(stripped) < 10 or len(stripped.split()) < 2:
-                raise ValueError("raw_text is too short or near-empty (minimum 10 characters and 2 words required)")
+                raise ValueError(
+                    "raw_text is too short or near-empty (minimum 10 characters and 2 words required)"
+                )
         if self.source_type == SourceTypeEnum.DOCUMENT and not (
             self.raw_text or self.file_content or self.storage_key
         ):
@@ -83,10 +86,10 @@ class EssayCreateResponse(BaseModel):
     submitted_by: UUID = Field(..., description="Submitter user UUID")
     source_type: str = Field(..., description="Source type ('PASTE' or 'DOCUMENT')")
     raw_text: str = Field(..., description="Essay raw text content")
-    storage_bucket: Optional[str] = Field(default=None, description="S3 bucket name")
-    storage_key: Optional[str] = Field(default=None, description="S3 storage key")
+    storage_bucket: str | None = Field(default=None, description="S3 bucket name")
+    storage_key: str | None = Field(default=None, description="S3 storage key")
     created_at: datetime = Field(..., description="Timestamp of submission")
-    message: Optional[str] = Field(
+    message: str | None = Field(
         default="Essay submitted successfully",
         description="Human-readable success message",
     )
@@ -100,8 +103,8 @@ class EssayResponse(BaseModel):
     submitted_by: UUID = Field(..., description="Submitter user UUID")
     raw_text: str = Field(..., description="Essay content")
     source_type: str = Field(..., description="Source type ('PASTE' or 'DOCUMENT')")
-    storage_bucket: Optional[str] = Field(default=None, description="S3 bucket")
-    storage_key: Optional[str] = Field(default=None, description="S3 object key")
+    storage_bucket: str | None = Field(default=None, description="S3 bucket")
+    storage_key: str | None = Field(default=None, description="S3 object key")
     status: str = Field(..., description="Current status")
     created_at: datetime = Field(..., description="Submission timestamp")
 
@@ -109,11 +112,11 @@ class EssayResponse(BaseModel):
 
 
 class EssayDetailResponse(EssayResponse):
-    download_url: Optional[str] = Field(
+    download_url: str | None = Field(
         default=None,
         description="Presigned URL to download the original document from storage (if applicable)",
     )
-    prompt_title: Optional[str] = Field(
+    prompt_title: str | None = Field(
         default=None,
         description="Title of the referenced prompt",
     )
@@ -122,7 +125,7 @@ class EssayDetailResponse(EssayResponse):
 
 
 class EssayListResponse(BaseModel):
-    items: List[EssayResponse] = Field(..., description="List of essay records")
+    items: list[EssayResponse] = Field(..., description="List of essay records")
     total: int = Field(..., description="Total count matching filter")
     skip: int = Field(default=0, description="Offset used")
     limit: int = Field(default=50, description="Page limit used")
@@ -135,11 +138,11 @@ class DimensionScoreDetail(BaseModel):
         ...,
         description="Dimension evaluated ('grammar', 'coherence', or 'argumentation')",
     )
-    score: Optional[float] = Field(
+    score: float | None = Field(
         default=None,
         description="Sub-score for this evaluation dimension",
     )
-    subScore: Optional[float] = Field(
+    subScore: float | None = Field(
         default=None,
         description="Alias for dimension sub-score",
     )
@@ -147,7 +150,7 @@ class DimensionScoreDetail(BaseModel):
         ...,
         description="Targeted pedagogical guidance text",
     )
-    feedbackText: Optional[str] = Field(
+    feedbackText: str | None = Field(
         default=None,
         description="Alias for feedback text",
     )
@@ -157,23 +160,31 @@ class DimensionScoreDetail(BaseModel):
 
 class EssayScoreResponse(BaseModel):
     essayId: UUID = Field(..., description="UUID of the scored essay")
-    holisticScore: float = Field(..., description="Holistic score predicted for the essay")
-    rubricBand: str = Field(..., description="Rubric band categorization (e.g. Advanced, Proficient)")
-    confidence: float = Field(..., description="Model scoring confidence metric (0.0 to 1.0)")
-    dimensions: List[DimensionScoreDetail] = Field(
+    holisticScore: float = Field(
+        ..., description="Holistic score predicted for the essay"
+    )
+    rubricBand: str = Field(
+        ..., description="Rubric band categorization (e.g. Advanced, Proficient)"
+    )
+    confidence: float = Field(
+        ..., description="Model scoring confidence metric (0.0 to 1.0)"
+    )
+    dimensions: list[DimensionScoreDetail] = Field(
         default_factory=list,
         description="Dimension-level evaluations (grammar, coherence, argumentation)",
     )
-    modelVersion: str = Field(..., description="Model version that produced the inference run")
-    reviewerOverrideScore: Optional[float] = Field(
+    modelVersion: str = Field(
+        ..., description="Model version that produced the inference run"
+    )
+    reviewerOverrideScore: float | None = Field(
         default=None,
         description="Manual score override provided by a human reviewer (if any)",
     )
-    reviewerOverrideReason: Optional[str] = Field(
+    reviewerOverrideReason: str | None = Field(
         default=None,
         description="Pedagogical reason for reviewer override (if any)",
     )
-    reviewerOverrideAt: Optional[datetime] = Field(
+    reviewerOverrideAt: datetime | None = Field(
         default=None,
         description="Timestamp when reviewer override was applied",
     )
@@ -191,5 +202,3 @@ class ReviewerOverrideRequest(BaseModel):
         min_length=1,
         description="Pedagogical reason for reviewer override (required)",
     )
-
-

@@ -13,7 +13,6 @@ Verifies:
 from __future__ import annotations
 
 import pytest
-
 from app.engine.feedback import (
     DimensionFeedbackGeneratorImpl,
     RuleBasedDimensionFeedbackGenerator,
@@ -70,7 +69,10 @@ def test_grammar_feedback_proficient(
     """Verify grammar feedback on well-structured essay acknowledges mechanics."""
     feedback = generator.generate_feedback(sample_proficient_essay, "grammar")
     assert isinstance(feedback, str) and len(feedback) > 20
-    assert any(term in feedback.lower() for term in ["mechanic", "conventions", "exemplary", "solid"])
+    assert any(
+        term in feedback.lower()
+        for term in ["mechanic", "conventions", "exemplary", "solid"]
+    )
 
 
 def test_grammar_feedback_flawed(
@@ -81,7 +83,11 @@ def test_grammar_feedback_flawed(
     assert isinstance(feedback, str)
     # Check for capitalization or repeated word detection
     feedback_lower = feedback.lower()
-    assert "capital" in feedback_lower or "repetition" in feedback_lower or "duplicate" in feedback_lower
+    assert (
+        "capital" in feedback_lower
+        or "repetition" in feedback_lower
+        or "duplicate" in feedback_lower
+    )
 
 
 def test_coherence_feedback_proficient(
@@ -91,7 +97,11 @@ def test_coherence_feedback_proficient(
     feedback = generator.generate_feedback(sample_proficient_essay, "coherence")
     assert isinstance(feedback, str)
     feedback_lower = feedback.lower()
-    assert "paragraph" in feedback_lower or "transition" in feedback_lower or "flow" in feedback_lower
+    assert (
+        "paragraph" in feedback_lower
+        or "transition" in feedback_lower
+        or "flow" in feedback_lower
+    )
 
 
 def test_coherence_feedback_single_paragraph(
@@ -117,7 +127,11 @@ def test_argumentation_feedback_with_evidence(
     feedback = generator.generate_feedback(sample_proficient_essay, "argumentation")
     assert isinstance(feedback, str)
     feedback_lower = feedback.lower()
-    assert "claim" in feedback_lower or "evidence" in feedback_lower or "thesis" in feedback_lower
+    assert (
+        "claim" in feedback_lower
+        or "evidence" in feedback_lower
+        or "thesis" in feedback_lower
+    )
 
 
 def test_argumentation_feedback_lacking_evidence(
@@ -130,14 +144,20 @@ def test_argumentation_feedback_lacking_evidence(
         "It also saves parents a lot of money because they do not have to buy expensive brand-name fashion."
     )
     feedback = generator.generate_feedback(opinion_only, "argumentation")
-    assert "evidence" in feedback.lower() or "examples" in feedback.lower() or "support" in feedback.lower()
+    assert (
+        "evidence" in feedback.lower()
+        or "examples" in feedback.lower()
+        or "support" in feedback.lower()
+    )
 
 
 def test_generate_all_feedback(
     generator: RuleBasedDimensionFeedbackGenerator, sample_proficient_essay: str
 ) -> None:
     """Verify generate_all_feedback outputs a full dimension feedback mapping."""
-    all_fb = generator.generate_all_feedback(sample_proficient_essay, holistic_band="Proficient")
+    all_fb = generator.generate_all_feedback(
+        sample_proficient_essay, holistic_band="Proficient"
+    )
     assert isinstance(all_fb, dict)
     assert set(all_fb.keys()) == {"grammar", "coherence", "argumentation"}
     for dim, text in all_fb.items():
@@ -158,20 +178,22 @@ def test_score_dimensions_bounds(
 
     for dim, score in scores.items():
         assert isinstance(score, float)
-        assert 2.0 <= score <= 12.0, f"Score for {dim} ({score}) out of [2.0, 12.0] bounds"
+        assert (
+            2.0 <= score <= 12.0
+        ), f"Score for {dim} ({score}) out of [2.0, 12.0] bounds"
 
     # Test clamping at upper boundary
     max_scores = generator.score_dimensions(
         sample_proficient_essay, holistic_score=12.0, min_score=2.0, max_score=12.0
     )
-    for dim, score in max_scores.items():
+    for score in max_scores.values():
         assert score <= 12.0
 
     # Test clamping at lower boundary
     min_scores = generator.score_dimensions(
         sample_proficient_essay, holistic_score=2.0, min_score=2.0, max_score=12.0
     )
-    for dim, score in min_scores.items():
+    for score in min_scores.values():
         assert score >= 2.0
 
 
@@ -199,7 +221,9 @@ def test_unknown_dimension_fallback(
     """Verify unknown dimension returns supportive general guidance."""
     feedback = generator.generate_feedback(sample_proficient_essay, "creativity")
     assert "creativity" in feedback.lower()
-    assert "strong effort" in feedback.lower() or "continue developing" in feedback.lower()
+    assert (
+        "strong effort" in feedback.lower() or "continue developing" in feedback.lower()
+    )
 
 
 def test_edge_cases_empty_and_short(
@@ -231,5 +255,5 @@ def test_model_predict_essay_integration() -> None:
     assert "coherence" in prediction.dimension_scores
     assert "argumentation" in prediction.dimension_scores
 
-    for dim, score in prediction.dimension_scores.items():
+    for _dim, score in prediction.dimension_scores.items():
         assert 2.0 <= score <= 12.0
