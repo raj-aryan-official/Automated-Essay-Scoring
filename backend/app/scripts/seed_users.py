@@ -58,21 +58,19 @@ def seed_users():
     try:
         for u in DEFAULT_USERS:
             existing = session.query(User).filter(User.email == u["email"]).first()
-            raw_password = str(u["password"])
-            user_role = str(u["role"])
             if existing:
-                existing.password_hash = get_password_hash(raw_password)
-                existing.role = user_role
-                print(f"Updated user: {u['email']} ({user_role})")
+                existing.password_hash = get_password_hash(u["password"])
+                existing.role = u["role"]
+                print(f"Updated user: {u['email']} ({u['role']})")
             else:
                 new_user = User(
                     id=u["id"],
                     email=u["email"],
-                    password_hash=get_password_hash(raw_password),
-                    role=user_role,
+                    password_hash=get_password_hash(u["password"]),
+                    role=u["role"],
                 )
                 session.add(new_user)
-                print(f"Created user: {u['email']} ({user_role})")
+                print(f"Created user: {u['email']} ({u['role']})")
         session.commit()
         print("Successfully seeded all 4 role accounts!")
     except Exception as e:

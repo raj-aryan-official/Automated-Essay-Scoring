@@ -1,5 +1,7 @@
 """Background job tracking and management API endpoints."""
 
+from __future__ import annotations
+
 import logging
 from uuid import UUID
 

@@ -1,5 +1,7 @@
 """Storage service wrapping boto3 for S3/MinIO compatible object storage."""
 
+from __future__ import annotations
+
 import io
 import logging
 from pathlib import Path

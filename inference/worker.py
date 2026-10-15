@@ -14,6 +14,8 @@ On exception:
 - updates essay status=PROCESSING_FAILED if terminal failure, else QUEUED
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import random

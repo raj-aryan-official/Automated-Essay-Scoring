@@ -1,5 +1,7 @@
 """Common dependencies for FastAPI endpoints: database sessions and RBAC authentication."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from uuid import UUID
 

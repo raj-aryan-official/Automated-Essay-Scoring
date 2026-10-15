@@ -8,6 +8,8 @@ Enforces:
 - Validating referenced prompt_id exists in the database (HTTP 404)
 """
 
+from __future__ import annotations
+
 import logging
 from pathlib import Path
 from uuid import UUID

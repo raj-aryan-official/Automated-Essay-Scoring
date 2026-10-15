@@ -1,5 +1,7 @@
 """Pydantic validation schemas for background jobs and scoring requests."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from enum import Enum
 from uuid import UUID

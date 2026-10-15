@@ -4,6 +4,8 @@ Matches Section 12.1 QWK evaluation report, training loss curves,
 and live job queue aggregations.
 """
 
+from __future__ import annotations
+
 from typing import Any
 
 from pydantic import BaseModel, Field
