@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# WHY: Provides polling target for frontend clients to track job state transitions (QUEUED -> PROCESSING -> COMPLETED)
 @router.get(
     "/{job_id}",
     response_model=JobResponse,
@@ -33,4 +34,5 @@ def get_job_status(
             detail=f"Job with id '{job_id}' not found.",
         )
 
+    # WHY: Pydantic v2 from_attributes validation translates ORM entity directly into serialized JSON response
     return JobResponse.model_validate(job)

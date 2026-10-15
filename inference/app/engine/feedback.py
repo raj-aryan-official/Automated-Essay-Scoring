@@ -18,7 +18,7 @@ from app.engine.interfaces import DimensionFeedbackGenerator
 
 logger = logging.getLogger(__name__)
 
-# Common transition keywords grouped by discourse category
+# WHY: Lexical discourse markers categorized into 4 semantic classes to measure coherence density without deep supervision
 DISCOURSE_TRANSITIONS: dict[str, list[str]] = {
     "additive": [
         "furthermore",
@@ -66,7 +66,7 @@ DISCOURSE_TRANSITIONS: dict[str, list[str]] = {
     ],
 }
 
-# Rhetorical claim & evidence indicators
+# WHY: Rhetorical citation phrases used to detect empirical evidence backing student assertions
 EVIDENCE_MARKERS: list[str] = [
     "for example",
     "for instance",
@@ -81,6 +81,7 @@ EVIDENCE_MARKERS: list[str] = [
     "to illustrate",
 ]
 
+# WHY: Argumentative indicators used to verify presence of a clear central thesis or assertion
 CLAIM_MARKERS: list[str] = [
     "i argue",
     "i believe",
@@ -106,6 +107,7 @@ ANALYSIS_MARKERS: list[str] = [
 ]
 
 
+# WHY: Transparent, explainable diagnostic engine providing qualitative revision guidance across 3 pedagogical dimensions
 class RuleBasedDimensionFeedbackGenerator(DimensionFeedbackGenerator):
     """Auxiliary rule-based feedback generator for grammar, coherence, and argumentation."""
 

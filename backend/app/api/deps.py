@@ -13,13 +13,14 @@ from app.core.database import get_async_db, get_db
 from app.core.security import decode_access_token
 from app.models.entities import User
 
-# OAuth2 scheme pointing to our token endpoint
+# WHY: Extracts Bearer token from the HTTP Authorization header and powers interactive Swagger UI login at /docs
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/token",
     auto_error=True,
 )
 
 
+# WHY: Validates token signature, extracts user UUID, and verifies account existence in DB, raising HTTP 401 if expired or revoked
 def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
@@ -45,6 +46,7 @@ def get_current_user(
     return user
 
 
+# WHY: Factory producing dependency functions that enforce role-based access control (RBAC), returning HTTP 403 Forbidden on violation
 def require_roles(allowed_roles: list[str]) -> Callable[[User], User]:
     """Dependency factory enforcing role-based access control (RBAC).
 
@@ -53,7 +55,7 @@ def require_roles(allowed_roles: list[str]) -> Callable[[User], User]:
     """
 
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        # ADMIN has full access across all endpoints
+        # WHY: ADMIN has full system privileges across all endpoints to facilitate administration and evaluation
         if current_user.role == "ADMIN":
             return current_user
 
@@ -71,7 +73,7 @@ def require_roles(allowed_roles: list[str]) -> Callable[[User], User]:
     return role_checker
 
 
-# Convenience role dependency instances matching Section 4.1 / project doc
+# WHY: Pre-configured role guards matching our 4-tier security architecture to annotate route endpoints declaratively
 require_viewer = require_roles(["VIEWER", "TEACHER", "ML_ENGINEER", "ADMIN"])
 require_teacher = require_roles(["TEACHER", "ADMIN"])
 require_ml_engineer = require_roles(["ML_ENGINEER", "ADMIN"])

@@ -7,11 +7,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+# WHY: Categorizes background task types between raw model scoring and detailed diagnostic feedback generation.
 class JobTypeEnum(str, Enum):
     SCORING = "SCORING"
     FEEDBACK = "FEEDBACK"
 
 
+# WHY: Enforces strict lifecycle state transitions (QUEUED -> PROCESSING -> COMPLETED / FAILED) for async worker jobs.
 class JobStatusEnum(str, Enum):
     QUEUED = "QUEUED"
     PROCESSING = "PROCESSING"
@@ -19,6 +21,7 @@ class JobStatusEnum(str, Enum):
     FAILED = "FAILED"
 
 
+# WHY: Immediate 202-style acknowledgement payload returned to the caller so the UI can initiate progress polling without blocking.
 class JobDispatchResponse(BaseModel):
     """Response returned immediately when an async job is dispatched."""
 
@@ -34,6 +37,7 @@ class JobDispatchResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# WHY: Detailed background job telemetry schema reporting execution progress, worker attempt count, error messages, and duration timestamps.
 class JobResponse(BaseModel):
     """Detailed job status and metadata returned from GET /api/v1/jobs/{job_id}."""
 

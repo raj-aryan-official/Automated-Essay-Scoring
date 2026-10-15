@@ -18,6 +18,7 @@ LOCAL_STORAGE_DIR = Path(".storage")
 _DEFAULT = object()
 
 
+# WHY: Abstracted storage client wrapping boto3 to support MinIO locally and AWS S3 in production with zero code changes
 class StorageService:
     """Service wrapper for S3-compatible object storage (e.g. MinIO or AWS S3) with local fallback."""
 
@@ -55,6 +56,7 @@ class StorageService:
 
         endpoint = str(self.endpoint_url) if self.endpoint_url else None
         try:
+            # WHY: Configures S3 client with path-style addressing (required by MinIO) and short connect timeout for fast fallback
             self.s3_client = boto3.client(
                 "s3",
                 region_name=self.region_name,
@@ -73,6 +75,7 @@ class StorageService:
         except Exception:
             self.s3_client = None
 
+    # WHY: Proactively creates the default storage bucket if missing to prevent upload crashes on fresh deployments
     def ensure_bucket_exists(self) -> None:
         """Create the target bucket if it does not already exist."""
         client = self.s3_client
@@ -107,6 +110,7 @@ class StorageService:
                     parents=True, exist_ok=True
                 )
 
+    # WHY: Uploads essay files to MinIO or gracefully falls back to local disk if MinIO is temporarily unreachable
     def upload_file(
         self,
         file_bytes: bytes | BinaryIO | io.BytesIO,

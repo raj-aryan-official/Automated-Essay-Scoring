@@ -8,6 +8,7 @@ interface ProtectedRouteProps {
   allowedRoles?: UserRole[];
 }
 
+// WHY: Client-side route guard enforcing authentication and role permissions before rendering protected pages
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   allowedRoles,
@@ -15,6 +16,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const { user, isAuthenticated, isLoading, hasRole } = useAuth();
   const location = useLocation();
 
+  // WHY: Displays non-blocking loading spinner while JWT token liveness is verified against the backend
   if (isLoading) {
     return (
       <div className="max-w-4xl mx-auto p-12 text-center text-slate-400 space-y-3">
@@ -24,6 +26,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
+  // WHY: Redirects unauthenticated requests to /login while preserving original destination URL in router state
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }

@@ -34,18 +34,21 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
+# WHY: Compiles PostgreSQL JSONB to SQLite JSON type so integration tests can run in-memory without a PostgreSQL server
 @compiles(JSONB, "sqlite")
 def compile_jsonb_sqlite(type_, compiler, **kw):
     """Render JSONB as JSON for SQLite compatibility in unit tests."""
     return "JSON"
 
 
+# WHY: Compiles PostgreSQL native UUID type to CHAR(36) string format for SQLite test execution
 @compiles(UUID, "sqlite")
 def compile_uuid_sqlite(type_, compiler, **kw):
     """Render PostgreSQL UUID as CHAR(36) for SQLite compatibility."""
     return "CHAR(36)"
 
 
+# WHY: Manages user identities and RBAC authorization tiers (ADMIN, TEACHER, ML_ENGINEER, VIEWER) for secure API gating
 class User(Base):
     __tablename__ = "users"
 
@@ -64,6 +67,7 @@ class User(Base):
         server_default=func.now(),
     )
 
+    # WHY: Database-level CHECK constraint guarantees no invalid or escalated roles can be inserted
     __table_args__ = (
         CheckConstraint(
             "role IN ('ADMIN','TEACHER','ML_ENGINEER','VIEWER')",
@@ -77,6 +81,7 @@ class User(Base):
     )
 
 
+# WHY: Stores the 8 ASAP essay prompts and their immutable rubric boundaries (e.g. 2-12, 0-30, 0-60) for model score calibration
 class Prompt(Base):
     __tablename__ = "prompts"
 
@@ -100,6 +105,7 @@ class Prompt(Base):
     essays = relationship("Essay", back_populates="prompt")
 
 
+# WHY: Tracks student essay submissions, raw text / S3 document references, and an 8-stage processing state machine
 class Essay(Base):
     __tablename__ = "essays"
 
@@ -135,6 +141,7 @@ class Essay(Base):
         server_default=func.now(),
     )
 
+    # WHY: Check constraints enforce valid input sources and rigid status progression across the asynchronous scoring lifecycle
     __table_args__ = (
         CheckConstraint(
             "source_type IN ('PASTE','DOCUMENT')",
@@ -145,6 +152,7 @@ class Essay(Base):
             "'FEEDBACK_READY','UNDER_REVIEW','FINALIZED','PROCESSING_FAILED')",
             name="chk_essays_status",
         ),
+        # WHY: Index on status accelerates teacher dashboard filtering and worker queue status queries
         Index("idx_essays_status", "status"),
     )
 
@@ -158,6 +166,7 @@ class Essay(Base):
     scores = relationship("Score", back_populates="essay", cascade="all, delete-orphan")
 
 
+# WHY: Model registry tracking active deep learning checkpoints, ONNX weight locations, architecture, and validation metrics
 class ModelEntity(Base):
     __tablename__ = "models"
 
@@ -172,6 +181,7 @@ class ModelEntity(Base):
     framework = Column(String(100), nullable=False)
     architecture = Column(String(255), nullable=False)
     weights_storage_key = Column(Text, nullable=False)
+    # WHY: JSONB allows storing dynamic evaluation metrics (QWK, MSE, loss curves) without altering schema tables
     metrics = Column(
         JSONB,
         nullable=False,
@@ -196,6 +206,7 @@ class ModelEntity(Base):
     inference_runs = relationship("InferenceRun", back_populates="model")
 
 
+# WHY: Distributed asynchronous job queue table supporting atomic FOR UPDATE SKIP LOCKED claiming and automatic crash retries
 class Job(Base):
     __tablename__ = "jobs"
 
@@ -238,6 +249,7 @@ class Job(Base):
             "status IN ('QUEUED','PROCESSING','COMPLETED','FAILED')",
             name="chk_jobs_status",
         ),
+        # WHY: Composite index matches worker polling query (status, priority, queued_at) to avoid table scans during SKIP LOCKED
         Index("idx_jobs_processing", "status", "priority", "queued_at"),
     )
 
@@ -246,6 +258,7 @@ class Job(Base):
     inference_runs = relationship("InferenceRun", back_populates="job")
 
 
+# WHY: Auditing entity capturing runtime telemetry (execution hardware, latency in ms, confidence threshold) for SLA monitoring
 class InferenceRun(Base):
     __tablename__ = "inference_runs"
 
@@ -288,6 +301,7 @@ class InferenceRun(Base):
     )
 
 
+# WHY: Stores rubric-calibrated holistic score, rubric band, confidence, and human-in-the-loop teacher override adjustments
 class Score(Base):
     __tablename__ = "scores"
 
@@ -310,6 +324,7 @@ class Score(Base):
     holistic_score = Column(Float, nullable=False)  # REAL
     rubric_band = Column(String(32), nullable=False)
     confidence = Column(Float, nullable=False)  # REAL
+    # WHY: Reviewer override columns enable educators to override model predictions with required pedagogical audit rationale
     reviewer_override_score = Column(Float, nullable=True)  # REAL
     reviewer_override_reason = Column(Text, nullable=True)
     reviewer_override_at = Column(DateTime(timezone=True), nullable=True)
@@ -324,6 +339,7 @@ class Score(Base):
             "confidence >= 0.0 AND confidence <= 1.0",
             name="chk_scores_confidence",
         ),
+        # WHY: Fast lookup index for retrieving calculated scores when rendering the split-screen ScoreWorkspace UI
         Index("idx_scores_lookup", "essay_id"),
     )
 
@@ -337,6 +353,7 @@ class Score(Base):
     )
 
 
+# WHY: Stores granular pedagogical feedback across Grammar, Coherence, and Argumentation with severity rankings for student revision
 class DimensionFeedback(Base):
     __tablename__ = "dimension_feedback"
 

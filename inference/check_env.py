@@ -10,6 +10,7 @@ import platform
 import sys
 
 
+# WHY: Week 1 Gate Verification: Inspects CUDA availability, active device name, and VRAM capacity to confirm training acceleration readiness
 def check_environment() -> str:
     """Verify PyTorch hardware acceleration environment.
 

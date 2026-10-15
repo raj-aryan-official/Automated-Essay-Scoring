@@ -174,13 +174,13 @@ def quadratic_weighted_kappa(
 
     N = max_score - min_score + 1
 
-    # 1. Observed score-pair matrix O
+    # WHY: Step 1: Construct the observed (N x N) contingency matrix O tracking empirical rater-model score pairs
     observed = build_confusion_matrix(true_list, pred_list, min_score, max_score)
 
-    # 2. Expected matrix E under chance agreement
+    # WHY: Step 2: Construct the expected matrix E from marginal histogram outer products to represent random chance agreement
     expected = build_expected_matrix(observed)
 
-    # 3. Quadratic weight matrix w_ij = (i - j)^2 / (N - 1)^2
+    # WHY: Step 3: Construct the quadratic weight matrix w_ij = (i - j)^2 / (N - 1)^2 to penalize larger errors exponentially
     weights = build_weight_matrix(N)
 
     # 4. Compute weighted sums

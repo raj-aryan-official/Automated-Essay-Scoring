@@ -7,11 +7,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+# WHY: Distinguishes direct browser text entries from binary document file uploads (.txt, .docx, .pdf).
 class SourceTypeEnum(str, Enum):
     PASTE = "PASTE"
     DOCUMENT = "DOCUMENT"
 
 
+# WHY: Formal 8-state lifecycle tracking an essay from submission through queuing, scoring, human review, and finalization.
 class EssayStatusEnum(str, Enum):
     DRAFT = "DRAFT"
     SUBMITTED = "SUBMITTED"
@@ -24,6 +26,7 @@ class EssayStatusEnum(str, Enum):
     PROCESSING_FAILED = "PROCESSING_FAILED"
 
 
+# WHY: Shared base schema encapsulating prompt reference and submission ingestion type.
 class EssayBase(BaseModel):
     prompt_id: UUID = Field(..., description="UUID of the prompt being addressed")
     source_type: SourceTypeEnum = Field(
@@ -32,6 +35,7 @@ class EssayBase(BaseModel):
     )
 
 
+# WHY: Validates essay creation payload, enforcing word/char minimums for raw text and document keys for binary uploads.
 class EssayCreate(EssayBase):
     raw_text: str | None = Field(
         default=None,
@@ -158,6 +162,7 @@ class DimensionScoreDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
+# WHY: Comprehensive evaluation schema returning holistic score, rubric band, confidence metrics, dimension breakdown, and teacher review status.
 class EssayScoreResponse(BaseModel):
     essayId: UUID = Field(..., description="UUID of the scored essay")
     holisticScore: float = Field(
@@ -192,6 +197,7 @@ class EssayScoreResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
+# WHY: Enforces mandatory teacher justification rationale and overridden holistic score to ensure full auditability of human grade modifications.
 class ReviewerOverrideRequest(BaseModel):
     reviewer_override_score: float = Field(
         ...,

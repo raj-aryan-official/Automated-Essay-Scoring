@@ -78,6 +78,7 @@ except ImportError:
     ORT_AVAILABLE = False
 
 
+# WHY: Two-layer MLP regression head projecting the 768-dim pooled [CLS] representation to an unconstrained scalar logit
 class BertRegressionHead(_ModuleBase):  # type: ignore[misc]
     """Two-layer dense regression head on pooled [CLS] representation (Section 10.2).
 
@@ -94,6 +95,7 @@ class BertRegressionHead(_ModuleBase):  # type: ignore[misc]
     ) -> None:
         if nn is not None and _ModuleBase is not object:
             super().__init__()
+            # WHY: GELU activation models non-linear semantic interactions smoothly compared to standard ReLU
             act_layer = (
                 nn.GELU()
                 if (activation.lower() == "gelu" and hasattr(nn, "GELU"))

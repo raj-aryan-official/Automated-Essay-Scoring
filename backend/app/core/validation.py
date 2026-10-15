@@ -48,6 +48,7 @@ ALLOWED_EXTENSIONS: set[str] = {
 }
 
 
+# WHY: Enforces relational integrity before database insertion; returns HTTP 404 if the requested prompt UUID does not exist
 def validate_prompt_exists(db: Session, prompt_id: UUID) -> Prompt:
     """Verify that referenced prompt exists in the database.
 
@@ -62,6 +63,7 @@ def validate_prompt_exists(db: Session, prompt_id: UUID) -> Prompt:
     return prompt
 
 
+# WHY: Validates essay text bounds: rejects empty submissions (HTTP 422) and protects BERT encoder from VRAM exhaustion by capping at 8,000 chars (HTTP 413)
 def validate_essay_text(raw_text: str | None) -> str:
     """Validate essay text length and content.
 
@@ -70,6 +72,7 @@ def validate_essay_text(raw_text: str | None) -> str:
     - Rejects essays exceeding MAX_ESSAY_LENGTH characters with HTTP 413.
     """
     if raw_text is None or not raw_text.strip():
+        # WHY: Rejects blank input to prevent undefined behavior in tokenizer and zero division in feature extractors
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Essay text cannot be empty or blank.",
@@ -79,6 +82,7 @@ def validate_essay_text(raw_text: str | None) -> str:
     words = stripped.split()
 
     if len(stripped) < MIN_ESSAY_LENGTH or len(words) < MIN_ESSAY_WORDS:
+        # WHY: Guard against single-character/nonsense submissions that have no pedagogical assessment value
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=(
@@ -88,6 +92,7 @@ def validate_essay_text(raw_text: str | None) -> str:
         )
 
     if len(raw_text) > MAX_ESSAY_LENGTH:
+        # WHY: Enforces Section 12.2 TEST-002: rejects essays >8000 chars with HTTP 413 to prevent memory exhaustion
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             detail=(
@@ -99,6 +104,7 @@ def validate_essay_text(raw_text: str | None) -> str:
     return raw_text
 
 
+# WHY: Enforces strict file size (20MB) and MIME-type whitelisting to prevent malicious binary execution and storage exhaustion
 def validate_document(
     file_bytes: bytes,
     filename: str | None = None,
@@ -109,7 +115,7 @@ def validate_document(
     - Rejects documents exceeding MAX_DOCUMENT_SIZE_BYTES (20MB) with HTTP 413.
     - Rejects documents with disallowed MIME types or extensions with HTTP 415.
     """
-    # 1. Enforce max file size (20MB)
+    # 1. Enforce max file size (20MB) to prevent S3 storage floods
     if len(file_bytes) > MAX_DOCUMENT_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -119,11 +125,11 @@ def validate_document(
             ),
         )
 
-    # 2. Enforce MIME type & extension checks
+    # 2. Enforce MIME type & extension checks against whitelist
     normalized_mime = (content_type or "").lower().split(";")[0].strip()
     ext = Path(filename).suffix.lower() if filename else ""
 
-    # Check for explicitly disallowed or untrusted MIME type
+    # WHY: Whitelist validation guarantees only parseable document formats (.pdf, .docx, .txt, .md, .rtf) reach storage
     if normalized_mime and normalized_mime not in ALLOWED_MIME_TYPES:
         if normalized_mime != "application/octet-stream":
             raise HTTPException(

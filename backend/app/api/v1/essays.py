@@ -111,6 +111,7 @@ def _get_or_create_user(db: Session, user_id: UUID | None = None) -> User:
         }
     },
 )
+# WHY: Unified submission gateway accepting both raw text pastes and binary document uploads (.pdf, .docx), returning HTTP 201 Created
 async def submit_essay(
     request: Request,
     db: Session = Depends(get_db),
@@ -122,6 +123,7 @@ async def submit_essay(
     (source_type=DOCUMENT, saved via StorageService), assign a UUID, and persist
     the essay row with status=SUBMITTED. Return HTTP 201 with the essay UUID on success.
     """
+    # WHY: Inspects request Content-Type to branch dynamically between multipart streaming and JSON deserialization
     content_type = request.headers.get("content-type", "").lower()
     essay_id = uuid.uuid4()
 
@@ -330,6 +332,7 @@ async def submit_essay(
     response_model=list[EssayResponse],
     summary="List submitted essays with optional filtering and pagination",
 )
+# WHY: Supports paginated historical essay browsing with status and prompt filtering for teachers and auditors
 def list_essays(
     skip: int = Query(0, ge=0, description="Offset of records to skip"),
     limit: int = Query(50, ge=1, le=100, description="Maximum records to return"),
@@ -351,6 +354,7 @@ def list_essays(
     return essays
 
 
+# WHY: Fetches full essay text and dynamically generates temporary S3 presigned download URLs for original document submissions
 @router.get(
     "/{essay_id}",
     response_model=EssayDetailResponse,
@@ -390,6 +394,7 @@ def get_essay_by_id(
     return detail_res
 
 
+# WHY: Implements asynchronous dispatch pattern returning HTTP 202 Accepted with job_id so API threads never block during BERT inference
 @router.post(
     "/{essay_id}/score",
     status_code=status.HTTP_202_ACCEPTED,
@@ -423,6 +428,7 @@ def dispatch_scoring_job(
     )
 
 
+# WHY: Fetches calculated holistic score, calibrated confidence, and 3-dimensional feedback items for split-screen ScoreWorkspace
 @router.get(
     "/{essay_id}/score",
     response_model=EssayScoreResponse,
@@ -529,18 +535,18 @@ def review_essay(
             detail=f"Cannot review essay '{essay_id}' because it has not been scored yet. Current status is '{essay.status}'.",
         )
 
-    # 1. Update status to UNDER_REVIEW
+    # WHY: Step 1: Update status to UNDER_REVIEW to signal active human intervention
     essay.status = "UNDER_REVIEW"
     db.commit()
     db.refresh(essay)
 
-    # 2. Persist override onto scores row with timestamp
+    # WHY: Step 2: Persist educator's adjusted score along with mandatory justification rationale and UTC audit timestamp
     override_time = datetime.now(timezone.utc)
     score.reviewer_override_score = payload.reviewer_override_score
     score.reviewer_override_reason = payload.reviewer_override_reason
     score.reviewer_override_at = override_time
 
-    # 3. Transition status to FINALIZED
+    # WHY: Step 3: Transition status to FINALIZED to lock the score against further automatic modification
     essay.status = "FINALIZED"
     db.commit()
     db.refresh(score)

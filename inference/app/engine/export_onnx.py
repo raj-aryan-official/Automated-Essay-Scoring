@@ -67,6 +67,7 @@ except ImportError:
     TORCH_AVAILABLE = False
 
 
+# WHY: Tracks p50, p95, and mean scoring latency to verify compliance with Section 5.3 NFR (<300ms)
 @dataclass
 class LatencyMetrics:
     """Latency percentile metrics in milliseconds."""
@@ -79,6 +80,7 @@ class LatencyMetrics:
     iterations: int
 
 
+# WHY: Auditing report comparing raw PyTorch execution vs. ONNX Runtime kernel fusion speedups
 @dataclass
 class BenchmarkReport:
     """Benchmark results comparing PyTorch/Baseline and ONNX Runtime."""

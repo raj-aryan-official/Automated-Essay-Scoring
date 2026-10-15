@@ -11,6 +11,7 @@ import {
 } from '../api';
 import { ScoreWorkspace } from '../features/scoring';
 
+// WHY: Central essay view coordinating lifecycle states (RAW -> QUEUED -> SCORED -> FINALIZED) with live polling and workspace display.
 export const EssayDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
 
@@ -40,6 +41,7 @@ export const EssayDetailPage: React.FC = () => {
     loadEssay(id);
   }, [id]);
 
+  // WHY: Retrieves the latest essay metadata and decides whether to load existing score data or initiate queue polling.
   const loadEssay = async (essayId: string) => {
     setLoading(true);
     setError(null);
@@ -66,6 +68,7 @@ export const EssayDetailPage: React.FC = () => {
     }
   };
 
+  // WHY: Fetches the holistic score, confidence metrics, rubric scale, and dimension feedback items once inference completes.
   const loadScore = async (essayId: string) => {
     try {
       console.log('[EssayDetailPage] Fetching score for essay:', essayId);
@@ -80,7 +83,7 @@ export const EssayDetailPage: React.FC = () => {
     }
   };
 
-  // 2. Dispatch Scoring Job
+  // WHY: Enqueues an asynchronous scoring job in the database and triggers polling to monitor worker execution.
   const handleDispatchScoring = async () => {
     if (!id) return;
     setIsDispatching(true);
@@ -101,7 +104,7 @@ export const EssayDetailPage: React.FC = () => {
     }
   };
 
-  // 3. Poll while QUEUED or PROCESSING
+  // WHY: Periodically polls job and essay status every 1.5s to display real-time worker progress and switch to ScoreWorkspace upon completion.
   const startEssayPolling = (essayId: string, jobId?: string) => {
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);

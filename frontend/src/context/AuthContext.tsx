@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // WHY: On application mount, verifies if a stored JWT exists and re-validates profile via GET /api/v1/auth/me
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('aes_token');
@@ -44,6 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initAuth();
   }, []);
 
+  // WHY: Persists issued JWT access token and user role profile to localStorage to keep user logged in on page reloads
   const login = async (payload: LoginPayload) => {
     const res = await apiLogin(payload);
     setToken(res.access_token);
@@ -57,6 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('aes_user', JSON.stringify(profile));
   };
 
+  // WHY: Purges credentials from React state and browser storage on logout to prevent unauthorized access
   const logout = () => {
     setToken(null);
     setUser(null);

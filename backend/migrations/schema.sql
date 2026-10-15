@@ -1,8 +1,10 @@
 -- Automated Essay Scoring (AES) Database Schema
 -- Matches Section 7.2 Database Schema (PostgreSQL DDL)
 
+-- WHY: Enables PostgreSQL native v4 UUID generation to prevent sequential enumeration attacks
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- WHY: Stores user credentials and RBAC roles (ADMIN, TEACHER, ML_ENGINEER, VIEWER) for JWT authorization
 CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email VARCHAR(320) NOT NULL UNIQUE,
@@ -11,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Stores immutable ASAP prompt definitions and score bounds (rubric_min, rubric_max) for neural score calibration
 CREATE TABLE IF NOT EXISTS prompts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   asap_set_id INTEGER NOT NULL UNIQUE,
@@ -20,6 +23,7 @@ CREATE TABLE IF NOT EXISTS prompts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Stores student submissions, source types (PASTE/DOCUMENT), S3 keys, and an 8-stage state machine
 CREATE TABLE IF NOT EXISTS essays (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   submitted_by UUID NOT NULL REFERENCES users(id),
@@ -34,6 +38,7 @@ CREATE TABLE IF NOT EXISTS essays (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Model registry tracking active deep learning checkpoints, ONNX weight locations, architecture, and validation metrics
 CREATE TABLE IF NOT EXISTS models (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
@@ -46,6 +51,7 @@ CREATE TABLE IF NOT EXISTS models (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Distributed job queue table supporting atomic FOR UPDATE SKIP LOCKED claiming, priority dispatch, and crash retries
 CREATE TABLE IF NOT EXISTS jobs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   essay_id UUID NOT NULL REFERENCES essays(id) ON DELETE CASCADE,
@@ -61,6 +67,7 @@ CREATE TABLE IF NOT EXISTS jobs (
   completed_at TIMESTAMPTZ
 );
 
+-- WHY: Auditing entity capturing runtime telemetry (inference execution device, latency in ms, confidence threshold) for SLA monitoring
 CREATE TABLE IF NOT EXISTS inference_runs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   essay_id UUID NOT NULL REFERENCES essays(id) ON DELETE CASCADE,
@@ -72,6 +79,7 @@ CREATE TABLE IF NOT EXISTS inference_runs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Stores rubric-calibrated holistic score, rubric band, confidence, and teacher override adjustments
 CREATE TABLE IF NOT EXISTS scores (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   inference_run_id UUID NOT NULL REFERENCES inference_runs(id) ON DELETE CASCADE,
@@ -85,6 +93,7 @@ CREATE TABLE IF NOT EXISTS scores (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Stores granular pedagogical feedback across Grammar, Coherence, and Argumentation with severity rankings for student revision
 CREATE TABLE IF NOT EXISTS dimension_feedback (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   score_id UUID NOT NULL REFERENCES scores(id) ON DELETE CASCADE,
@@ -94,6 +103,9 @@ CREATE TABLE IF NOT EXISTS dimension_feedback (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- WHY: Index on status accelerates teacher dashboard filtering and worker queue status queries
 CREATE INDEX IF NOT EXISTS idx_essays_status ON essays(status);
+-- WHY: Composite index matches worker polling query (status, priority, queued_at) to avoid table scans during SKIP LOCKED
 CREATE INDEX IF NOT EXISTS idx_jobs_processing ON jobs(status, priority, queued_at);
+-- WHY: Fast lookup index for retrieving calculated scores when rendering the split-screen ScoreWorkspace UI
 CREATE INDEX IF NOT EXISTS idx_scores_lookup ON scores(essay_id);

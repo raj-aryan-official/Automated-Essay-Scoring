@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+# WHY: Immutable dataclass mapping numeric score ranges to qualitative performance bands (e.g., 'Proficient', 'Developing') for student feedback.
 @dataclass(frozen=True)
 class RubricBand:
     """Represents a score band within a prompt's evaluation rubric."""
@@ -23,6 +24,7 @@ class RubricBand:
     max_score: float
 
 
+# WHY: Standardized prediction envelope encapsulating holistic score, mapped rubric band, confidence probability, and latency telemetry.
 @dataclass
 class ScorePrediction:
     """Encapsulates the model's scoring output for an essay."""
@@ -35,6 +37,7 @@ class ScorePrediction:
     inference_ms: int | None = None
 
 
+# WHY: Abstract Base Class establishing a strict polymorphic interface for PyTorch BERT, LoRA fine-tuned, and ONNX Runtime scoring engines.
 class EssayScoringModel(ABC):
     """Abstract interface for essay scoring models."""
 
@@ -49,6 +52,7 @@ class EssayScoringModel(ABC):
         pass
 
 
+# WHY: Abstract Base Class establishing contract for diagnostic feedback generation across grammar, coherence, and argumentation dimensions.
 class DimensionFeedbackGenerator(ABC):
     """Abstract interface for generating dimension-level pedagogical feedback."""
 

@@ -9,6 +9,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+# WHY: Schema defining per-prompt held-out test evaluation metrics (QWK, genre, rubric bounds, and gate pass/fail).
 class PromptQwkResult(BaseModel):
     """Evaluation result for an individual ASAP essay prompt."""
 
@@ -31,6 +32,7 @@ class PromptQwkResult(BaseModel):
     )
 
 
+# WHY: Aggregated benchmark report computing mean QWK across all 8 ASAP prompts and verifying gate compliance against QWK >= 0.70.
 class QwkSummaryResponse(BaseModel):
     """Aggregated QWK report across all evaluated prompts."""
 
@@ -52,6 +54,7 @@ class QwkSummaryResponse(BaseModel):
     )
 
 
+# WHY: Single time-series training telemetry point recording training loss, validation loss, and learning rate at each step.
 class LossCurvePoint(BaseModel):
     """A single step data point in model training / validation loss curve."""
 
@@ -67,6 +70,7 @@ class LossCurvePoint(BaseModel):
     )
 
 
+# WHY: Real-time worker task counts across QUEUED, PROCESSING, COMPLETED, and FAILED states for live queue health monitoring.
 class JobStatusCounts(BaseModel):
     """Real-time job queue summary counts."""
 
@@ -81,6 +85,7 @@ class JobStatusCounts(BaseModel):
     total: int = Field(default=0, description="Total jobs across all statuses")
 
 
+# WHY: Aggregated payload combining QWK benchmarks, loss curves, and queue counts in a single network request to minimize client latency.
 class EvaluationDashboardResponse(BaseModel):
     """Combined payload for the Model Evaluation dashboard."""
 

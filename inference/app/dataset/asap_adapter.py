@@ -36,6 +36,7 @@ except (ImportError, Exception):
     train_test_split = None  # type: ignore
 
 
+# WHY: Lightweight in-memory series fallback enabling standalone model execution and testing when pandas is unavailable
 class SimpleSeries(list):
     """Lightweight fallback for pd.Series when pandas is unavailable."""
 
@@ -336,6 +337,7 @@ def load_asap_dataset(
     return SimpleDataFrame(records)
 
 
+# WHY: Week 1 Gate Requirement: Produces stratified 80/10/10 train/validation/test splits per prompt to preserve score distribution across splits
 def split_prompt_dataset(
     df: Any,
     essay_set: int,

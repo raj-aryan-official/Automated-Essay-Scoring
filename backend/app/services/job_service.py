@@ -19,6 +19,7 @@ from app.models.entities import Essay, Job
 logger = logging.getLogger(__name__)
 
 
+# WHY: Enqueues an asynchronous scoring job and links it to the essay, transitioning both to QUEUED state for worker consumption
 def create_scoring_job(
     db: Session,
     essay_id: UUID | Any,
@@ -42,7 +43,7 @@ def create_scoring_job(
     )
     db.add(job)
 
-    # Also update the essay status to QUEUED if present
+    # WHY: Keeps essay status synchronized with the job queue so teachers immediately see the essay is pending assessment
     essay = db.query(Essay).filter(Essay.id == essay_id).first()
     if essay:
         essay.status = "QUEUED"
@@ -54,6 +55,7 @@ def create_scoring_job(
     return job
 
 
+# WHY: Atomically claims the next queued job using PostgreSQL's FOR UPDATE SKIP LOCKED to prevent duplicate processing across concurrent workers
 def claim_next_job(
     db: Session,
     job_type: str | None = None,
@@ -75,7 +77,7 @@ def claim_next_job(
     if job_type:
         query = query.filter(Job.job_type == job_type)
 
-    # Use FOR UPDATE SKIP LOCKED (supported natively in PostgreSQL, transparently bypassed in SQLite)
+    # WHY: with_for_update(skip_locked=True) ensures that competing worker daemons skip locked rows without waiting, achieving zero lock contention
     job = (
         query.order_by(Job.priority.asc(), Job.queued_at.asc())
         .with_for_update(skip_locked=True)
@@ -85,7 +87,7 @@ def claim_next_job(
     if not job:
         return None
 
-    # Atomically transition job to PROCESSING
+    # WHY: Atomically transition job to PROCESSING and track started_at timestamp for worker timeout monitoring
     job.status = "PROCESSING"
     job.started_at = datetime.now(timezone.utc)
     job.attempts = (job.attempts or 0) + 1
@@ -104,6 +106,7 @@ def claim_next_job(
     return job
 
 
+# WHY: Supports polling from the frontend (GET /api/v1/jobs/{job_id}) to display live progress spinners until scoring completes
 def get_job_by_id(db: Session, job_id: UUID) -> Job | None:
     """Retrieve a job by UUID from the database."""
     return db.query(Job).filter(Job.id == job_id).first()

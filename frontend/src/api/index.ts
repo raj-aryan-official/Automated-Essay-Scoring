@@ -19,6 +19,7 @@ export * from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+// WHY: Configures Axios HTTP client with base URL pointing to reverse proxy or FastAPI backend (/api/v1)
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -27,7 +28,7 @@ export const apiClient = axios.create({
   timeout: 30000,
 });
 
-// Request & Response logging interceptors with JWT token injection
+// WHY: Request interceptor automatically attaches the stored JWT Bearer token to all outgoing API requests
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('aes_token');

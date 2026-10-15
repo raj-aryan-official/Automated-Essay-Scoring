@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# WHY: Provides standard JSON login endpoint consumed by Axios in our React frontend, issuing a JWT with role metadata
 @router.post(
     "/login",
     response_model=TokenResponse,
@@ -26,6 +27,7 @@ def login_json(
     db: Session = Depends(get_db),
 ):
     """Authenticate user with email and password, returning a JWT access token."""
+    # WHY: Constant-time hash verification against bcrypt prevents timing attacks
     user = db.query(User).filter(User.email == payload.email).first()
     if not user or not verify_password(payload.password, user.password_hash):
         raise HTTPException(
@@ -34,6 +36,7 @@ def login_json(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # WHY: Generates signed JWT embedding role tier (TEACHER, ADMIN, etc.) for client-side permission state
     token = create_access_token(
         subject=user.id,
         role=user.role,
@@ -50,6 +53,7 @@ def login_json(
     )
 
 
+# WHY: Implements standard RFC-6749 OAuth2 password form endpoint so engineers can authenticate directly inside Swagger UI (/docs)
 @router.post(
     "/token",
     response_model=TokenResponse,
@@ -83,6 +87,7 @@ def login_token_form(
     )
 
 
+# WHY: Allows the React client on page refresh to validate active JWT session and restore user role in AuthContext
 @router.get(
     "/me",
     response_model=UserResponse,

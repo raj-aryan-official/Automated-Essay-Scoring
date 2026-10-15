@@ -21,9 +21,11 @@ export const SubmissionPage: React.FC = () => {
   const [submitResult, setSubmitResult] = useState<EssayCreateResponse | null>(null);
   const [dispatchStatus, setDispatchStatus] = useState<string | null>(null);
 
+  // WHY: Computes live word and character counts as student types to assist in adhering to minimum/maximum length constraints
   const wordCount = rawText.trim() ? rawText.trim().split(/\s+/).length : 0;
   const charCount = rawText.length;
 
+  // WHY: Handles essay submission by conditionally formatting JSON payload (PASTE) or multipart FormData (DOCUMENT upload)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);

@@ -63,6 +63,7 @@ _scoring_model: EssayScoringModel | None = None
 _feedback_generator: DimensionFeedbackGenerator | None = None
 
 
+# WHY: Singleton pattern lazily instantiates and caches the BERT+LoRA model in GPU/CPU memory to avoid expensive reloads on every job
 def get_scoring_model(prompt_id: str | None = "1") -> EssayScoringModel:
     """Lazily instantiate and return the singleton EssayScoringModel loaded with prompt checkpoint."""
     global _scoring_model
@@ -79,6 +80,7 @@ def get_scoring_model(prompt_id: str | None = "1") -> EssayScoringModel:
     return _scoring_model
 
 
+# WHY: Singleton pattern caches the heuristic diagnostic generator for Grammar, Coherence, and Argumentation
 def get_feedback_generator() -> DimensionFeedbackGenerator:
     """Lazily instantiate and return the singleton DimensionFeedbackGenerator."""
     global _feedback_generator
@@ -122,6 +124,7 @@ def stub_predict_score(
     }
 
 
+# WHY: Master worker execution method orchestrating model inference, pedagogical feedback generation, atomic DB persistence, and retry logic
 def process_job(
     job: Job,
     db: Session,

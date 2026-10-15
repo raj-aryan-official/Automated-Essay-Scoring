@@ -8,7 +8,7 @@ from app.api.deps import get_async_db, get_db
 from app.api.v1 import api_router
 from app.core.config import settings
 
-# Initialize FastAPI application
+# WHY: We use FastAPI as our ASGI framework for native async I/O, automatic Pydantic validation, and OpenAPI doc generation
 app = FastAPI(
     title=settings.PROJECT_NAME,
     description="Automated Essay Scoring REST API and Real-Time Assessment Engine",
@@ -18,7 +18,7 @@ app = FastAPI(
     openapi_url="/openapi.json",
 )
 
-# Configure CORS for frontend origin and allowed origins
+# WHY: We enable CORS middleware to permit secure cross-origin REST requests from our React/Vite frontend (ports 3000 & 5173)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -27,13 +27,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount API v1 router (includes /api/v1/health and /api/v1/ready)
+# WHY: We version-prefix all domain routes under /api/v1 to isolate endpoints and maintain backward-compatible API contracts
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/", tags=["General"])
 async def root():
     """Root entrypoint providing basic service discovery and links."""
+    # WHY: We provide a lightweight discovery endpoint so load balancers and developers can immediately verify API availability and doc links
     return {
         "message": "Welcome to Automated Essay Scoring API",
         "docs": "/docs",
@@ -46,8 +47,9 @@ async def root():
 @app.get(f"{settings.API_V1_STR}/docs", include_in_schema=False)
 async def redirect_v1_docs():
     """Redirect legacy API v1 docs URL to canonical /docs."""
+    # WHY: We redirect any legacy versioned docs requests directly to the canonical Swagger UI at /docs to prevent broken links
     return RedirectResponse(url="/docs")
 
 
-# Re-export database dependencies for convenient application-level access
+# WHY: We re-export database dependency providers at the root module level for clean application-wide access
 __all__ = ["app", "get_db", "get_async_db"]

@@ -4,6 +4,7 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+# WHY: Centralized Pydantic BaseSettings configuration singleton loading typed environment variables from .env files or Docker environments.
 class Settings(BaseSettings):
     # Base application metadata
     PROJECT_NAME: str = "Automated Essay Scoring"
@@ -47,6 +48,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:4173",
     ]
 
+    # WHY: Pre-validator harmonizing alias environment variables (S3_ENDPOINT vs S3_ENDPOINT_URL, JWT_SECRET vs SECRET_KEY) and syncing sync/async DB connection strings.
     @model_validator(mode="before")
     @classmethod
     def assemble_settings(cls, data: dict):
@@ -135,6 +137,7 @@ class Settings(BaseSettings):
 
         return data
 
+    # WHY: Dynamically computes normalized, unique CORS allowed origins without trailing slashes for Starlette/FastAPI middleware.
     @property
     def cors_origins(self) -> list[str]:
         """Returns normalized list of unique allowed CORS origins including FRONTEND_ORIGIN."""
@@ -163,4 +166,5 @@ class Settings(BaseSettings):
     )
 
 
+# WHY: Application-wide settings singleton initialized at import time for zero-overhead access across modules.
 settings = Settings()

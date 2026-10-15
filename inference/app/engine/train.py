@@ -260,13 +260,14 @@ class BertLoRAEssayRegressor(_TrainModuleBase):  # type: ignore[misc]
                 cls_rep = outputs[0][:, 0, :]
 
             logits = self.regression_head(cls_rep)
-            # Sigmoid activation mapping unscaled logits strictly into [0, 1]
+            # WHY: Sigmoid strictly bounds predicted output to (0, 1), guaranteeing predictions never violate rubric bounds after affine rescaling
             if hasattr(torch, "sigmoid"):
                 return torch.sigmoid(logits.squeeze(-1))
             return 0.5
         return 0.5
 
 
+# WHY: Master per-prompt fine-tuning orchestrator managing LoRA adapter injection, AdamW optimization, and early checkpointing
 class PromptTrainer:
     """Orchestrates per-prompt LoRA fine-tuning on ASAP dataset."""
 

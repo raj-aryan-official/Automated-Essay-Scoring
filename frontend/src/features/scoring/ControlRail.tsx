@@ -1,5 +1,6 @@
 import React from 'react';
 
+// WHY: Restricts evaluative rubric aspects to grammar, coherence, and argumentation to align with multi-trait scoring criteria.
 export type DimensionKey = 'grammar' | 'coherence' | 'argumentation';
 
 interface ControlRailProps {
@@ -12,12 +13,14 @@ interface ControlRailProps {
   onResetFilters: () => void;
 }
 
+// WHY: Metadata dictionary defining user-friendly labels and subtitles for the rubric dimensions displayed in the control panel.
 const DIMENSIONS: { key: DimensionKey; label: string; description: string }[] = [
   { key: 'grammar', label: 'Grammar', description: 'Syntax & Mechanics' },
   { key: 'coherence', label: 'Coherence', description: 'Flow & Transitions' },
   { key: 'argumentation', label: 'Argumentation', description: 'Claims & Evidence' },
 ];
 
+// WHY: Interactive control rail component providing reviewers with instant dimension filtering, confidence threshold tuning, and drawer controls.
 export const ControlRail: React.FC<ControlRailProps> = ({
   activeDimensions,
   onToggleDimension,

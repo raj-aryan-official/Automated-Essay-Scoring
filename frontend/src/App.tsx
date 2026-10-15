@@ -8,6 +8,7 @@ import { EssayDetailPage } from './pages/EssayDetailPage';
 import { ModelEvaluationPage } from './pages/ModelEvaluationPage';
 import { UserRole } from './api';
 
+// WHY: Visual styling map assigning distinct color accents to RBAC roles (ADMIN, TEACHER, ML_ENGINEER, VIEWER) for clear UI identity.
 const ROLE_BADGES: Record<UserRole, string> = {
   ADMIN: 'bg-rose-500/20 text-rose-300 border-rose-500/40',
   TEACHER: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
@@ -15,6 +16,7 @@ const ROLE_BADGES: Record<UserRole, string> = {
   VIEWER: 'bg-slate-700/60 text-slate-300 border-slate-600/50',
 };
 
+// WHY: Persistent application header displaying navigation links, current user session email, role indicator badge, and sign-out actions.
 const HeaderBar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const navigate = useNavigate();
@@ -88,6 +90,7 @@ const HeaderBar: React.FC = () => {
   );
 };
 
+// WHY: Root application component coordinating client-side React Router, global authentication context, and role-protected view routes.
 export const App: React.FC = () => {
   return (
     <AuthProvider>

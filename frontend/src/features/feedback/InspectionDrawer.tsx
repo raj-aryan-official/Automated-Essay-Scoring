@@ -19,7 +19,7 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
   rubricMin = 2.0,
   rubricMax = 12.0,
 }) => {
-  // Sort dimensions by severity (lowest sub-score = highest pedagogical severity)
+  // WHY: Sorts dimensions ascending by score so students and teachers immediately see the most critical deficiencies first
   const sortedAndFiltered = useMemo(() => {
     // 1. Filter by active dimension toggles
     const filtered = dimensions.filter((dim) => {
@@ -35,7 +35,7 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
     });
   }, [dimensions, activeDimensions]);
 
-  // Compute severity level based on score position in rubric range
+  // WHY: Partitions sub-scores into 3 pedagogical action tiers: High Priority (<35%), Moderate (35-70%), and Proficient (>=70%)
   const getSeverity = (score: number | null | undefined) => {
     if (score === null || score === undefined) {
       return {

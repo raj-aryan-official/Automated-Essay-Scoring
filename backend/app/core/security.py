@@ -14,6 +14,7 @@ if not hasattr(bcrypt, "__about__"):
 _orig_hashpw = bcrypt.hashpw
 
 
+# WHY: Bcrypt algorithms have a hard 72-byte input limit; we truncate oversized inputs to prevent DoS attacks and compatibility crashes
 def _safe_hashpw(password, salt):
     if isinstance(password, (bytes, bytearray)) and len(password) > 72:
         password = password[:72]
@@ -29,20 +30,23 @@ from passlib.context import CryptContext
 
 from app.core.config import settings
 
-# Password hashing context using bcrypt via passlib
+# WHY: We use bcrypt via passlib for adaptive, salted, slow-by-design password hashing resistant to rainbow table and brute-force attacks
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
+# WHY: Performs constant-time comparison of plaintext input against the stored salted bcrypt hash
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a raw password against its stored hash."""
     return pwd_context.verify(plain_password, hashed_password)
 
 
+# WHY: Automatically generates a cryptographic salt and hashes user passwords before persisting to PostgreSQL
 def get_password_hash(password: str) -> str:
     """Generate a bcrypt hash of a plain password."""
     return pwd_context.hash(password)
 
 
+# WHY: Issues a cryptographically signed JWT containing user ID (sub) and role tier for stateless REST authorization
 def create_access_token(
     subject: str | Any,
     role: str,
@@ -66,6 +70,7 @@ def create_access_token(
     if email:
         to_encode["email"] = email
 
+    # WHY: Signs the token with HS256 secret key to guarantee payload integrity against client-side tampering
     encoded_jwt = jwt.encode(
         to_encode,
         settings.JWT_SECRET,
@@ -74,6 +79,7 @@ def create_access_token(
     return encoded_jwt
 
 
+# WHY: Validates the cryptographic signature and token expiration; throws JWTError if tampered with or expired
 def decode_access_token(token: str) -> dict[str, Any]:
     """Decode and validate a signed JWT. Raises JWTError if invalid or expired."""
     return jwt.decode(

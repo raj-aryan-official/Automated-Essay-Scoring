@@ -19,10 +19,7 @@ export const HolisticScoreCard: React.FC<HolisticScoreCardProps> = ({
     reviewerOverrideReason,
   } = scoreData;
 
-  // Confidence color-coding:
-  // Low (< 0.70): Red
-  // Mid (0.70 - 0.85): Amber
-  // High (>= 0.85): Green
+  // WHY: Color-codes model certainty (Green >= 0.85, Amber 0.70-0.85, Red < 0.70) to visually signal when human review is required
   let confidenceColor = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30';
   let confidenceLabel = 'High Confidence';
   let dotColor = 'bg-emerald-400';
@@ -37,7 +34,7 @@ export const HolisticScoreCard: React.FC<HolisticScoreCardProps> = ({
     dotColor = 'bg-amber-400';
   }
 
-  // Check if score falls below the user's adjustable threshold
+  // WHY: Dynamically flags score card with warning badge when model confidence drops below teacher's adjustable threshold
   const isBelowThreshold = confidence < confidenceThreshold;
 
   return (

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../api';
 
+// WHY: Predefined seed test accounts enabling 1-click role-based sign-in for viva demonstrations across TEACHER, ADMIN, ML_ENGINEER, and VIEWER roles.
 const DEMO_ACCOUNTS: { role: UserRole; label: string; email: string; pass: string; badgeColor: string }[] = [
   {
     role: 'TEACHER',
@@ -34,6 +35,7 @@ const DEMO_ACCOUNTS: { role: UserRole; label: string; email: string; pass: strin
   },
 ];
 
+// WHY: Authentication page providing standard credential submission and convenient 1-click demo logins with JWT session creation.
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
@@ -46,6 +48,7 @@ export const LoginPage: React.FC = () => {
 
   const from = (location.state as any)?.from?.pathname || '/';
 
+  // WHY: Dispatches user credentials to the OAuth2 token endpoint, stores JWT in browser storage, and returns user to target route.
   const handleLogin = async (e?: React.FormEvent, customEmail?: string, customPass?: string) => {
     if (e) e.preventDefault();
     setError(null);

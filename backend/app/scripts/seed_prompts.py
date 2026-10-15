@@ -34,7 +34,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("seed_prompts")
 
-# Authentic ASAP prompt specifications with deterministic UUIDs matching frontend
+# WHY: Uses fixed deterministic UUIDs matching the React frontend's dropdown IDs to prevent broken client references
 ASAP_PROMPTS_DATA: list[dict[str, Any]] = [
     {
         "id": UUID("11111111-1111-1111-1111-111111111111"),
@@ -95,6 +95,7 @@ ASAP_PROMPTS_DATA: list[dict[str, Any]] = [
 ]
 
 
+# WHY: Executed by entrypoint.sh on container startup; idempotent upsert logic ensures rerunning never duplicates rows
 def seed_prompts() -> int:
     """Seed all 8 ASAP prompts into the database idempotently.
 

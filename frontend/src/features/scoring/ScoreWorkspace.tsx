@@ -11,6 +11,7 @@ interface ScoreWorkspaceProps {
   onReviewSubmitted?: (updatedScore: EssayScoreResponse) => void;
 }
 
+// WHY: Core human-in-the-loop assessment workspace combining original prose inspection with model scores and teacher controls
 export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
   essay,
   scoreData,
@@ -48,7 +49,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
 
   return (
     <div id="score-workspace" className="space-y-6">
-      {/* Split-Screen Workspace Grid */}
+      {/* WHY: 12-column split-screen layout: 7 columns for original essay reader, 5 columns for score card and controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Pane: Essay Text Reader (7 columns on desktop) */}
         <section

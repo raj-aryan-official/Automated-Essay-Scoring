@@ -19,6 +19,7 @@ import {
   getJobStatusCounts,
 } from '../api';
 
+// WHY: Model evaluation dashboard displaying per-prompt QWK benchmarks against acceptance gates, loss curves, and live worker job telemetry.
 export const ModelEvaluationPage: React.FC = () => {
   const [data, setData] = useState<EvaluationDashboardData | null>(null);
   const [jobCounts, setJobCounts] = useState<JobStatusCounts | null>(null);
@@ -28,7 +29,7 @@ export const ModelEvaluationPage: React.FC = () => {
   const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch full dashboard payload on mount
+  // WHY: Retrieves the complete evaluation dashboard payload including held-out QWK metrics and epoch loss trajectories from the analytics API.
   const fetchDashboard = useCallback(async () => {
     try {
       setError(null);
@@ -44,7 +45,7 @@ export const ModelEvaluationPage: React.FC = () => {
     }
   }, []);
 
-  // Poll live job status counts
+  // WHY: Polls lightweight job status counters every 5s to visualize worker queue throughput and processing load without re-fetching static eval metrics.
   const pollJobCounts = useCallback(async () => {
     try {
       const counts = await getJobStatusCounts();

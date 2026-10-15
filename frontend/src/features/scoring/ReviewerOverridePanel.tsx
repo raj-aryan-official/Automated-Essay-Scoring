@@ -41,13 +41,14 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
     setError(null);
     setSuccessMessage(null);
 
-    // Validation
+    // WHY: Client-side validation guarantees numeric format before dispatching HTTP request
     const parsedScore = parseFloat(overrideScore);
     if (isNaN(parsedScore)) {
       setError('Please provide a valid numeric override score.');
       return;
     }
 
+    // WHY: Enforces pedagogical accountability by forbidding ungrounded grade modifications without written rationale
     if (!overrideReason.trim()) {
       setError('Reviewer override reason is required for pedagogical auditing.');
       return;
@@ -55,6 +56,7 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
 
     try {
       setIsSubmitting(true);
+      // WHY: Submits override payload to POST /api/v1/essays/{id}/review to transition state to FINALIZED
       const updatedScore = await submitReview(essayId, {
         reviewer_override_score: parsedScore,
         reviewer_override_reason: overrideReason.trim(),

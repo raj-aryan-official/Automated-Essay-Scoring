@@ -59,6 +59,7 @@ except ImportError:
     TRANSFORMERS_AVAILABLE = False
 
 
+# WHY: Data structure capturing rubric boundaries, test sample size, and achieved QWK for an individual prompt
 @dataclass
 class PromptEvaluationResult:
     """Evaluation result for a single ASAP essay prompt."""
@@ -75,6 +76,7 @@ class PromptEvaluationResult:
     sample_predictions: list[dict[str, Any]]
 
 
+# WHY: Master evaluation report validating the Section 12.1 Acceptance Gate (mean QWK >= 0.70 across all 8 prompts)
 @dataclass
 class OverallEvaluationReport:
     """Comprehensive evaluation report across all evaluated prompts."""

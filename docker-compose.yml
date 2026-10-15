@@ -1,6 +1,8 @@
+# WHY: Docker Compose multi-container specification orchestrating PostgreSQL, MinIO, FastAPI backend, GPU/CPU inference worker, and React frontend.
 version: '3.8'
 
 services:
+  # WHY: Relational database storing users, prompts, essay submissions, scoring jobs, and teacher review audit trails.
   postgres:
     image: postgres:15-alpine
     container_name: aes_postgres
@@ -23,6 +25,7 @@ services:
     networks:
       - aes_network
 
+  # WHY: S3-compatible object storage server retaining original essay upload documents (.txt, .docx, .pdf).
   minio:
     image: minio/minio:latest
     container_name: aes_minio
@@ -45,6 +48,7 @@ services:
     networks:
       - aes_network
 
+  # WHY: Ephemeral initialization container creating default S3 buckets ('essay-documents') with download policies before backend boots.
   minio-init:
     image: minio/mc:latest
     container_name: aes_minio_init
@@ -68,6 +72,7 @@ services:
     networks:
       - aes_network
 
+  # WHY: Core FastAPI ASGI web service exposing REST APIs, enforcing RBAC JWT security, handling file uploads, and managing job queues.
   backend:
     build:
       context: ./backend
@@ -117,6 +122,7 @@ services:
     networks:
       - aes_network
 
+  # WHY: Decoupled asynchronous scoring daemon polling database queue with SKIP LOCKED and executing PyTorch/ONNX BERT inferences.
   gpu-worker:
     build:
       context: ./inference
@@ -147,6 +153,7 @@ services:
     networks:
       - aes_network
 
+  # WHY: Production-grade Nginx web server serving Vite/React SPA bundle with proxy passes to the backend API.
   frontend:
     build:
       context: ./frontend
