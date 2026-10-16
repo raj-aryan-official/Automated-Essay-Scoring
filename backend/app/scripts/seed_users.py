@@ -59,8 +59,8 @@ def seed_users():
         for u in DEFAULT_USERS:
             existing = session.query(User).filter(User.email == u["email"]).first()
             if existing:
-                existing.password_hash = get_password_hash(u["password"])
-                existing.role = u["role"]
+                setattr(existing, "password_hash", get_password_hash(u["password"]))
+                setattr(existing, "role", u["role"])
                 print(f"Updated user: {u['email']} ({u['role']})")
             else:
                 new_user = User(

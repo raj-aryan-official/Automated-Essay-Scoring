@@ -52,13 +52,13 @@ def build_confusion_matrix(
     Returns:
         2D matrix of shape (N, N) where N = max_score - min_score + 1.
     """
-    N = int(max_score - min_score + 1)
+    N = max_score - min_score + 1
     matrix = [[0.0] * N for _ in range(N)]
 
-    for t, p in zip(y_true, y_pred, strict=False):
+    for t, p in zip(y_true, y_pred):
         # Round to nearest integer category and clamp within rubric bounds
-        ti = int(round(float(t))) - min_score
-        pi = int(round(float(p))) - min_score
+        ti = round(float(t)) - min_score
+        pi = round(float(p)) - min_score
         ti = max(0, min(N - 1, ti))
         pi = max(0, min(N - 1, pi))
         matrix[ti][pi] += 1.0
@@ -103,7 +103,7 @@ def build_weight_matrix(num_categories: int) -> list[list[float]]:
     Returns:
         2D quadratic weight matrix of shape (N, N).
     """
-    N = int(num_categories)
+    N = num_categories
     if N <= 1:
         return [[0.0]]
 
@@ -150,14 +150,14 @@ def quadratic_weighted_kappa(
 
     # Determine rubric boundaries
     if min_score is None:
-        min_score = int(round(min(min(true_list), min(pred_list))))
+        min_score = round(min(min(true_list), min(pred_list)))
     else:
-        min_score = int(round(float(min_score)))
+        min_score = round(float(min_score))
 
     if max_score is None:
-        max_score = int(round(max(max(true_list), max(pred_list))))
+        max_score = round(max(max(true_list), max(pred_list)))
     else:
-        max_score = int(round(float(max_score)))
+        max_score = round(float(max_score))
 
     if max_score < min_score:
         raise ValueError(
@@ -167,8 +167,8 @@ def quadratic_weighted_kappa(
     # If only one possible score category exists, agreement is trivially perfect if matched
     if max_score == min_score:
         all_match = all(
-            int(round(t)) == int(round(p))
-            for t, p in zip(true_list, pred_list, strict=False)
+            round(t) == round(p)
+            for t, p in zip(true_list, pred_list)
         )
         return 1.0 if all_match else 0.0
 
