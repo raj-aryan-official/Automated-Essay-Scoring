@@ -87,10 +87,8 @@ class StorageService:
 
         try:
             client.head_bucket(Bucket=self.bucket_name)
-        except Exception as exc:
-            error_code = ""
-            if isinstance(exc, ClientError):
-                error_code = exc.response.get("Error", {}).get("Code", "")
+        except ClientError as exc:
+            error_code = exc.response.get("Error", {}).get("Code", "")
             if error_code in ("404", "NoSuchBucket"):
                 create_kwargs = {"Bucket": self.bucket_name}
                 if self.region_name and self.region_name != "us-east-1":
@@ -108,9 +106,19 @@ class StorageService:
                         parents=True, exist_ok=True
                     )
             else:
+                logger.warning(
+                    f"S3 head_bucket check failed: {exc}. Using local directory."
+                )
                 (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(
                     parents=True, exist_ok=True
                 )
+        except Exception as exc:
+            logger.warning(
+                f"S3 head_bucket check failed: {exc}. Using local directory."
+            )
+            (LOCAL_STORAGE_DIR / self.bucket_name).mkdir(
+                parents=True, exist_ok=True
+            )
 
     # WHY: Uploads essay files to MinIO or gracefully falls back to local disk if MinIO is temporarily unreachable
     def upload_file(
@@ -125,7 +133,10 @@ class StorageService:
             extra_args["ContentType"] = content_type
 
         # Normalize to file-like object
-        if isinstance(file_bytes, (bytes, bytearray)):
+        if isinstance(file_bytes, bytes):
+            raw_bytes = file_bytes
+            stream = io.BytesIO(raw_bytes)
+        elif isinstance(file_bytes, bytearray):
             raw_bytes = bytes(file_bytes)
             stream = io.BytesIO(raw_bytes)
         else:

@@ -11,6 +11,7 @@ Exact mapping to Section 7.2 Database Schema:
 - dimension_feedback
 """
 
+import datetime
 import uuid
 
 from sqlalchemy import (
@@ -29,7 +30,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
 
@@ -52,16 +53,16 @@ def compile_uuid_sqlite(type_, compiler, **kw):
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4,
         server_default=text("uuid_generate_v4()"),
     )
-    email = Column(String(320), nullable=False, unique=True)
-    password_hash = Column(Text, nullable=False)
-    role = Column(String(32), nullable=False)
-    created_at = Column(
+    email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    role: Mapped[str] = mapped_column(String(32), nullable=False)
+    created_at: Mapped[datetime.datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
