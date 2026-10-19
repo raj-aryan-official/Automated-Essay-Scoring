@@ -3,6 +3,7 @@ import {
   EssayCreatePayload,
   EssayCreateResponse,
   EssayDetailResponse,
+  EssayListItem,
   EssayScoreResponse,
   JobDispatchResponse,
   JobResponse,
@@ -71,6 +72,22 @@ export const submitEssay = async (
   const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
   const response = await apiClient.post<EssayCreateResponse>('/essays', data, config);
   console.log('[API Call] submitEssay success:', response.data);
+  return response.data;
+};
+
+/**
+ * Retrieve list of essays with optional filters and pagination.
+ * GET /api/v1/essays
+ */
+export const getEssays = async (params?: {
+  skip?: number;
+  limit?: number;
+  status?: string;
+  prompt_id?: string;
+}): Promise<EssayListItem[]> => {
+  console.log('[API Call] getEssays executing with params:', params);
+  const response = await apiClient.get<EssayListItem[]>('/essays', { params });
+  console.log('[API Call] getEssays success:', response.data?.length, 'records');
   return response.data;
 };
 

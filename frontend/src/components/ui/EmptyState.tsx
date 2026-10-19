@@ -7,8 +7,16 @@ export interface EmptyStateProps {
   description?: string;
   actionLabel?: string;
   onAction?: () => void;
+  action?: {
+    label: string;
+    onClick?: () => void;
+  };
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
+  secondaryAction?: {
+    label: string;
+    onClick?: () => void;
+  };
   children?: React.ReactNode;
   className?: string;
 }
@@ -19,11 +27,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   description,
   actionLabel,
   onAction,
+  action,
   secondaryActionLabel,
   onSecondaryAction,
+  secondaryAction,
   children,
   className = '',
 }) => {
+  const effectiveActionLabel = action?.label || actionLabel;
+  const effectiveOnAction = action?.onClick || onAction;
+  const effectiveSecondaryLabel = secondaryAction?.label || secondaryActionLabel;
+  const effectiveOnSecondary = secondaryAction?.onClick || onSecondaryAction;
+
   return (
     <div
       className={`flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-slate-700/80 bg-slate-900/40 ${className}`}
@@ -44,17 +59,17 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </p>
       )}
 
-      {(actionLabel || secondaryActionLabel || children) && (
+      {(effectiveActionLabel || effectiveSecondaryLabel || children) && (
         <div className="flex items-center gap-3">
-          {secondaryActionLabel && (
-            <Button variant="secondary" size="sm" onClick={onSecondaryAction}>
-              {secondaryActionLabel}
+          {effectiveSecondaryLabel && (
+            <Button variant="secondary" size="sm" onClick={effectiveOnSecondary}>
+              {effectiveSecondaryLabel}
             </Button>
           )}
 
-          {actionLabel && (
-            <Button variant="primary" size="sm" onClick={onAction}>
-              {actionLabel}
+          {effectiveActionLabel && (
+            <Button variant="primary" size="sm" onClick={effectiveOnAction}>
+              {effectiveActionLabel}
             </Button>
           )}
 

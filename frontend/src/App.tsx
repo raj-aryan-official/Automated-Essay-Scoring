@@ -14,13 +14,15 @@ import { EssayDetailPage } from './pages/EssayDetailPage';
 import { InferenceJobsPage } from './pages/InferenceJobsPage';
 import { ModelEvaluationPage } from './pages/ModelEvaluationPage';
 import { DevComponentsPage } from './pages/DevComponentsPage';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
         <ToastProvider>
-          <BrowserRouter>
+          <ErrorBoundary>
+            <BrowserRouter>
             <Routes>
               {/* Public Authentication Route */}
               <Route path="/login" element={<LoginPage />} />
@@ -110,7 +112,8 @@ export const App: React.FC = () => {
               />
             </Routes>
           </BrowserRouter>
-        </ToastProvider>
+        </ErrorBoundary>
+      </ToastProvider>
       </AuthProvider>
     </ThemeProvider>
   );

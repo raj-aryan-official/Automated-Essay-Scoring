@@ -9,6 +9,8 @@ import {
   CardDescription,
   CardContent,
   Badge,
+  useToast,
+  formatApiError,
 } from '../components/ui';
 import {
   PenTool,
@@ -96,6 +98,7 @@ const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt'];
 
 export const SubmissionPage: React.FC = () => {
   const navigate = useNavigate();
+  const toast = useToast();
 
   // Mode and inputs
   const [activeTab, setActiveTab] = useState<'PASTE' | 'DOCUMENT'>('PASTE');
@@ -252,10 +255,15 @@ export const SubmissionPage: React.FC = () => {
       }
 
       setSubmitResult(res);
+      toast.success(
+        'Essay Submitted Successfully',
+        `Essay #${res.id.slice(0, 8)} is confirmed and ready for AI scoring.`
+      );
     } catch (err: any) {
       console.error('[SubmissionPage] Error submitting essay:', err);
-      const detail = err.response?.data?.detail;
-      setError(typeof detail === 'string' ? detail : err.message || 'Failed to submit essay');
+      const formatted = formatApiError(err);
+      setError(formatted.message);
+      toast.error(formatted.title, formatted.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -268,13 +276,16 @@ export const SubmissionPage: React.FC = () => {
     setDispatchStatus('Dispatching scoring job to Celery worker queue...');
     try {
       const jobRes = await dispatchScoring(submitResult.id);
+      toast.info('Scoring Dispatched', `Celery worker running inference (Job #${jobRes.job_id.slice(0, 8)}).`);
       setDispatchStatus(`Scoring Job Dispatched (Job ID: ${jobRes.job_id}). Redirecting to workspace...`);
       setTimeout(() => {
         navigate(`/essays/${submitResult.id}`);
       }, 750);
     } catch (err: any) {
       console.error('[SubmissionPage] Error dispatching scoring:', err);
-      setDispatchStatus(`Error: ${err.response?.data?.detail || err.message}`);
+      const formatted = formatApiError(err);
+      setDispatchStatus(`Error: ${formatted.message}`);
+      toast.error(formatted.title, formatted.message);
       setIsDispatching(false);
     }
   };

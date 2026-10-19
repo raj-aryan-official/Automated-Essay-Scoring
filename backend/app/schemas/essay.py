@@ -113,6 +113,15 @@ class EssayResponse(BaseModel):
     storage_key: str | None = Field(default=None, description="S3 object key")
     status: str = Field(..., description="Current status")
     created_at: datetime = Field(..., description="Submission timestamp")
+    prompt_title: str | None = Field(default=None, description="Referenced prompt title")
+    asap_set_id: int | None = Field(default=None, description="ASAP prompt set ID (1-8)")
+    rubric_min: float | None = Field(default=None, description="Prompt rubric min score")
+    rubric_max: float | None = Field(default=None, description="Prompt rubric max score")
+    submitter_email: str | None = Field(default=None, description="Submitter user email")
+    holistic_score: float | None = Field(default=None, description="Predicted or overridden score")
+    rubric_band: str | None = Field(default=None, description="Rubric band name")
+    confidence: float | None = Field(default=None, description="Model prediction confidence score")
+    reviewer_override_score: float | None = Field(default=None, description="Teacher override score if reviewed")
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   getEssay,
   dispatchScoring,
@@ -9,11 +9,15 @@ import {
   EssayScoreResponse,
   JobResponse,
 } from '../api';
-import { ScoreWorkspace } from '../features/scoring';
+import { ScoreWorkspace, ScoringJobProgress, FailedJobView } from '../features/scoring';
+import { ScoreWorkspaceSkeleton, Skeleton, ErrorState, useToast } from '../components/ui';
+import { FileText } from 'lucide-react';
 
 // WHY: Central essay view coordinating lifecycle states (RAW -> QUEUED -> SCORED -> FINALIZED) with live polling and workspace display.
 export const EssayDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const toast = useToast();
 
   const [essay, setEssay] = useState<EssayDetailResponse | null>(null);
   const [scoreData, setScoreData] = useState<EssayScoreResponse | null>(null);
@@ -163,23 +167,36 @@ export const EssayDetailPage: React.FC = () => {
   };
 
   if (loading && !essay) {
-    return (
-      <div className="max-w-6xl mx-auto p-8 text-center text-slate-400 space-y-3">
-        <div className="inline-block w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm">Loading essay details...</p>
-      </div>
-    );
+    return <ScoreWorkspaceSkeleton />;
   }
 
   if (error && !essay) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-4">
-        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-sm">
-          <strong>Error:</strong> {error}
-        </div>
-        <Link to="/" className="inline-block text-xs text-brand-400 hover:underline">
-          &larr; Return to Submission Page
-        </Link>
+        <ErrorState
+          error={error}
+          onRetry={() => {
+            setError(null);
+            setLoading(true);
+            if (id) {
+              getEssay(id)
+                .then((data) => {
+                  setEssay(data);
+                  if (
+                    data.status === 'SCORED' ||
+                    data.status === 'FEEDBACK_READY' ||
+                    data.status === 'FINALIZED'
+                  ) {
+                    loadScore(id);
+                  }
+                })
+                .catch((e) => setError(e))
+                .finally(() => setLoading(false));
+            }
+          }}
+          onBack={() => navigate('/essays')}
+          onHome={() => navigate('/')}
+        />
       </div>
     );
   }
@@ -249,45 +266,96 @@ export const EssayDetailPage: React.FC = () => {
         </div>
       )}
 
-      {/* Processing State: Polling Progress Box */}
+      {/* Non-blocking Async Job Progress Card with 5-step Stepper (Prompt 11) */}
       {isDispatching && (
-        <div
-          id="job-processing-panel"
-          className="bg-slate-800 border border-blue-500/40 rounded-xl p-6 shadow-xl text-center space-y-4 animate-fade-in"
-        >
-          <div className="inline-flex p-3 bg-blue-500/10 rounded-full text-blue-400 mb-1">
-            <div className="w-8 h-8 border-3 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-white">
-              Evaluating Essay with BERT &amp; Multi-Dimensional Feedback...
-            </h3>
-            <p className="text-xs text-slate-400 mt-1 max-w-lg mx-auto">
-              Inference worker is calculating holistic score, rubric band, confidence metrics, and pedagogical diagnostics across grammar, coherence, and argumentation.
-            </p>
-          </div>
+        <div className="space-y-6 animate-fade-in">
+          <ScoringJobProgress
+            jobId={activeJob?.id || activeJob?.job_id}
+            jobStatus={activeJob?.status || 'PROCESSING'}
+            essayStatus={essay?.status}
+            elapsedSeconds={pollSecondsElapsed}
+            attempts={activeJob?.attempts ?? 1}
+            maxAttempts={activeJob?.max_attempts ?? 3}
+            onCancel={() => {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+              if (elapsedTimerRef.current) clearInterval(elapsedTimerRef.current);
+              setIsDispatching(false);
+            }}
+            onRefresh={async () => {
+              if (essay) {
+                try {
+                  const refreshed = await getEssay(essay.id);
+                  setEssay(refreshed);
+                  if (activeJob?.id) {
+                    const refreshedJob = await getJobStatus(activeJob.id);
+                    setActiveJob(refreshedJob);
+                  }
+                } catch (e) {
+                  console.warn('Manual poll refresh error:', e);
+                }
+              }
+            }}
+          />
 
-          <div className="flex justify-center items-center space-x-6 text-xs text-slate-400 font-mono pt-2">
-            <div>
-              Status:{' '}
-              <span className="text-blue-400 font-semibold uppercase">
-                {activeJob?.status || 'DISPATCHED'}
-              </span>
-            </div>
-            <div>
-              Elapsed: <span className="text-white font-semibold">{pollSecondsElapsed}s</span>
-            </div>
-            {activeJob && (
-              <div>
-                Attempt:{' '}
-                <span className="text-white font-semibold">
-                  {activeJob.attempts}/{activeJob.max_attempts}
+          {/* Non-blocking Essay Content Preview + Upcoming Workspace Skeleton */}
+          {essay && (
+            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-primary-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                    Essay Text Being Evaluated
+                  </h3>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
+                    {essay.raw_text.split(/\s+/).filter(Boolean).length} words
+                  </span>
+                </div>
+                <span className="text-xs text-primary-400 font-medium">
+                  {essay.prompt_title || `Prompt ${essay.prompt_id.slice(0, 8)}`}
                 </span>
               </div>
-            )}
-          </div>
+
+              {/* Readable essay text */}
+              <div className="max-w-[75ch] mx-auto py-2 space-y-3 font-serif text-sm leading-relaxed text-slate-300 whitespace-pre-wrap selection:bg-primary-500/30">
+                {essay.raw_text}
+              </div>
+
+              {/* Placeholder Skeleton for upcoming holistic score & dimension inspection */}
+              <div className="pt-4 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                  <Skeleton width={120} height={14} />
+                  <Skeleton height={28} className="w-2/3" />
+                </div>
+                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                  <Skeleton width={140} height={14} />
+                  <Skeleton height={28} className="w-2/3" />
+                </div>
+                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                  <Skeleton width={160} height={14} />
+                  <Skeleton height={28} className="w-2/3" />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
+
+      {/* Failed Scoring Job View (Prompt 12 requirement (e)) */}
+      {essay &&
+        (essay.status === 'FAILED' ||
+          essay.status === 'PROCESSING_FAILED' ||
+          activeJob?.status === 'FAILED') &&
+        !isDispatching && (
+          <FailedJobView
+            essayId={essay.id}
+            jobId={activeJob?.id || activeJob?.job_id}
+            errorMessage={activeJob?.error_message || (typeof error === 'string' ? error : null)}
+            status={essay.status === 'PROCESSING_FAILED' ? 'PROCESSING_FAILED' : 'FAILED'}
+            onRetryScoring={handleDispatchScoring}
+            onEditEssay={() => navigate('/submit')}
+            isRetrying={isDispatching}
+          />
+        )}
 
       {/* Score Workspace (Section 4.2 UI): Rendered once essay is scored */}
       {essay && scoreData && !isDispatching && (
@@ -297,35 +365,44 @@ export const EssayDetailPage: React.FC = () => {
           onReviewSubmitted={(updatedScore) => {
             setScoreData(updatedScore);
             setEssay((prev) => (prev ? { ...prev, status: 'FINALIZED' } : null));
+            toast.success(
+              'Review Finalized',
+              'Teacher override successfully recorded in institutional audit log.'
+            );
           }}
         />
       )}
 
-      {/* Fallback Unscored Reader: Rendered if essay is NOT scored yet and NOT dispatching */}
-      {essay && !scoreData && !isDispatching && (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
-          <div className="flex justify-between items-center border-b border-slate-700/80 pb-3">
-            <div>
-              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-                Submitted Essay Text
-              </h2>
-              {essay.prompt_title && (
-                <p className="text-xs text-brand-400 mt-0.5">{essay.prompt_title}</p>
-              )}
+      {/* Fallback Unscored Reader: Rendered if essay is NOT scored yet and NOT failed */}
+      {essay &&
+        !scoreData &&
+        !isDispatching &&
+        essay.status !== 'FAILED' &&
+        essay.status !== 'PROCESSING_FAILED' &&
+        activeJob?.status !== 'FAILED' && (
+          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-700/80 pb-3">
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                  Submitted Essay Text
+                </h2>
+                {essay.prompt_title && (
+                  <p className="text-xs text-brand-400 mt-0.5">{essay.prompt_title}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={handleDispatchScoring}
+                className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
+              >
+                Score This Essay Now &rarr;
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleDispatchScoring}
-              className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
-            >
-              Score This Essay Now &rarr;
-            </button>
+            <div className="bg-slate-900/90 border border-slate-700/60 rounded-lg p-5 text-sm text-slate-200 font-serif leading-relaxed whitespace-pre-wrap">
+              {essay.raw_text}
+            </div>
           </div>
-          <div className="bg-slate-900/90 border border-slate-700/60 rounded-lg p-5 text-sm text-slate-200 font-serif leading-relaxed whitespace-pre-wrap">
-            {essay.raw_text}
-          </div>
-        </div>
-      )}
+        )}
     </div>
   );
 };

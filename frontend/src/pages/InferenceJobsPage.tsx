@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getJobStatusCounts, JobStatusCounts } from '../api';
 import {
   Card,
@@ -9,30 +10,60 @@ import {
   Button,
   Badge,
   Skeleton,
+  EmptyState,
+  ErrorState,
+  useToast,
+  formatApiError,
 } from '../components/ui';
 import { Cpu, RefreshCw, Clock, CheckCircle2, XCircle, Activity } from 'lucide-react';
 
 export const InferenceJobsPage: React.FC = () => {
+  const navigate = useNavigate();
+  const toast = useToast();
   const [counts, setCounts] = useState<JobStatusCounts | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<unknown | null>(null);
 
-  const fetchJobCounts = async () => {
+  const fetchJobCounts = useCallback(async (isManual = false) => {
     setIsLoading(true);
     try {
       const data = await getJobStatusCounts();
       setCounts(data);
+      setError(null);
+      if (isManual) {
+        toast.success('Inference worker queue refreshed successfully');
+      }
     } catch (err) {
       console.warn('Failed to fetch job status counts:', err);
+      setError(err);
+      if (isManual) {
+        const parsed = formatApiError(err);
+        toast.error(`${parsed.title}: ${parsed.message}`);
+      }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchJobCounts();
-    const interval = setInterval(fetchJobCounts, 10000);
+    const interval = setInterval(() => fetchJobCounts(false), 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchJobCounts]);
+
+  if (error && !counts) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 md:px-6 py-12">
+        <ErrorState
+          error={error}
+          onRetry={() => fetchJobCounts(true)}
+          onHome={() => navigate('/')}
+        />
+      </div>
+    );
+  }
+
+  const totalJobs = counts ? counts.queued + counts.processing + counts.completed + counts.failed : 0;
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 space-y-8">
@@ -56,7 +87,7 @@ export const InferenceJobsPage: React.FC = () => {
           variant="outline"
           size="sm"
           leftIcon={<RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />}
-          onClick={fetchJobCounts}
+          onClick={() => fetchJobCounts(true)}
         >
           Refresh Queue
         </Button>
@@ -145,6 +176,23 @@ export const InferenceJobsPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Empty queue callout if 0 total jobs */}
+      {!isLoading && totalJobs === 0 && (
+        <Card>
+          <CardContent className="p-8">
+            <EmptyState
+              icon={<Cpu className="w-8 h-8 text-primary-400" />}
+              title="No inference jobs yet — submit your first essay"
+              description="Background Celery workers are currently idle. Submit an essay to start asynchronous tokenization, embedding generation, and automated rubric scoring."
+              action={{
+                label: "Submit essay for inference",
+                onClick: () => navigate('/submit'),
+              }}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Architecture & Pipeline Notes */}
       <Card>

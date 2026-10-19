@@ -15,3 +15,5 @@ export * from './Skeleton';
 export * from './EmptyState';
 export * from './Spinner';
 export * from './Table';
+export * from './Skeletons';
+export * from './ErrorState';

@@ -53,6 +53,27 @@ export interface EssayDetailResponse {
   prompt_title?: string | null;
 }
 
+export interface EssayListItem {
+  id: string;
+  prompt_id: string;
+  submitted_by: string;
+  raw_text: string;
+  source_type: SourceType | string;
+  storage_bucket?: string | null;
+  storage_key?: string | null;
+  status: EssayStatus | string;
+  created_at: string;
+  prompt_title?: string | null;
+  asap_set_id?: number | null;
+  rubric_min?: number | null;
+  rubric_max?: number | null;
+  submitter_email?: string | null;
+  holistic_score?: number | null;
+  rubric_band?: string | null;
+  confidence?: number | null;
+  reviewer_override_score?: number | null;
+}
+
 export interface JobDispatchResponse {
   job_id: string;
   essay_id: string;

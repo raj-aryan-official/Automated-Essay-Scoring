@@ -353,7 +353,24 @@ def list_essays(
         query = query.filter(Essay.prompt_id == prompt_id)
 
     essays = query.order_by(Essay.created_at.desc()).offset(skip).limit(limit).all()
-    return essays
+    results = []
+    for e in essays:
+        item = EssayResponse.model_validate(e)
+        if e.prompt:
+            item.prompt_title = e.prompt.title
+            item.asap_set_id = e.prompt.asap_set_id
+            item.rubric_min = e.prompt.rubric_min
+            item.rubric_max = e.prompt.rubric_max
+        if e.submitter:
+            item.submitter_email = e.submitter.email
+        if e.scores:
+            latest_score = e.scores[-1]
+            item.holistic_score = latest_score.holistic_score
+            item.rubric_band = latest_score.rubric_band
+            item.confidence = latest_score.confidence
+            item.reviewer_override_score = latest_score.reviewer_override_score
+        results.append(item)
+    return results
 
 
 # WHY: Fetches full essay text and dynamically generates temporary S3 presigned download URLs for original document submissions
