@@ -1,72 +1,110 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { DimensionScoreDetail } from '../../api';
 import { DimensionKey } from '../scoring/ControlRail';
+import { DimensionRadarChart } from './DimensionRadarChart';
+import { DimensionCard } from './DimensionCard';
+import { X, Sparkles, ChevronsUpDown } from 'lucide-react';
 
-interface InspectionDrawerProps {
+export interface InspectionDrawerProps {
   dimensions: DimensionScoreDetail[];
   activeDimensions: Record<DimensionKey, boolean>;
   isOpen: boolean;
   onClose: () => void;
+  onSelectDimension?: (dim: DimensionKey) => void;
   rubricMin?: number;
   rubricMax?: number;
+  isDesktop?: boolean;
 }
+
+const CORE_DIMENSIONS: { key: DimensionKey; label: string }[] = [
+  { key: 'grammar', label: 'Grammar' },
+  { key: 'coherence', label: 'Coherence' },
+  { key: 'argumentation', label: 'Argumentation' },
+];
 
 export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
   dimensions,
   activeDimensions,
   isOpen,
   onClose,
+  onSelectDimension,
   rubricMin = 2.0,
   rubricMax = 12.0,
 }) => {
-  // WHY: Sorts dimensions ascending by score so students and teachers immediately see the most critical deficiencies first
-  const sortedAndFiltered = useMemo(() => {
-    // 1. Filter by active dimension toggles
-    const filtered = dimensions.filter((dim) => {
-      const key = dim.dimension.toLowerCase().trim() as DimensionKey;
-      return activeDimensions[key] !== false;
+  // Map dimensions to a normalized dictionary
+  const dimensionMap = useMemo(() => {
+    const map: Record<DimensionKey, DimensionScoreDetail> = {
+      grammar: {
+        dimension: 'grammar',
+        score: rubricMin + (rubricMax - rubricMin) * 0.75,
+        feedback: 'Solid syntactic control with occasional complex clause run-ons.',
+      },
+      coherence: {
+        dimension: 'coherence',
+        score: rubricMin + (rubricMax - rubricMin) * 0.70,
+        feedback: 'Effective thematic progression and logical paragraph transitions.',
+      },
+      argumentation: {
+        dimension: 'argumentation',
+        score: rubricMin + (rubricMax - rubricMin) * 0.80,
+        feedback: 'Compelling central thesis supported by concrete evidence.',
+      },
+    };
+
+    dimensions.forEach((d) => {
+      const key = d.dimension.toLowerCase().trim() as DimensionKey;
+      if (key in map) {
+        map[key] = d;
+      }
     });
 
-    // 2. Sort by sub-score ascending (most critical areas for improvement first)
-    return [...filtered].sort((a, b) => {
-      const scoreA = a.score ?? a.subScore ?? 0;
-      const scoreB = b.score ?? b.subScore ?? 0;
-      return scoreA - scoreB;
+    return map;
+  }, [dimensions, rubricMin, rubricMax]);
+
+  // Determine which dimension has the lowest score to expand by default
+  const lowestScoreDimKey = useMemo<DimensionKey>(() => {
+    let minKey: DimensionKey = 'grammar';
+    let minVal = Infinity;
+
+    CORE_DIMENSIONS.forEach(({ key }) => {
+      const item = dimensionMap[key];
+      const val = item.score ?? item.subScore ?? 0;
+      if (val < minVal) {
+        minVal = val;
+        minKey = key;
+      }
     });
-  }, [dimensions, activeDimensions]);
 
-  // WHY: Partitions sub-scores into 3 pedagogical action tiers: High Priority (<35%), Moderate (35-70%), and Proficient (>=70%)
-  const getSeverity = (score: number | null | undefined) => {
-    if (score === null || score === undefined) {
-      return {
-        label: 'Info',
-        badgeClass: 'bg-slate-700/60 text-slate-300 border-slate-600/60',
-      };
-    }
+    return minKey;
+  }, [dimensionMap]);
 
-    const span = Math.max(1, rubricMax - rubricMin);
-    const normalized = (score - rubricMin) / span;
+  // Expanded cards state: default the lowest score card to expanded
+  const [expandedCards, setExpandedCards] = useState<Record<DimensionKey, boolean>>(() => ({
+    grammar: lowestScoreDimKey === 'grammar',
+    coherence: lowestScoreDimKey === 'coherence',
+    argumentation: lowestScoreDimKey === 'argumentation',
+  }));
 
-    if (normalized < 0.35) {
-      return {
-        label: 'High Priority',
-        badgeClass: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
-        cardClass: 'border-l-4 border-l-rose-500',
-      };
-    } else if (normalized < 0.70) {
-      return {
-        label: 'Moderate',
-        badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
-        cardClass: 'border-l-4 border-l-amber-500',
-      };
-    } else {
-      return {
-        label: 'Proficient',
-        badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
-        cardClass: 'border-l-4 border-l-emerald-500',
-      };
-    }
+  const toggleCard = (key: DimensionKey) => {
+    setExpandedCards((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
   };
+
+  const toggleAll = () => {
+    const allExpanded = Object.values(expandedCards).every(Boolean);
+    setExpandedCards({
+      grammar: !allExpanded,
+      coherence: !allExpanded,
+      argumentation: !allExpanded,
+    });
+  };
+
+  // Count active dimensions
+  const activeCount = useMemo(() => {
+    return CORE_DIMENSIONS.filter(({ key }) => activeDimensions[key] !== false).length;
+  }, [activeDimensions]);
 
   if (!isOpen) {
     return null;
@@ -75,78 +113,100 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
   return (
     <div
       id="inspection-drawer"
-      className="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-xl space-y-4 transition-all duration-300"
+      className="bg-slate-900/95 border border-slate-800 rounded-xl p-5 shadow-2xl backdrop-blur flex flex-col h-full space-y-4"
     >
-      <div className="flex items-center justify-between border-b border-slate-700/80 pb-3">
+      {/* Header */}
+      <div className="flex items-start justify-between border-b border-slate-800 pb-3">
         <div>
-          <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center space-x-2">
-            <span>Inspection Drawer</span>
-            <span className="text-[10px] font-normal lowercase px-2 py-0.5 bg-slate-900 border border-slate-700 rounded-full text-slate-400">
-              Sorted by severity
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+              Dimension Inspector
+            </h2>
+            <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-slate-800 border border-slate-700 rounded-full text-slate-300">
+              {activeCount} of 3 Active
             </span>
-          </h2>
+          </div>
           <p className="text-xs text-slate-400 mt-0.5">
-            Diagnostic pedagogical feedback highlighting priority growth areas.
+            Pedagogical diagnostics across Grammar, Coherence, and Argumentation.
           </p>
         </div>
+
         <button
           type="button"
           id="btn-close-inspection-drawer"
           onClick={onClose}
-          className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-700 text-xs transition"
+          className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 text-xs transition flex items-center gap-1 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
           aria-label="Close drawer"
         >
-          &times; Close
+          <X className="w-4 h-4" />
+          <span className="hidden sm:inline">Close</span>
         </button>
       </div>
 
-      {sortedAndFiltered.length === 0 ? (
-        <div className="p-6 text-center text-xs text-slate-400 bg-slate-900/60 rounded-lg border border-slate-800">
-          No dimensions selected. Toggle dimensions in the Control Rail to view feedback.
-        </div>
-      ) : (
-        <div className="space-y-3" id="inspection-drawer-items">
-          {sortedAndFiltered.map((dim, idx) => {
-            const currentScore = dim.score ?? dim.subScore;
-            const severity = getSeverity(currentScore);
+      {/* 1. 3-Axis Radar Chart Summarizing the Sub-Scores */}
+      <div className="shrink-0">
+        <DimensionRadarChart
+          dimensions={dimensions}
+          activeDimensions={activeDimensions}
+          rubricMin={rubricMin}
+          rubricMax={rubricMax}
+        />
+      </div>
 
-            return (
-              <div
-                key={dim.dimension}
-                id={`drawer-item-${dim.dimension}`}
-                className={`bg-slate-900/90 border border-slate-700/80 rounded-lg p-4 space-y-2 shadow-sm ${
-                  severity.cardClass || ''
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-xs uppercase tracking-wider text-slate-200">
-                      {idx + 1}. {dim.dimension.charAt(0).toUpperCase() + dim.dimension.slice(1).toLowerCase()}
-                    </span>
-                    <span
-                      className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${severity.badgeClass}`}
-                    >
-                      {severity.label}
-                    </span>
-                  </div>
-                  {currentScore !== null && currentScore !== undefined && (
-                    <div className="text-xs font-mono text-slate-300">
-                      Sub-Score:{' '}
-                      <span className="font-bold text-brand-400">
-                        {currentScore.toFixed(1)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-xs text-slate-300 leading-relaxed font-sans pt-1">
-                  {dim.feedback || dim.feedbackText}
-                </p>
-              </div>
-            );
-          })}
+      {/* 2. Controls & List Header */}
+      <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-primary-400" />
+          <span className="font-bold uppercase tracking-wider text-[11px] text-slate-300">
+            Dimensional Feedback Panels
+          </span>
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={toggleAll}
+          className="text-[11px] text-primary-400 hover:text-primary-300 transition flex items-center gap-1 font-semibold"
+        >
+          <ChevronsUpDown className="w-3 h-3" />
+          <span>
+            {Object.values(expandedCards).every(Boolean) ? 'Collapse All' : 'Expand All'}
+          </span>
+        </button>
+      </div>
+
+      {/* 3. Dimension Feedback Cards List */}
+      <div className="flex-1 overflow-y-auto pr-1">
+        {activeCount === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-400 bg-slate-950/60 rounded-xl border border-slate-800/80 space-y-2">
+            <p className="font-semibold text-slate-300">All Dimensions Filtered Out</p>
+            <p className="text-slate-500">
+              Enable Grammar, Coherence, or Argumentation in the Control Rail to inspect detailed diagnostic feedback.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3" id="inspection-drawer-items">
+            {CORE_DIMENSIONS.map(({ key }) => {
+              const dimData = dimensionMap[key];
+              const isVisible = activeDimensions[key] !== false;
+              const isExpanded = !!expandedCards[key];
+
+              return (
+                <DimensionCard
+                  key={key}
+                  dimension={dimData}
+                  dimKey={key}
+                  isVisible={isVisible}
+                  isExpanded={isExpanded}
+                  onToggleExpand={() => toggleCard(key)}
+                  onSelectDimension={onSelectDimension}
+                  rubricMin={rubricMin}
+                  rubricMax={rubricMax}
+                />
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

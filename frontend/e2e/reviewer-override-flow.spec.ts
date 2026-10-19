@@ -70,6 +70,12 @@ test.describe('Reviewer Override Flow (Section 4.1 & POST /api/v1/essays/:id/rev
     await expect(submitOverrideBtn).toBeEnabled();
     await submitOverrideBtn.click();
 
+    // Confirm in modal if displayed (Prompt 10)
+    const confirmBtn = page.locator('#btn-confirm-override');
+    if (await confirmBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await confirmBtn.click();
+    }
+
     // 9. Verify success banner and finalized card
     await expect(page.locator('#override-success-banner')).toBeVisible({ timeout: 10000 });
     await expect(page.locator('#override-finalized-card')).toBeVisible();

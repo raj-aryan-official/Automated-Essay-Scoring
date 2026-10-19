@@ -76,12 +76,23 @@ export interface JobResponse {
   completed_at?: string | null;
 }
 
+export interface FeedbackSpan {
+  id?: string;
+  start: number;
+  end: number;
+  dimension: 'grammar' | 'coherence' | 'argumentation' | string;
+  feedback?: string;
+  severity?: 'high' | 'moderate' | 'proficient';
+  label?: string;
+}
+
 export interface DimensionScoreDetail {
   dimension: string;
   score?: number | null;
   subScore?: number | null;
   feedback: string;
   feedbackText?: string | null;
+  spans?: FeedbackSpan[];
 }
 
 export interface EssayScoreResponse {
@@ -94,6 +105,9 @@ export interface EssayScoreResponse {
   reviewerOverrideScore?: number | null;
   reviewerOverrideReason?: string | null;
   reviewerOverrideAt?: string | null;
+  rubricMin?: number;
+  rubricMax?: number;
+  spans?: FeedbackSpan[];
 }
 
 export interface ReviewerOverridePayload {

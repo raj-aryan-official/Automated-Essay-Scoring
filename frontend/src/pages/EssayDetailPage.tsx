@@ -185,7 +185,7 @@ export const EssayDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 space-y-6">
+    <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 space-y-6">
       {/* Top Breadcrumb & Status Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700/80 rounded-xl px-5 py-3.5 backdrop-blur">
         <div className="flex items-center space-x-3">

@@ -3,8 +3,8 @@ import React from 'react';
 export interface ToggleProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
-  label?: string;
-  description?: string;
+  label?: React.ReactNode;
+  description?: React.ReactNode;
   disabled?: boolean;
   size?: 'sm' | 'md' | 'lg';
   id?: string;
