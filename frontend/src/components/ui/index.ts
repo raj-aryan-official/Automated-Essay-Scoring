@@ -17,3 +17,4 @@ export * from './Spinner';
 export * from './Table';
 export * from './Skeletons';
 export * from './ErrorState';
+export * from './ContextHelp';

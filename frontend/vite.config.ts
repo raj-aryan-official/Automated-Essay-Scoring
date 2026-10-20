@@ -14,4 +14,19 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    target: 'es2020',
+    sourcemap: false,
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-recharts': ['recharts'],
+          'vendor-lucide': ['lucide-react'],
+          'vendor-axios': ['axios'],
+        },
+      },
+    },
+  },
 });

@@ -10,6 +10,7 @@ import {
   Cpu,
   BarChart3,
   Sparkles,
+  HelpCircle,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -55,6 +56,12 @@ const NAV_ITEMS: NavItemConfig[] = [
     allowedRoles: ['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN'],
   },
   {
+    label: 'Help & FAQ',
+    path: '/help',
+    icon: <HelpCircle className="w-4 h-4 shrink-0" />,
+    allowedRoles: ['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN'],
+  },
+  {
     label: 'UI Library',
     path: '/dev/components',
     icon: <Sparkles className="w-4 h-4 shrink-0" />,
@@ -84,7 +91,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className={`h-full flex flex-col justify-between bg-slate-900 border-r border-slate-800 transition-all duration-300 select-none ${
+      className={`h-full flex flex-col justify-between bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 transition-all duration-300 select-none ${
         isMobileDrawer
           ? 'w-full'
           : isCollapsed
@@ -94,17 +101,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Top Branding Section */}
       <div>
-        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-800">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-primary-500/20 shrink-0 font-bold text-sm">
               AES
             </div>
             {(!isCollapsed || isMobileDrawer) && (
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-black text-white tracking-tight truncate">
+                <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
                   Essay Scoring
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono tracking-wider truncate">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-wider truncate">
                   BERT + QWK v1.2
                 </span>
               </div>
@@ -116,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               type="button"
               onClick={onToggleCollapse}
               aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-              className="hidden md:flex p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
+              className="hidden md:flex p-1.5 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 transition-colors"
             >
               {isCollapsed ? (
                 <ChevronRight className="w-4 h-4" />
@@ -137,12 +144,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <NavLink
                 key={item.path}
                 to={item.path}
+                id={item.path === '/evaluation' ? 'nav-model-eval' : undefined}
                 onClick={onItemClick}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs transition-all duration-150 group font-medium ${
+                  `flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded-xl text-xs transition-all duration-150 group font-medium ${
                     isActive
                       ? 'bg-primary-600 text-white font-semibold shadow-md shadow-primary-600/20'
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800/80 active:bg-slate-800'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/80 active:bg-slate-200 dark:active:bg-slate-800'
                   } ${isCollapsed && !isMobileDrawer ? 'justify-center px-0' : ''}`
                 }
               >
@@ -179,14 +187,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Footer Role Indicator & Status */}
-      <div className="p-3 border-t border-slate-800/80">
+      <div className="p-3 border-t border-slate-200 dark:border-slate-800/80">
         {(!isCollapsed || isMobileDrawer) ? (
-          <div className="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex items-center justify-between">
             <div className="flex flex-col min-w-0 pr-2">
-              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                 Active Session
               </span>
-              <span className="text-xs font-semibold text-slate-200 truncate">
+              <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
                 {user?.email || 'Guest'}
               </span>
             </div>
@@ -210,7 +218,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div className="flex justify-center">
             <Tooltip content={`Role: ${user?.role || 'Guest'}`} position="right">
-              <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-mono font-bold text-primary-400">
+              <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-mono font-bold text-primary-600 dark:text-primary-400">
                 {user?.role ? user.role.charAt(0) : 'U'}
               </div>
             </Tooltip>

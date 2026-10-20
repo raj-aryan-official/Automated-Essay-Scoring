@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import {
   Clock,
   Cpu,
@@ -13,6 +13,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { Button, Badge } from '../../components/ui';
+import { useA11yAnnounce } from '../../context/A11yAnnouncerContext';
 
 export type ScoringStepKey = 'QUEUED' | 'PROCESSING' | 'SCORING' | 'FEEDBACK' | 'DONE';
 
@@ -122,6 +123,20 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
   }, [jobStatus, essayStatus, elapsedSeconds]);
 
   const activeStep = STEPS[currentStepIndex];
+  const { announce } = useA11yAnnounce();
+  const lastAnnouncedStepRef = useRef<number>(-1);
+
+  // Announce step transitions to assistive screen readers
+  useEffect(() => {
+    if (lastAnnouncedStepRef.current !== currentStepIndex) {
+      lastAnnouncedStepRef.current = currentStepIndex;
+      const step = STEPS[currentStepIndex];
+      announce(
+        `Scoring job status: ${step.title}. Step ${step.stepNumber} of 5. ${step.friendlyMessage}`,
+        'polite'
+      );
+    }
+  }, [currentStepIndex, announce]);
 
   // Slow job detection (>= 10s elapsed while not done)
   const isLongRunning = elapsedSeconds >= 10 && currentStepIndex < 4;
@@ -138,6 +153,8 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
   return (
     <div
       id="job-processing-panel"
+      role="region"
+      aria-label="Asynchronous scoring job progress"
       className={`rounded-2xl bg-slate-900/95 border border-primary-500/30 p-5 md:p-6 shadow-2xl backdrop-blur space-y-5 transition-all ${className}`}
     >
       {/* ===================================================================
@@ -191,7 +208,15 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
       {/* ===================================================================
           STEPPER: Queued → Processing → Scoring → Generating feedback → Done
           =================================================================== */}
-      <div className="py-2">
+      <div
+        className="py-2"
+        role="progressbar"
+        aria-label="Scoring progression pipeline"
+        aria-valuenow={currentStepIndex + 1}
+        aria-valuemin={1}
+        aria-valuemax={5}
+        aria-valuetext={`Step ${activeStep.stepNumber} of 5: ${activeStep.title}. ${activeStep.friendlyMessage}`}
+      >
         <div className="grid grid-cols-5 relative">
           {STEPS.map((step, idx) => {
             const isCompleted = idx < currentStepIndex;

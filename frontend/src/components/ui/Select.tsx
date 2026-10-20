@@ -42,10 +42,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="text-xs font-semibold text-slate-300 tracking-wide select-none"
+            className="text-xs font-semibold text-slate-700 dark:text-slate-300 tracking-wide select-none"
           >
             {label}
-            {props.required && <span className="text-rose-400 ml-0.5">*</span>}
+            {props.required && <span className="text-rose-500 dark:text-rose-400 ml-0.5">*</span>}
           </label>
         )}
 
@@ -56,19 +56,19 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             disabled={disabled}
             aria-invalid={!!error}
             aria-describedby={error ? errorId : helperText ? helperId : undefined}
-            className={`w-full text-sm bg-slate-900 border rounded-lg pl-3.5 pr-10 py-2 transition-colors text-slate-100 appearance-none
-              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900
-              disabled:opacity-50 disabled:bg-slate-950 disabled:cursor-not-allowed
+            className={`w-full text-sm bg-white dark:bg-slate-900 border rounded-lg pl-3.5 pr-10 py-2 transition-colors text-slate-900 dark:text-slate-100 appearance-none
+              focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900
+              disabled:opacity-50 disabled:bg-slate-100 dark:disabled:bg-slate-950 disabled:cursor-not-allowed
               ${
                 error
                   ? 'border-rose-500/80 focus:border-rose-500 focus:ring-rose-500/30'
-                  : 'border-slate-700 hover:border-slate-600 focus:border-primary-500 focus:ring-primary-500/30'
+                  : 'border-slate-300 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 focus:border-primary-500 focus:ring-primary-500/30'
               }
               ${className}`}
             {...props}
           >
             {placeholder && (
-              <option value="" disabled className="text-slate-500 bg-slate-900">
+              <option value="" disabled className="text-slate-400 dark:text-slate-500 bg-white dark:bg-slate-900">
                 {placeholder}
               </option>
             )}
@@ -78,7 +78,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
                     key={opt.value}
                     value={opt.value}
                     disabled={opt.disabled}
-                    className="bg-slate-900 text-slate-100 py-1"
+                    className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 py-1"
                   >
                     {opt.label}
                   </option>
@@ -86,17 +86,17 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
               : children}
           </select>
 
-          <div className="absolute right-3 flex items-center pointer-events-none text-slate-400">
+          <div className="absolute right-3 flex items-center pointer-events-none text-slate-400 dark:text-slate-500">
             <ChevronDown className="w-4 h-4" />
           </div>
         </div>
 
         {error ? (
-          <p id={errorId} className="text-xs text-rose-400 font-medium">
+          <p id={errorId} className="text-xs text-rose-600 dark:text-rose-400 font-medium">
             {error}
           </p>
         ) : helperText ? (
-          <p id={helperId} className="text-xs text-slate-400">
+          <p id={helperId} className="text-xs text-slate-500 dark:text-slate-400">
             {helperText}
           </p>
         ) : null}

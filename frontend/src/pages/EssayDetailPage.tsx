@@ -61,7 +61,11 @@ export const EssayDetailPage: React.FC = () => {
         data.status === 'FINALIZED'
       ) {
         await loadScore(essayId);
-      } else if (data.status === 'QUEUED' || data.status === 'PROCESSING') {
+      } else if (
+        data.status === 'QUEUED' ||
+        data.status === 'PROCESSING' ||
+        data.status === 'SUBMITTED'
+      ) {
         startEssayPolling(essayId);
       }
     } catch (err: any) {
@@ -204,30 +208,30 @@ export const EssayDetailPage: React.FC = () => {
   return (
     <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 space-y-6">
       {/* Top Breadcrumb & Status Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700/80 rounded-xl px-5 py-3.5 backdrop-blur">
-        <div className="flex items-center space-x-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-xl px-3.5 sm:px-5 py-3 backdrop-blur shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Link
             to="/"
-            className="text-xs font-medium text-slate-400 hover:text-slate-200 transition"
+            className="text-xs font-medium text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 transition min-h-[44px] inline-flex items-center"
           >
             &larr; Back to Submit
           </Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-xs text-slate-300 font-mono">
+          <span className="text-slate-400 dark:text-slate-600 hidden sm:inline">/</span>
+          <span className="text-xs text-slate-700 dark:text-slate-300 font-mono">
             Essay {essay?.id.slice(0, 8)}...
           </span>
           <span
             id="essay-status-pill"
             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
               essay?.status === 'FINALIZED'
-                ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                ? 'bg-purple-100 dark:bg-purple-500/20 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-500/30'
                 : essay?.status === 'SCORED' || essay?.status === 'FEEDBACK_READY'
-                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30'
                 : essay?.status === 'UNDER_REVIEW'
-                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 animate-pulse'
+                ? 'bg-indigo-100 dark:bg-indigo-500/20 text-indigo-800 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-500/30 animate-pulse'
                 : essay?.status === 'PROCESSING' || isDispatching
-                ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 animate-pulse'
-                : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                ? 'bg-blue-100 dark:bg-blue-500/20 text-blue-800 dark:text-blue-400 border border-blue-300 dark:border-blue-500/30 animate-pulse'
+                : 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30'
             }`}
           >
             {isDispatching ? 'PROCESSING' : essay?.status}
@@ -244,7 +248,7 @@ export const EssayDetailPage: React.FC = () => {
                 id="btn-dispatch-scoring"
                 type="button"
                 onClick={handleDispatchScoring}
-                className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
+                className="px-4 py-2 min-h-[44px] bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold rounded-lg shadow transition flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 Start AI Scoring
               </button>
@@ -254,12 +258,12 @@ export const EssayDetailPage: React.FC = () => {
 
       {/* Error Alert */}
       {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-300 rounded-lg text-xs font-mono flex items-center justify-between">
+        <div className="p-4 bg-rose-50 dark:bg-rose-500/10 border border-rose-300 dark:border-rose-500/20 text-rose-800 dark:text-rose-300 rounded-lg text-xs font-mono flex items-center justify-between">
           <span>{error}</span>
           <button
             type="button"
             onClick={handleDispatchScoring}
-            className="underline text-rose-200 hover:text-white ml-4 font-sans font-medium"
+            className="underline text-rose-700 dark:text-rose-200 hover:text-rose-900 dark:hover:text-white ml-4 font-sans font-medium"
           >
             Retry Scoring
           </button>
@@ -299,38 +303,38 @@ export const EssayDetailPage: React.FC = () => {
 
           {/* Non-blocking Essay Content Preview + Upcoming Workspace Skeleton */}
           {essay && (
-            <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-6 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl p-6 space-y-4 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-primary-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <FileText className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Essay Text Being Evaluated
                   </h3>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400">
                     {essay.raw_text.split(/\s+/).filter(Boolean).length} words
                   </span>
                 </div>
-                <span className="text-xs text-primary-400 font-medium">
+                <span className="text-xs text-primary-600 dark:text-primary-400 font-medium">
                   {essay.prompt_title || `Prompt ${essay.prompt_id.slice(0, 8)}`}
                 </span>
               </div>
 
               {/* Readable essay text */}
-              <div className="max-w-[75ch] mx-auto py-2 space-y-3 font-serif text-sm leading-relaxed text-slate-300 whitespace-pre-wrap selection:bg-primary-500/30">
+              <div className="max-w-[75ch] mx-auto py-2 space-y-3 font-serif text-sm leading-relaxed text-slate-800 dark:text-slate-300 whitespace-pre-wrap selection:bg-primary-500/30">
                 {essay.raw_text}
               </div>
 
               {/* Placeholder Skeleton for upcoming holistic score & dimension inspection */}
-              <div className="pt-4 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <div className="pt-4 border-t border-slate-200 dark:border-slate-800/80 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
                   <Skeleton width={120} height={14} />
                   <Skeleton height={28} className="w-2/3" />
                 </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
                   <Skeleton width={140} height={14} />
                   <Skeleton height={28} className="w-2/3" />
                 </div>
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 space-y-2">
                   <Skeleton width={160} height={14} />
                   <Skeleton height={28} className="w-2/3" />
                 </div>
@@ -380,25 +384,25 @@ export const EssayDetailPage: React.FC = () => {
         essay.status !== 'FAILED' &&
         essay.status !== 'PROCESSING_FAILED' &&
         activeJob?.status !== 'FAILED' && (
-          <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-700/80 pb-3">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 space-y-4 shadow-sm">
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700/80 pb-3">
               <div>
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
                   Submitted Essay Text
                 </h2>
                 {essay.prompt_title && (
-                  <p className="text-xs text-brand-400 mt-0.5">{essay.prompt_title}</p>
+                  <p className="text-xs text-primary-600 dark:text-brand-400 mt-0.5">{essay.prompt_title}</p>
                 )}
               </div>
               <button
                 type="button"
                 onClick={handleDispatchScoring}
-                className="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold rounded-lg shadow transition"
+                className="px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold rounded-lg shadow transition"
               >
                 Score This Essay Now &rarr;
               </button>
             </div>
-            <div className="bg-slate-900/90 border border-slate-700/60 rounded-lg p-5 text-sm text-slate-200 font-serif leading-relaxed whitespace-pre-wrap">
+            <div className="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-700/60 rounded-lg p-5 text-sm text-slate-800 dark:text-slate-200 font-serif leading-relaxed whitespace-pre-wrap">
               {essay.raw_text}
             </div>
           </div>

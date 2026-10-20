@@ -8,4 +8,124 @@ body {
   margin: 0;
   min-height: 100vh;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background-color: var(--bg-canvas, #0b0f19);
+  color: var(--text-primary, #f8fafc);
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN & TOUCH TARGET UTILITIES (PROMPT 16)
+   Breakpoints: 360px (mobile), 768px (tablet), 1024px (desktop), 1440px (widescreen)
+   ========================================================================== */
+
+/* Prevent horizontal blowout across all elements */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Ensure minimum 44px touch targets on mobile viewports (<768px) and touchscreens (WCAG 2.5.5) */
+@media (max-width: 768px), (pointer: coarse) {
+  button:not(.btn-compact),
+  a[role="button"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  [role="tab"],
+  .touch-target-44 {
+    min-height: 44px;
+  }
+
+  /* Compact icon button touch target hit area */
+  .icon-touch-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+
+/* ==========================================================================
+   WCAG 2.1 AA ACCESSIBILITY UTILITIES & GLOBAL OVERRIDES
+   ========================================================================== */
+
+/* 1. Visible Keyboard Focus Ring (WCAG 2.4.7 Focus Visible & 1.4.11 Non-text Contrast) */
+:focus-visible {
+  outline: 2px solid #818cf8 !important; /* Indigo 400 with >3:1 contrast against dark slate */
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35) !important;
+}
+
+/* Button & Link specific focus enhancement */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #818cf8 !important;
+  outline-offset: 2px !important;
+}
+
+/* High contrast mode focus */
+@media (forced-colors: active) {
+  :focus-visible {
+    outline: 3px solid Highlight !important;
+    outline-offset: 3px !important;
+  }
+}
+
+/* 2. Prefers Reduced Motion (WCAG 2.3.3 Animation from Interactions) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 3. Screen Reader Only Class with Skip-Link Support */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.focus\:not-sr-only:focus,
+.sr-only.focus\:not-sr-only:focus {
+  position: fixed !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0.75rem 1.25rem !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+  z-index: 9999 !important;
+  top: 1rem !important;
+  left: 1rem !important;
+  background-color: #4f46e5 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+  border: 2px solid #ffffff !important;
 }

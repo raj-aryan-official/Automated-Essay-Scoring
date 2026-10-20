@@ -1,4 +1,5 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { Drawer } from '../ui';
@@ -8,6 +9,7 @@ export interface AppShellProps {
 }
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
+  const location = useLocation();
   const [isCollapsed, setIsCollapsed] = React.useState<boolean>(() => {
     return window.innerWidth >= 768 && window.innerWidth < 1024;
   });
@@ -27,7 +29,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-150">
       {/* Skip to Main Content Link for WCAG Keyboard Navigation */}
       <a
         href="#main-content"
@@ -65,14 +67,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </Drawer>
 
         {/* Main Content Pane */}
-        <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-y-auto">
+        <div className="flex-1 flex flex-col min-w-0 min-h-screen overflow-y-auto bg-slate-50 dark:bg-slate-950 transition-colors duration-150">
           <TopBar onOpenMobileMenu={() => setIsMobileMenuOpen(true)} />
 
           <main id="main-content" tabIndex={-1} className="flex-1 focus:outline-none">
-            {children}
+            <div key={location.pathname} className="animate-page-enter">
+              {children}
+            </div>
           </main>
 
-          <footer className="border-t border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500">
+          <footer className="border-t border-slate-200 dark:border-slate-800/80 py-4 px-6 text-center text-xs text-slate-500 dark:text-slate-400">
             Automated Essay Scoring (BERT + Regression Head &amp; Rubric Feedback) | Raj Aryan (240410700141)
           </footer>
         </div>

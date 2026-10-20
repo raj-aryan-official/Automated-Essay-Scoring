@@ -11,6 +11,8 @@ import {
 } from 'recharts';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../../components/ui';
 import { GitCompare, Table as TableIcon, BarChart3, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { useReducedMotion } from '../../hooks';
 
 export interface ScoreBandDriftItem {
   band: string;
@@ -75,12 +77,14 @@ const DEFAULT_DRIFT_DATA: Record<string, ScoreBandDriftItem[]> = {
   ],
 };
 
-export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
+const ScoreBandDriftChartComponent: React.FC<ScoreBandDriftChartProps> = ({
   data,
   selectedPrompt = 'all',
   onPromptChange,
   className = '',
 }) => {
+  const { isDark } = useTheme();
+  const prefersReducedMotion = useReducedMotion();
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
   const [activePrompt, setActivePrompt] = useState<number | 'all'>(selectedPrompt);
 
@@ -106,47 +110,47 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
       const isPositive = delta > 0;
 
       return (
-        <div className="bg-slate-900/95 border border-slate-700/80 p-3.5 rounded-xl shadow-2xl backdrop-blur-md text-xs space-y-2 min-w-[210px]">
-          <div className="font-bold text-white flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+        <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 p-3.5 rounded-xl shadow-2xl backdrop-blur-md text-xs space-y-2 min-w-[210px]">
+          <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-slate-700/60 pb-1.5">
             <span>{item.band}</span>
             {item.rubricRange && (
-              <span className="font-mono text-[10px] text-slate-400">
+              <span className="font-mono text-[10px] text-slate-500 dark:text-slate-400">
                 Range: {item.rubricRange}
               </span>
             )}
           </div>
 
           <div className="space-y-1">
-            <div className="flex justify-between items-center text-slate-300">
+            <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-sky-400 inline-block" />
-                <span className="text-slate-400">ASAP Baseline:</span>
+                <span className="w-2.5 h-2.5 rounded-sm bg-sky-500 dark:bg-sky-400 inline-block" />
+                <span className="text-slate-500 dark:text-slate-400">ASAP Baseline:</span>
               </span>
-              <span className="font-mono font-semibold text-sky-400">
+              <span className="font-mono font-semibold text-sky-600 dark:text-sky-400">
                 {item.baselinePct.toFixed(1)}%
               </span>
             </div>
 
-            <div className="flex justify-between items-center text-slate-300">
+            <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 inline-block" />
-                <span className="text-slate-400">Current Model:</span>
+                <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 dark:bg-emerald-400 inline-block" />
+                <span className="text-slate-500 dark:text-slate-400">Current Model:</span>
               </span>
-              <span className="font-mono font-bold text-emerald-400">
+              <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 {item.modelPct.toFixed(1)}%
               </span>
             </div>
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-between items-center">
-            <span className="text-slate-400">Distribution Drift:</span>
+          <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center">
+            <span className="text-slate-500 dark:text-slate-400">Distribution Drift:</span>
             <span
               className={`font-mono font-bold text-xs ${
                 Math.abs(delta) <= 2.0
-                  ? 'text-emerald-400'
+                  ? 'text-emerald-600 dark:text-emerald-400'
                   : Math.abs(delta) <= 4.0
-                  ? 'text-amber-400'
-                  : 'text-rose-400'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-rose-600 dark:text-rose-400'
               }`}
             >
               {isPositive ? `+${delta.toFixed(1)}%` : `${delta.toFixed(1)}%`}
@@ -160,10 +164,10 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
 
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <CardTitle className="text-base flex items-center gap-2">
-            <GitCompare className="w-4 h-4 text-sky-400" />
+            <GitCompare className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <span>Score-Band Distribution vs. ASAP Baseline</span>
           </CardTitle>
           <CardDescription>
@@ -180,7 +184,7 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                 e.target.value === 'all' ? 'all' : Number(e.target.value)
               )
             }
-            className="bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:border-primary-500"
+            className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700/80 rounded-lg px-3 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500"
             aria-label="Filter drift chart by prompt"
           >
             <option value="all">All Prompts (Global)</option>
@@ -192,31 +196,31 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
           </select>
 
           {/* View Toggle */}
-          <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800">
+          <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800">
             <button
               onClick={() => setViewMode('chart')}
-              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-medium rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                 viewMode === 'chart'
-                  ? 'bg-slate-800 text-sky-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm font-semibold'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
               title="Switch to Chart View"
               aria-label="Switch to Chart View"
             >
-              <BarChart3 className="w-3.5 h-3.5" />
+              <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">Chart</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-medium rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                 viewMode === 'table'
-                  ? 'bg-slate-800 text-sky-400 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-sm font-semibold'
+                  : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
               }`}
               title="Switch to Accessible Table View"
               aria-label="Switch to Accessible Table View"
             >
-              <TableIcon className="w-3.5 h-3.5" />
+              <TableIcon className="w-4 h-4" />
               <span className="hidden sm:inline">Table</span>
             </button>
           </div>
@@ -225,16 +229,16 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
 
       <CardContent className="pt-4 space-y-4">
         {/* Drift Status Banner */}
-        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+        <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
           <div className="flex items-center gap-2">
             {isWellCalibrated ? (
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             ) : (
-              <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
             )}
-            <span className="text-slate-300">
+            <span className="text-slate-700 dark:text-slate-300">
               Max distribution drift across bands is{' '}
-              <strong className="text-white font-mono">{maxDrift.toFixed(1)}%</strong>
+              <strong className="text-slate-900 dark:text-white font-mono">{maxDrift.toFixed(1)}%</strong>
               {' '}(threshold &le; 3.0%).
             </span>
           </div>
@@ -242,8 +246,8 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
             variant={isWellCalibrated ? 'default' : 'warning'}
             className={
               isWellCalibrated
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                : 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30'
+                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/30'
             }
           >
             {isWellCalibrated ? 'Well Calibrated' : 'Minor Drift'}
@@ -258,19 +262,21 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                 margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
                 barGap={8}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1E293B' : '#E2E8F0'} vertical={false} />
                 <XAxis
                   dataKey="band"
-                  stroke="#64748B"
+                  stroke={isDark ? '#64748B' : '#94A3B8'}
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#334155' }}
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B' }}
+                  axisLine={{ stroke: isDark ? '#334155' : '#CBD5E1' }}
                 />
                 <YAxis
-                  stroke="#64748B"
+                  stroke={isDark ? '#64748B' : '#94A3B8'}
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#334155' }}
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B' }}
+                  axisLine={{ stroke: isDark ? '#334155' : '#CBD5E1' }}
                   tickFormatter={(val) => `${val}%`}
                   domain={[0, 70]}
                 />
@@ -281,7 +287,7 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                   height={32}
                   wrapperStyle={{ fontSize: '11px', paddingBottom: '8px' }}
                   formatter={(value) => (
-                    <span className="text-slate-300 font-medium">{value}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">{value}</span>
                   )}
                 />
                 <Bar
@@ -290,6 +296,9 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                   fill="#0EA5E9"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={48}
+                  isAnimationActive={!prefersReducedMotion}
+                  animationDuration={300}
+                  animationEasing="ease-out"
                 />
                 <Bar
                   name="Model Predictions"
@@ -297,15 +306,18 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                   fill="#10B981"
                   radius={[4, 4, 0, 0]}
                   maxBarSize={48}
+                  isAnimationActive={!prefersReducedMotion}
+                  animationDuration={300}
+                  animationEasing="ease-out"
                 />
               </BarChart>
             </ResponsiveContainer>
           </div>
         ) : (
           /* Accessible Text / Table Alternative */
-          <div className="overflow-x-auto rounded-xl border border-slate-800">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-semibold">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-semibold">
                 <tr>
                   <th scope="col" className="py-2.5 px-3">Score Band</th>
                   <th scope="col" className="py-2.5 px-3">Rubric Range</th>
@@ -315,29 +327,29 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                   <th scope="col" className="py-2.5 px-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
                 {chartData.map((row) => {
                   const delta = row.modelPct - row.baselinePct;
                   const isLowDrift = Math.abs(delta) <= 2.5;
 
                   return (
-                    <tr key={row.band} className="hover:bg-slate-800/40 transition-colors">
-                      <td className="py-2.5 px-3 font-sans font-medium text-white">
+                    <tr key={row.band} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-2.5 px-3 font-sans font-medium text-slate-900 dark:text-white">
                         {row.band}
                       </td>
-                      <td className="py-2.5 px-3 text-slate-400">
+                      <td className="py-2.5 px-3 text-slate-500 dark:text-slate-400">
                         {row.rubricRange || 'N/A'}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-sky-400 font-semibold">
+                      <td className="py-2.5 px-3 text-right text-sky-600 dark:text-sky-400 font-semibold">
                         {row.baselinePct.toFixed(1)}%
                       </td>
-                      <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">
+                      <td className="py-2.5 px-3 text-right text-emerald-600 dark:text-emerald-400 font-bold">
                         {row.modelPct.toFixed(1)}%
                       </td>
                       <td className="py-2.5 px-3 text-right">
                         <span
                           className={`font-bold ${
-                            isLowDrift ? 'text-emerald-400' : 'text-amber-400'
+                            isLowDrift ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
                           }`}
                         >
                           {delta > 0 ? `+${delta.toFixed(1)}%` : `${delta.toFixed(1)}%`}
@@ -347,8 +359,8 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-sans font-semibold ${
                             isLowDrift
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/20'
+                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/20'
                           }`}
                         >
                           {isLowDrift ? 'In Tolerance' : 'Slight Shift'}
@@ -362,7 +374,7 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+        <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800/60">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-sm bg-sky-500 inline-block" />
@@ -379,3 +391,6 @@ export const ScoreBandDriftChart: React.FC<ScoreBandDriftChartProps> = ({
     </Card>
   );
 };
+
+export const ScoreBandDriftChart = React.memo(ScoreBandDriftChartComponent);
+export default ScoreBandDriftChart;

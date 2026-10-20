@@ -17,7 +17,7 @@ export interface KpiCardProps {
   className?: string;
 }
 
-export const KpiCard: React.FC<KpiCardProps> = ({
+const KpiCardComponent: React.FC<KpiCardProps> = ({
   title,
   value,
   subtitle,
@@ -28,33 +28,33 @@ export const KpiCard: React.FC<KpiCardProps> = ({
 }) => {
   // Variant icon container styles
   const iconVariantStyles = {
-    primary: 'bg-primary-500/10 border-primary-500/30 text-primary-400',
-    emerald: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
-    sky: 'bg-sky-500/10 border-sky-500/30 text-sky-400',
-    amber: 'bg-amber-500/10 border-amber-500/30 text-amber-400',
-    rose: 'bg-rose-500/10 border-rose-500/30 text-rose-400',
+    primary: 'bg-primary-50 dark:bg-primary-500/10 border-primary-200 dark:border-primary-500/30 text-primary-600 dark:text-primary-400',
+    emerald: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
+    sky: 'bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/30 text-sky-600 dark:text-sky-400',
+    amber: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400',
+    rose: 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400',
   }[variant];
 
   // Trend color determination
   const getTrendColor = () => {
     if (!trend) return '';
-    if (trend.direction === 'neutral') return 'text-slate-400';
+    if (trend.direction === 'neutral') return 'text-slate-500 dark:text-slate-400';
     const isGood = trend.isPositive !== undefined
       ? (trend.direction === 'up' ? trend.isPositive : !trend.isPositive)
       : trend.direction === 'up';
 
-    return isGood ? 'text-emerald-400' : 'text-rose-400';
+    return isGood ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400';
   };
 
   return (
     <Card className={`relative overflow-hidden ${className}`}>
       <CardContent className="p-5 flex items-start justify-between gap-3">
         <div className="space-y-1.5 flex-1 min-w-0">
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block truncate">
+          <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">
             {title}
           </span>
 
-          <div className="text-2xl font-black text-white font-mono tracking-tight">
+          <div className="text-2xl font-black text-slate-900 dark:text-white font-mono tracking-tight">
             {value}
           </div>
 
@@ -65,12 +65,12 @@ export const KpiCard: React.FC<KpiCardProps> = ({
                 {trend.direction === 'down' && <TrendingDown className="w-3.5 h-3.5" />}
                 {trend.direction === 'neutral' && <Minus className="w-3.5 h-3.5" />}
                 <span>{trend.value}</span>
-                {trend.label && <span className="text-slate-400 font-normal">{trend.label}</span>}
+                {trend.label && <span className="text-slate-500 dark:text-slate-400 font-normal">{trend.label}</span>}
               </span>
             )}
 
             {subtitle && !trend && (
-              <span className="text-slate-400 font-medium">{subtitle}</span>
+              <span className="text-slate-500 dark:text-slate-400 font-medium">{subtitle}</span>
             )}
           </div>
         </div>
@@ -86,3 +86,6 @@ export const KpiCard: React.FC<KpiCardProps> = ({
     </Card>
   );
 };
+
+export const KpiCard = React.memo(KpiCardComponent);
+export default KpiCard;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getEssays, dispatchScoring, EssayListItem } from '../api';
+import { useDebounce } from '../hooks';
 import { ASAP_PROMPTS } from './SubmissionPage';
 import {
   Table,
@@ -89,6 +90,22 @@ export const EssayManagerPage: React.FC = () => {
     },
     [searchParams, setSearchParams, sortOrder]
   );
+
+  // Debounced search input state for buttery smooth typing
+  const [searchInput, setSearchInput] = useState<string>(searchQuery);
+  const debouncedSearch = useDebounce(searchInput, 250);
+
+  // Sync debounced search query to URL params
+  useEffect(() => {
+    if (debouncedSearch !== searchQuery) {
+      updateParams({ q: debouncedSearch || null, page: '1' });
+    }
+  }, [debouncedSearch, searchQuery, updateParams]);
+
+  // Keep searchInput in sync if URL params change externally
+  useEffect(() => {
+    setSearchInput(searchQuery);
+  }, [searchQuery]);
 
   // Fetch essays from backend
   const fetchEssays = useCallback(
@@ -473,17 +490,17 @@ export const EssayManagerPage: React.FC = () => {
       <button
         type="button"
         onClick={() => handleSort(field)}
-        className="inline-flex items-center gap-1.5 hover:text-white transition-colors uppercase font-bold text-[11px] tracking-wider select-none group"
+        className="inline-flex items-center gap-1.5 hover:text-slate-900 dark:hover:text-white transition-colors uppercase font-bold text-[11px] tracking-wider select-none group"
       >
         <span>{label}</span>
         {isSorted ? (
           sortOrder === 'asc' ? (
-            <ArrowUp className="w-3.5 h-3.5 text-primary-400" />
+            <ArrowUp className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
           ) : (
-            <ArrowDown className="w-3.5 h-3.5 text-primary-400" />
+            <ArrowDown className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
           )
         ) : (
-          <ArrowUpDown className="w-3 h-3 text-slate-500 opacity-60 group-hover:opacity-100 transition-opacity" />
+          <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500 opacity-60 group-hover:opacity-100 transition-opacity" />
         )}
       </button>
     );
@@ -492,17 +509,17 @@ export const EssayManagerPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6 animate-fade-in pb-28">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">
+            <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Essay Manager
             </h1>
             <Badge variant="outline" size="sm" className="font-mono">
               {filteredEssays.length} {filteredEssays.length === 1 ? 'essay' : 'essays'}
             </Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Browse submissions, monitor rubric progression, inspect automated evaluations, and trigger batch actions.
           </p>
         </div>
@@ -538,21 +555,25 @@ export const EssayManagerPage: React.FC = () => {
       </div>
 
       {/* Filter & Search Toolbar */}
-      <div className="space-y-3.5 bg-slate-900/60 border border-slate-800 rounded-2xl p-4 shadow-sm">
+      <div className="space-y-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
         {/* Search Input & Quick Status Pills */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
             <Input
+              id="essay-search-input"
               placeholder="Search by ID, prompt, email, status, or text..."
-              value={searchQuery}
-              onChange={(e) => updateParams({ q: e.target.value, page: '1' })}
-              leftIcon={<Search className="w-4 h-4 text-slate-500" />}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              leftIcon={<Search className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
               rightIcon={
-                searchQuery ? (
+                searchInput ? (
                   <button
                     type="button"
-                    onClick={() => updateParams({ q: null, page: '1' })}
-                    className="text-slate-400 hover:text-white"
+                    onClick={() => {
+                      setSearchInput('');
+                      updateParams({ q: null, page: '1' });
+                    }}
+                    className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -562,16 +583,16 @@ export const EssayManagerPage: React.FC = () => {
           </div>
 
           {/* Quick Status Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none py-1">
             {['ALL', 'SUBMITTED', 'SCORED', 'UNDER_REVIEW', 'FINALIZED', 'FAILED'].map((st) => (
               <button
                 key={st}
                 type="button"
                 onClick={() => updateParams({ status: st, page: '1' })}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 min-h-[44px] inline-flex items-center rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
                   statusFilter === st
                     ? 'bg-primary-600 text-white shadow-sm'
-                    : 'bg-slate-800/80 text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-700/60'
+                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60'
                 }`}
               >
                 {st.replace('_', ' ')}
@@ -581,17 +602,17 @@ export const EssayManagerPage: React.FC = () => {
         </div>
 
         {/* Secondary Filter Controls Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-800/80 text-xs">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800/80 text-xs">
           <div className="flex flex-wrap items-center gap-2.5">
             {/* Prompt Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Prompt:
               </span>
               <select
                 value={promptFilter}
                 onChange={(e) => updateParams({ prompt: e.target.value, page: '1' })}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option value="ALL">All ASAP Prompts</option>
                 {ASAP_PROMPTS.map((p) => (
@@ -604,13 +625,13 @@ export const EssayManagerPage: React.FC = () => {
 
             {/* Rubric Band Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Band:
               </span>
               <select
                 value={bandFilter}
                 onChange={(e) => updateParams({ band: e.target.value, page: '1' })}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option value="ALL">All Rubric Bands</option>
                 <option value="HIGH">High Band</option>
@@ -621,13 +642,13 @@ export const EssayManagerPage: React.FC = () => {
 
             {/* Date Range Selector */}
             <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 Date:
               </span>
               <select
                 value={dateRange}
                 onChange={(e) => updateParams({ date: e.target.value, page: '1' })}
-                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
               >
                 <option value="ALL">All Time</option>
                 <option value="TODAY">Last 24 Hours</option>
@@ -640,14 +661,14 @@ export const EssayManagerPage: React.FC = () => {
           {/* Active Filter Indicators & Reset Action */}
           {activeFiltersCount > 0 && (
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-400 bg-primary-500/10 px-2.5 py-1 rounded-md border border-primary-500/20">
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 px-2.5 py-1 rounded-md border border-primary-200 dark:border-primary-500/20">
                 <Filter className="w-3 h-3" />
                 <span>{activeFiltersCount} active {activeFiltersCount === 1 ? 'filter' : 'filters'}</span>
               </span>
               <button
                 type="button"
                 onClick={resetFilters}
-                className="text-xs text-slate-400 hover:text-rose-400 transition-colors font-medium underline underline-offset-2"
+                className="text-xs text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors font-medium underline underline-offset-2"
               >
                 Reset all
               </button>
@@ -702,13 +723,13 @@ export const EssayManagerPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={toggleSelectAll}
-                      className="text-slate-400 hover:text-white transition-colors"
+                      className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
                       title={isAllCurrentPageSelected ? 'Deselect all' : 'Select all on page'}
                     >
                       {isAllCurrentPageSelected ? (
-                        <CheckSquare className="w-4 h-4 text-primary-400" />
+                        <CheckSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                       ) : isSomeCurrentPageSelected ? (
-                        <MinusSquare className="w-4 h-4 text-primary-400" />
+                        <MinusSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                       ) : (
                         <Square className="w-4 h-4" />
                       )}
@@ -736,7 +757,7 @@ export const EssayManagerPage: React.FC = () => {
                       key={essay.id}
                       onClick={() => navigate(`/essays/${essay.id}`)}
                       className={`cursor-pointer group ${
-                        isSelected ? 'bg-primary-950/20 border-l-2 border-primary-500' : ''
+                        isSelected ? 'bg-primary-50/50 dark:bg-primary-950/20 border-l-2 border-primary-500' : ''
                       }`}
                     >
                       {/* Checkbox */}
@@ -746,10 +767,10 @@ export const EssayManagerPage: React.FC = () => {
                       >
                         <button
                           type="button"
-                          className="text-slate-500 hover:text-slate-200 transition-colors"
+                          className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-primary-400" />
+                            <CheckSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                           ) : (
                             <Square className="w-4 h-4" />
                           )}
@@ -759,14 +780,14 @@ export const EssayManagerPage: React.FC = () => {
                       {/* Prompt */}
                       <TableCell>
                         <div className="flex items-center gap-2.5">
-                          <span className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-mono font-bold text-xs text-primary-400 shrink-0">
+                          <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-xs text-primary-600 dark:text-primary-400 shrink-0">
                             P{essay.asap_set_id || '?'}
                           </span>
                           <div className="flex flex-col min-w-0 max-w-xs">
-                            <span className="text-xs font-semibold text-slate-100 truncate">
+                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                               {essay.prompt_title || promptInfo?.title || `Prompt ${essay.prompt_id.substring(0, 8)}`}
                             </span>
-                            <span className="text-[11px] text-slate-400 font-mono">
+                            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                               Rubric: {promptInfo?.rubric || `[${essay.rubric_min ?? 0} – ${essay.rubric_max ?? 12}]`}
                             </span>
                           </div>
@@ -780,26 +801,26 @@ export const EssayManagerPage: React.FC = () => {
                       <TableCell>
                         {essay.reviewer_override_score != null ? (
                           <div className="flex flex-col">
-                            <span className="font-mono font-bold text-sm text-purple-400">
+                            <span className="font-mono font-bold text-sm text-purple-600 dark:text-purple-400">
                               {essay.reviewer_override_score.toFixed(2)}
                             </span>
-                            <span className="text-[10px] text-slate-500 font-mono">
+                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
                               (AI: {essay.holistic_score?.toFixed(2) ?? '—'})
                             </span>
                           </div>
                         ) : essay.holistic_score != null ? (
                           <div className="flex flex-col">
-                            <span className="font-mono font-bold text-sm text-emerald-400">
+                            <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
                               {essay.holistic_score.toFixed(2)}
                             </span>
                             {essay.confidence != null && (
-                              <span className="text-[10px] text-slate-400 font-mono">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                                 {(essay.confidence * 100).toFixed(0)}% conf
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-500 font-mono">Pending</span>
+                          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">Pending</span>
                         )}
                       </TableCell>
 
@@ -809,14 +830,14 @@ export const EssayManagerPage: React.FC = () => {
                       {/* Submitted Date */}
                       <TableCell>
                         <div className="flex flex-col">
-                          <span className="text-xs text-slate-200">
+                          <span className="text-xs text-slate-800 dark:text-slate-200">
                             {new Date(essay.created_at).toLocaleDateString(undefined, {
                               month: 'short',
                               day: 'numeric',
                               year: 'numeric',
                             })}
                           </span>
-                          <span className="text-[10px] text-slate-500 font-mono">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
                             {new Date(essay.created_at).toLocaleTimeString(undefined, {
                               hour: '2-digit',
                               minute: '2-digit',
@@ -828,10 +849,10 @@ export const EssayManagerPage: React.FC = () => {
                       {/* Submitter */}
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-300 shrink-0">
+                          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-300 shrink-0">
                             {(essay.submitter_email?.[0] || 'S').toUpperCase()}
                           </div>
-                          <span className="text-xs text-slate-300 truncate max-w-[130px]">
+                          <span className="text-xs text-slate-700 dark:text-slate-300 truncate max-w-[130px]">
                             {essay.submitter_email || 'student@aes.local'}
                           </span>
                         </div>
@@ -844,7 +865,7 @@ export const EssayManagerPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={(e) => handleCopyId(essay.id, e)}
-                            className="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition"
+                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                             title="Copy Essay ID"
                           >
                             <Copy className="w-3.5 h-3.5" />
@@ -899,25 +920,26 @@ export const EssayManagerPage: React.FC = () => {
                   key={essay.id}
                   onClick={() => navigate(`/essays/${essay.id}`)}
                   className={`cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-primary-500 bg-primary-950/20' : ''
+                    isSelected ? 'ring-2 ring-primary-500 bg-primary-50/50 dark:bg-primary-950/20' : ''
                   }`}
                 >
                   <CardContent className="p-4 space-y-3">
                     {/* Top Header Row: Checkbox, ID, Status */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2.5">
+                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
                       <div className="flex items-center gap-2.5">
                         <button
                           type="button"
                           onClick={(e) => toggleSelectOne(essay.id, e)}
-                          className="text-slate-400 hover:text-white"
+                          aria-label={`Select essay ${essay.id.substring(0, 8)}`}
+                          className="text-slate-400 hover:text-slate-700 dark:hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                         >
                           {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-primary-400" />
+                            <CheckSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
                           ) : (
                             <Square className="w-4 h-4" />
                           )}
                         </button>
-                        <span className="font-mono text-xs font-semibold text-primary-400">
+                        <span className="font-mono text-xs font-semibold text-primary-600 dark:text-primary-400">
                           #{essay.id.substring(0, 8)}...
                         </span>
                       </div>
@@ -927,44 +949,44 @@ export const EssayManagerPage: React.FC = () => {
                     {/* Prompt Title */}
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono font-bold text-primary-400">
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-bold text-primary-600 dark:text-primary-400">
                           P{essay.asap_set_id || '?'}
                         </span>
-                        <h3 className="text-xs font-bold text-white leading-tight">
+                        <h3 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
                           {essay.prompt_title || promptInfo?.title || `Prompt ${essay.prompt_id.substring(0, 8)}`}
                         </h3>
                       </div>
-                      <p className="text-[11px] text-slate-400 font-mono">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                         Rubric Scale: {promptInfo?.rubric || `[${essay.rubric_min ?? 0} – ${essay.rubric_max ?? 12}]`}
                       </p>
                     </div>
 
                     {/* Score & Rubric Band */}
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900 border border-slate-800">
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
                       <div className="space-y-0.5">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
                           Holistic Score
                         </span>
-                        <div className="font-mono font-black text-base text-white">
+                        <div className="font-mono font-black text-base text-slate-900 dark:text-white">
                           {essay.reviewer_override_score != null ? (
-                            <span className="text-purple-400">
+                            <span className="text-purple-600 dark:text-purple-400">
                               {essay.reviewer_override_score.toFixed(2)}{' '}
-                              <span className="text-xs text-slate-500 font-normal">
+                              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">
                                 (AI: {essay.holistic_score?.toFixed(2)})
                               </span>
                             </span>
                           ) : essay.holistic_score != null ? (
-                            <span className="text-emerald-400">
+                            <span className="text-emerald-600 dark:text-emerald-400">
                               {essay.holistic_score.toFixed(2)}
                             </span>
                           ) : (
-                            <span className="text-xs text-slate-500">Pending</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500">Pending</span>
                           )}
                         </div>
                       </div>
 
                       <div className="space-y-0.5 text-right">
-                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider block">
                           Rubric Band
                         </span>
                         <div>{renderBandBadge(essay.rubric_band)}</div>
@@ -972,41 +994,41 @@ export const EssayManagerPage: React.FC = () => {
                     </div>
 
                     {/* Submitter & Date Footer */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
                       <div className="flex items-center gap-1.5 truncate max-w-[60%]">
-                        <User className="w-3 h-3 text-slate-500 shrink-0" />
+                        <User className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
                         <span className="truncate">{essay.submitter_email || 'student@aes.local'}</span>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <Calendar className="w-3 h-3 text-slate-500" />
+                        <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                         <span>{new Date(essay.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-800">
+                    {/* Action Buttons (min-h-[44px] touch target) */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
                       {(essay.status === 'SUBMITTED' ||
                         essay.status === 'FAILED' ||
                         essay.status === 'PROCESSING_FAILED') && (
                         <Button
-                          size="xs"
+                          size="sm"
                           variant="primary"
-                          leftIcon={<Sparkles className="w-3 h-3" />}
+                          leftIcon={<Sparkles className="w-3.5 h-3.5" />}
                           onClick={(e) => handleQuickScore(essay.id, e)}
-                          className="flex-1"
+                          className="flex-1 min-h-[44px]"
                         >
                           Score Now
                         </Button>
                       )}
                       <Button
-                        size="xs"
+                        size="sm"
                         variant="secondary"
-                        rightIcon={<ArrowRight className="w-3 h-3" />}
+                        rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate(`/essays/${essay.id}`);
                         }}
-                        className="flex-1"
+                        className="flex-1 min-h-[44px]"
                       >
                         Inspect Workspace
                       </Button>
@@ -1018,15 +1040,15 @@ export const EssayManagerPage: React.FC = () => {
           </div>
 
           {/* Pagination Controls Footer */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-800 text-xs text-slate-400">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
             <div className="flex items-center gap-2">
               <span>
-                Showing <strong className="text-slate-200">{totalItems === 0 ? 0 : startIndex + 1}</strong> to{' '}
-                <strong className="text-slate-200">{endIndex}</strong> of{' '}
-                <strong className="text-slate-200">{totalItems}</strong> essays
+                Showing <strong className="text-slate-800 dark:text-slate-200">{totalItems === 0 ? 0 : startIndex + 1}</strong> to{' '}
+                <strong className="text-slate-800 dark:text-slate-200">{endIndex}</strong> of{' '}
+                <strong className="text-slate-800 dark:text-slate-200">{totalItems}</strong> essays
               </span>
 
-              <span className="text-slate-600">&bull;</span>
+              <span className="text-slate-400 dark:text-slate-600">&bull;</span>
 
               {/* Page Size Selector */}
               <div className="flex items-center gap-1.5">
@@ -1034,7 +1056,7 @@ export const EssayManagerPage: React.FC = () => {
                 <select
                   value={pageSize}
                   onChange={(e) => updateParams({ pageSize: e.target.value, page: '1' })}
-                  className="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-200 focus:outline-none"
+                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
                 >
                   <option value="10">10</option>
                   <option value="25">25</option>
@@ -1044,12 +1066,13 @@ export const EssayManagerPage: React.FC = () => {
             </div>
 
             {/* Pagination Navigation */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 flex-wrap">
               <Button
                 variant="outline"
-                size="xs"
+                size="sm"
                 disabled={safeCurrentPage <= 1}
                 onClick={() => updateParams({ page: String(safeCurrentPage - 1) })}
+                className="min-h-[44px]"
               >
                 Previous
               </Button>
@@ -1066,14 +1089,14 @@ export const EssayManagerPage: React.FC = () => {
                     const showEllipsis = prev && p - prev > 1;
                     return (
                       <React.Fragment key={p}>
-                        {showEllipsis && <span className="px-1 text-slate-600">...</span>}
+                        {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600">...</span>}
                         <button
                           type="button"
                           onClick={() => updateParams({ page: String(p) })}
-                          className={`w-7 h-7 rounded-lg text-xs font-semibold transition ${
+                          className={`min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition ${
                             safeCurrentPage === p
                               ? 'bg-primary-600 text-white shadow-sm'
-                              : 'bg-slate-900 text-slate-400 hover:text-white hover:bg-slate-800'
+                              : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
                           }`}
                         >
                           {p}
@@ -1085,9 +1108,10 @@ export const EssayManagerPage: React.FC = () => {
 
               <Button
                 variant="outline"
-                size="xs"
+                size="sm"
                 disabled={safeCurrentPage >= totalPages}
                 onClick={() => updateParams({ page: String(safeCurrentPage + 1) })}
+                className="min-h-[44px]"
               >
                 Next
               </Button>
@@ -1098,17 +1122,17 @@ export const EssayManagerPage: React.FC = () => {
 
       {/* Floating Bulk Actions Bar (Docked at bottom when 1+ selected) */}
       {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-slate-900/95 border border-primary-500/40 backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center gap-4 animate-slide-up">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white/95 dark:bg-slate-900/95 border border-primary-500/40 backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center gap-4 animate-slide-up">
           <div className="flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold font-mono">
               {selectedIds.length}
             </span>
-            <span className="text-xs font-semibold text-slate-200">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
               {selectedIds.length === 1 ? 'essay selected' : 'essays selected'}
             </span>
           </div>
 
-          <div className="h-4 w-px bg-slate-700 hidden sm:block" />
+          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
 
           <div className="flex items-center gap-2">
             <Button
@@ -1134,7 +1158,7 @@ export const EssayManagerPage: React.FC = () => {
               size="xs"
               variant="ghost"
               onClick={() => setSelectedIds([])}
-              className="text-slate-400 hover:text-white"
+              className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
             >
               Deselect All
             </Button>

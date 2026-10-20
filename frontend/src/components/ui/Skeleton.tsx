@@ -23,7 +23,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   return (
     <div
       aria-hidden="true"
-      className={`animate-pulse bg-slate-800/80 border border-slate-700/40 ${
+      className={`animate-shimmer bg-slate-200 dark:bg-slate-800/80 border border-slate-300/40 dark:border-slate-700/40 ${
         circle ? 'rounded-full' : 'rounded-lg'
       } ${className}`}
       style={customStyles}

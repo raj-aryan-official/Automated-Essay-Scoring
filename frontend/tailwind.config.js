@@ -165,6 +165,44 @@ export default {
         xl: 'var(--shadow-xl)',
         inner: 'var(--shadow-inner)',
       },
+
+      transitionDuration: {
+        fast: '150ms',
+        normal: '200ms',
+        moderate: '250ms',
+        slow: '300ms',
+        150: '150ms',
+        200: '200ms',
+        250: '250ms',
+        300: '300ms',
+      },
+
+      transitionTimingFunction: {
+        'ease-out-custom': 'cubic-bezier(0.16, 1, 0.3, 1)',
+        'ease-in-custom': 'cubic-bezier(0.7, 0, 0.84, 0)',
+        'ease-spring': 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      },
+
+      keyframes: {
+        pageEnter: {
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        modalCardIn: {
+          '0%': { opacity: '0', transform: 'scale(0.96) translateY(4px)' },
+          '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
+        },
+        toastSlideIn: {
+          '0%': { opacity: '0', transform: 'translateX(1rem) scale(0.96)' },
+          '100%': { opacity: '1', transform: 'translateX(0) scale(1)' },
+        },
+      },
+
+      animation: {
+        'page-enter': 'pageEnter 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'modal-in': 'modalCardIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'toast-in': 'toastSlideIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
+      },
     },
   },
   plugins: [],

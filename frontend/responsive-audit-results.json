@@ -1,0 +1,823 @@
+[
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 17,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_dashboard.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/submit",
+      "name": "Submission"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 16,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_submission.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/essays",
+      "name": "Essay_Manager"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 23,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_essay_manager.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/essays/6e117e5addb14b448054cdd7b3d61bcb",
+      "name": "Score_Workspace"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 24,
+      "smallTargets": []
+    },
+    "scoreWorkspace": {
+      "hasScoreCard": true,
+      "isScoreCardSticky": true,
+      "hasEssayPanel": true,
+      "isEssayOnTop": true,
+      "hasMobileTabs": true,
+      "tabCount": 4,
+      "tabLabels": [
+        "Grammar8.5",
+        "Coherence9.0",
+        "Argument9.5",
+        "Radar"
+      ]
+    },
+    "screenshotFile": "mobile_360_score_workspace.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/jobs",
+      "name": "Inference_Jobs"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 8,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_inference_jobs.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/evaluation",
+      "name": "Model_Evaluation"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 28,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_model_evaluation.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/help",
+      "name": "Help_Page"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 27,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_help_page.png"
+  },
+  {
+    "breakpoint": {
+      "width": 360,
+      "height": 740,
+      "name": "mobile_360",
+      "label": "360px (Compact Mobile)"
+    },
+    "page": {
+      "path": "/login",
+      "name": "Login"
+    },
+    "overflow": {
+      "docWidth": 360,
+      "winWidth": 360,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 7,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "mobile_360_login.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 17,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_dashboard.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/submit",
+      "name": "Submission"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 16,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_submission.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/essays",
+      "name": "Essay_Manager"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 23,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_essay_manager.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/essays/6e117e5addb14b448054cdd7b3d61bcb",
+      "name": "Score_Workspace"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 19,
+      "smallTargets": []
+    },
+    "scoreWorkspace": {
+      "hasScoreCard": true,
+      "isScoreCardSticky": true,
+      "hasEssayPanel": true,
+      "isEssayOnTop": true,
+      "hasMobileTabs": false,
+      "tabCount": 0,
+      "tabLabels": []
+    },
+    "screenshotFile": "tablet_768_score_workspace.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/jobs",
+      "name": "Inference_Jobs"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 8,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_inference_jobs.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/evaluation",
+      "name": "Model_Evaluation"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 28,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_model_evaluation.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/help",
+      "name": "Help_Page"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 27,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_help_page.png"
+  },
+  {
+    "breakpoint": {
+      "width": 768,
+      "height": 1024,
+      "name": "tablet_768",
+      "label": "768px (Tablet Portrait)"
+    },
+    "page": {
+      "path": "/login",
+      "name": "Login"
+    },
+    "overflow": {
+      "docWidth": 768,
+      "winWidth": 768,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 7,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "tablet_768_login.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_dashboard.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/submit",
+      "name": "Submission"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_submission.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/essays",
+      "name": "Essay_Manager"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_essay_manager.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/essays/6e117e5addb14b448054cdd7b3d61bcb",
+      "name": "Score_Workspace"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_score_workspace.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/jobs",
+      "name": "Inference_Jobs"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_inference_jobs.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/evaluation",
+      "name": "Model_Evaluation"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_model_evaluation.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/help",
+      "name": "Help_Page"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_help_page.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1024,
+      "height": 768,
+      "name": "desktop_1024",
+      "label": "1024px (Desktop)"
+    },
+    "page": {
+      "path": "/login",
+      "name": "Login"
+    },
+    "overflow": {
+      "docWidth": 1024,
+      "winWidth": 1024,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "desktop_1024_login.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/dashboard",
+      "name": "Dashboard"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_dashboard.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/submit",
+      "name": "Submission"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_submission.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/essays",
+      "name": "Essay_Manager"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_essay_manager.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/essays/6e117e5addb14b448054cdd7b3d61bcb",
+      "name": "Score_Workspace"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_score_workspace.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/jobs",
+      "name": "Inference_Jobs"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_inference_jobs.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/evaluation",
+      "name": "Model_Evaluation"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_model_evaluation.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/help",
+      "name": "Help_Page"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_help_page.png"
+  },
+  {
+    "breakpoint": {
+      "width": 1440,
+      "height": 900,
+      "name": "widescreen_1440",
+      "label": "1440px (Widescreen Desktop)"
+    },
+    "page": {
+      "path": "/login",
+      "name": "Login"
+    },
+    "overflow": {
+      "docWidth": 1440,
+      "winWidth": 1440,
+      "hasOverflow": false,
+      "offending": []
+    },
+    "touchTargets": {
+      "compliant": true,
+      "checkedCount": 0,
+      "smallTargets": []
+    },
+    "scoreWorkspace": null,
+    "screenshotFile": "widescreen_1440_login.png"
+  }
+]

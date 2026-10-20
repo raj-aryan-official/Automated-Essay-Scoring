@@ -11,7 +11,7 @@ export interface DimensionRadarChartProps {
 }
 
 // WHY: Lightweight, zero-dependency SVG 3-axis radar chart visualizing Grammar, Coherence, and Argumentation sub-scores.
-export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
+const DimensionRadarChartComponent: React.FC<DimensionRadarChartProps> = ({
   dimensions,
   activeDimensions,
   rubricMin = 2.0,
@@ -70,17 +70,17 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
 
   return (
     <div
-      className={`bg-slate-950/70 border border-slate-800/80 rounded-xl p-4 shadow-inner space-y-2 backdrop-blur-sm ${className}`}
+      className={`bg-slate-100/80 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-inner space-y-2 backdrop-blur-sm ${className}`}
     >
-      <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary-400 animate-pulse" />
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+          <div className="w-2 h-2 rounded-full bg-primary-500 dark:bg-primary-400 animate-pulse" />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
             3-Axis Dimensional Profile
           </h3>
         </div>
-        <span className="font-mono text-[11px] text-slate-400">
-          Avg: <strong className="text-primary-300">{avgSubScore.toFixed(1)}</strong> / {rubricMax.toFixed(1)}
+        <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">
+          Avg: <strong className="text-primary-600 dark:text-primary-300">{avgSubScore.toFixed(1)}</strong> / {rubricMax.toFixed(1)}
         </span>
       </div>
 
@@ -114,7 +114,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
                 points={`${p0} ${p1} ${p2}`}
                 fill="none"
                 stroke="currentColor"
-                className="text-slate-800"
+                className="text-slate-300 dark:text-slate-800"
                 strokeWidth="1"
                 strokeDasharray={lvl === 1.0 ? 'none' : '3,3'}
               />
@@ -128,7 +128,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             x2={cx}
             y2={cy - maxR}
             stroke="currentColor"
-            className="text-slate-700/80"
+            className="text-slate-400 dark:text-slate-700/80"
             strokeWidth="1.2"
           />
           <line
@@ -137,7 +137,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             x2={cx + maxR * cos30}
             y2={cy + maxR * sin30}
             stroke="currentColor"
-            className="text-slate-700/80"
+            className="text-slate-400 dark:text-slate-700/80"
             strokeWidth="1.2"
           />
           <line
@@ -146,7 +146,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             x2={cx - maxR * cos30}
             y2={cy + maxR * sin30}
             stroke="currentColor"
-            className="text-slate-700/80"
+            className="text-slate-400 dark:text-slate-700/80"
             strokeWidth="1.2"
           />
 
@@ -158,7 +158,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             strokeWidth="2.5"
             strokeLinejoin="round"
             filter="url(#radarGlow)"
-            className="transition-all duration-500 ease-out"
+            className="transition-all duration-300 ease-out motion-reduce:transition-none"
           />
 
           {/* Vertex Markers */}
@@ -166,8 +166,8 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             cx={pGrammar.x}
             cy={pGrammar.y}
             r="4.5"
-            className={`transition-all duration-300 ${
-              activeDimensions.grammar ? 'fill-rose-400 stroke-slate-900' : 'fill-slate-600 stroke-slate-800'
+            className={`transition-all duration-300 motion-reduce:transition-none ${
+              activeDimensions.grammar ? 'fill-rose-500 dark:fill-rose-400 stroke-white dark:stroke-slate-900' : 'fill-slate-400 dark:fill-slate-600 stroke-white dark:stroke-slate-800'
             }`}
             strokeWidth="2"
           />
@@ -175,8 +175,8 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             cx={pCoherence.x}
             cy={pCoherence.y}
             r="4.5"
-            className={`transition-all duration-300 ${
-              activeDimensions.coherence ? 'fill-amber-400 stroke-slate-900' : 'fill-slate-600 stroke-slate-800'
+            className={`transition-all duration-300 motion-reduce:transition-none ${
+              activeDimensions.coherence ? 'fill-amber-500 dark:fill-amber-400 stroke-white dark:stroke-slate-900' : 'fill-slate-400 dark:fill-slate-600 stroke-white dark:stroke-slate-800'
             }`}
             strokeWidth="2"
           />
@@ -184,8 +184,8 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             cx={pArgument.x}
             cy={pArgument.y}
             r="4.5"
-            className={`transition-all duration-300 ${
-              activeDimensions.argumentation ? 'fill-emerald-400 stroke-slate-900' : 'fill-slate-600 stroke-slate-800'
+            className={`transition-all duration-300 motion-reduce:transition-none ${
+              activeDimensions.argumentation ? 'fill-emerald-500 dark:fill-emerald-400 stroke-white dark:stroke-slate-900' : 'fill-slate-400 dark:fill-slate-600 stroke-white dark:stroke-slate-800'
             }`}
             strokeWidth="2"
           />
@@ -195,7 +195,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             <text
               textAnchor="middle"
               className={`text-[11px] font-bold font-sans transition-colors ${
-                activeDimensions.grammar ? 'fill-rose-300' : 'fill-slate-500'
+                activeDimensions.grammar ? 'fill-rose-700 dark:fill-rose-300' : 'fill-slate-500'
               }`}
             >
               Grammar
@@ -203,7 +203,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             <text
               textAnchor="middle"
               y="11"
-              className="text-[10px] font-mono fill-slate-400 font-semibold"
+              className="text-[10px] font-mono fill-slate-600 dark:fill-slate-400 font-semibold"
             >
               {grammarScore.toFixed(1)}
             </text>
@@ -214,7 +214,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             <text
               textAnchor="start"
               className={`text-[11px] font-bold font-sans transition-colors ${
-                activeDimensions.coherence ? 'fill-amber-300' : 'fill-slate-500'
+                activeDimensions.coherence ? 'fill-amber-800 dark:fill-amber-300' : 'fill-slate-500'
               }`}
             >
               Coherence
@@ -222,7 +222,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             <text
               textAnchor="start"
               y="11"
-              className="text-[10px] font-mono fill-slate-400 font-semibold"
+              className="text-[10px] font-mono fill-slate-600 dark:fill-slate-400 font-semibold"
             >
               {coherenceScore.toFixed(1)}
             </text>
@@ -233,7 +233,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             <text
               textAnchor="end"
               className={`text-[11px] font-bold font-sans transition-colors ${
-                activeDimensions.argumentation ? 'fill-emerald-300' : 'fill-slate-500'
+                activeDimensions.argumentation ? 'fill-emerald-800 dark:fill-emerald-300' : 'fill-slate-500'
               }`}
             >
               Argumentation
@@ -241,7 +241,7 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
             <text
               textAnchor="end"
               y="11"
-              className="text-[10px] font-mono fill-slate-400 font-semibold"
+              className="text-[10px] font-mono fill-slate-600 dark:fill-slate-400 font-semibold"
             >
               {argumentScore.toFixed(1)}
             </text>
@@ -250,25 +250,26 @@ export const DimensionRadarChart: React.FC<DimensionRadarChartProps> = ({
       </div>
 
       {/* Bottom Dimension Legend Chips */}
-      <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-800/60 text-[10px] font-mono">
-        <div className="flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-slate-900/60 border border-slate-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-          <span className="text-slate-400">Grammar:</span>
-          <span className="font-bold text-white">{grammarScore.toFixed(1)}</span>
+      <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-200 dark:border-slate-800/60 text-[10px] font-mono">
+        <div className="flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400" />
+          <span className="text-slate-500 dark:text-slate-400">Grammar:</span>
+          <span className="font-bold text-slate-900 dark:text-white">{grammarScore.toFixed(1)}</span>
         </div>
-        <div className="flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-slate-900/60 border border-slate-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-          <span className="text-slate-400">Coherence:</span>
-          <span className="font-bold text-white">{coherenceScore.toFixed(1)}</span>
+        <div className="flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400" />
+          <span className="text-slate-500 dark:text-slate-400">Coherence:</span>
+          <span className="font-bold text-slate-900 dark:text-white">{coherenceScore.toFixed(1)}</span>
         </div>
-        <div className="flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-slate-900/60 border border-slate-800">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-          <span className="text-slate-400">Arg:</span>
-          <span className="font-bold text-white">{argumentScore.toFixed(1)}</span>
+        <div className="flex items-center justify-center gap-1.5 py-1 px-2 rounded bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400" />
+          <span className="text-slate-500 dark:text-slate-400">Arg:</span>
+          <span className="font-bold text-slate-900 dark:text-white">{argumentScore.toFixed(1)}</span>
         </div>
       </div>
     </div>
   );
 };
 
+export const DimensionRadarChart = React.memo(DimensionRadarChartComponent);
 export default DimensionRadarChart;

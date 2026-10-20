@@ -13,6 +13,8 @@ import {
 import { LossCurvePoint } from '../../api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../../components/ui';
 import { Table as TableIcon, LineChart as LineChartIcon, Activity, Sparkles } from 'lucide-react';
+import { useTheme } from '../../context/ThemeContext';
+import { useReducedMotion } from '../../hooks';
 
 export interface LossCurvesChartProps {
   lossCurves?: Record<string, LossCurvePoint[]>;
@@ -53,12 +55,14 @@ const DEFAULT_LOSS_CURVES: Record<string, LossCurvePoint[]> = {
   '8': generateFallbackCurves(8),
 };
 
-export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
+const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
   lossCurves,
   initialPromptId = 1,
   onPromptSelect,
   className = '',
 }) => {
+  const { isDark } = useTheme();
+  const prefersReducedMotion = useReducedMotion();
   const [selectedPrompt, setSelectedPrompt] = useState<number>(initialPromptId);
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
@@ -93,41 +97,41 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
       const isBest = bestPoint && bestPoint.step === p?.step;
 
       return (
-        <div className="bg-slate-900/95 border border-slate-700/80 p-3.5 rounded-xl shadow-2xl backdrop-blur-md text-xs space-y-2 min-w-[200px]">
-          <div className="font-bold text-white flex items-center justify-between border-b border-slate-700/60 pb-1.5">
+        <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 p-3.5 rounded-xl shadow-2xl backdrop-blur-md text-xs space-y-2 min-w-[200px]">
+          <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-200 dark:border-slate-700/60 pb-1.5">
             <span className="font-mono">Training Step {label}</span>
             {isBest && (
-              <span className="flex items-center gap-1 bg-purple-500/20 text-purple-300 border border-purple-500/40 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                <Sparkles className="w-3 h-3 text-purple-400" /> Best Epoch
+              <span className="flex items-center gap-1 bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/40 px-1.5 py-0.5 rounded text-[10px] font-semibold">
+                <Sparkles className="w-3 h-3 text-purple-600 dark:text-purple-400" /> Best Epoch
               </span>
             )}
           </div>
 
           <div className="space-y-1">
             <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-400 inline-block" />
-                <span className="text-slate-400">Train Loss:</span>
+              <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-sky-500 dark:bg-sky-400 inline-block" />
+                <span className="text-slate-500 dark:text-slate-400">Train Loss:</span>
               </span>
-              <span className="font-mono font-bold text-sky-400">
+              <span className="font-mono font-bold text-sky-600 dark:text-sky-400">
                 {train.toFixed(4)}
               </span>
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="flex items-center gap-1.5 text-slate-300">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-400 inline-block" />
-                <span className="text-slate-400">Val Loss:</span>
+              <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                <span className="w-2.5 h-2.5 rounded-full bg-purple-500 dark:bg-purple-400 inline-block" />
+                <span className="text-slate-500 dark:text-slate-400">Val Loss:</span>
               </span>
-              <span className="font-mono font-bold text-purple-400">
+              <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
                 {val.toFixed(4)}
               </span>
             </div>
           </div>
 
-          <div className="pt-1.5 border-t border-slate-800 flex justify-between items-center text-slate-400">
+          <div className="pt-1.5 border-t border-slate-200 dark:border-slate-800 flex justify-between items-center text-slate-500 dark:text-slate-400">
             <span>Gen Gap:</span>
-            <span className={`font-mono font-semibold ${diff > 0.08 ? 'text-amber-400' : 'text-emerald-400'}`}>
+            <span className={`font-mono font-semibold ${diff > 0.08 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               +{diff.toFixed(4)}
             </span>
           </div>
@@ -139,10 +143,10 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
 
   return (
     <Card id="loss-curves-section" className={className}>
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
         <div>
           <CardTitle className="text-base flex items-center gap-2">
-            <Activity className="w-4 h-4 text-purple-400" />
+            <Activity className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span>Loss Curves & Generalization Convergence — Prompt {selectedPrompt}</span>
           </CardTitle>
           <CardDescription>
@@ -151,31 +155,31 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
         </div>
 
         {/* View Toggle */}
-        <div className="flex items-center bg-slate-900 p-0.5 rounded-lg border border-slate-800 self-start sm:self-auto">
+        <div className="flex items-center bg-slate-100 dark:bg-slate-900 p-0.5 rounded-lg border border-slate-200 dark:border-slate-800 self-start sm:self-auto">
           <button
             onClick={() => setViewMode('chart')}
-            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-medium rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
               viewMode === 'chart'
-                ? 'bg-slate-800 text-purple-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
             title="Switch to Line Chart"
             aria-label="Switch to Line Chart"
           >
-            <LineChartIcon className="w-3.5 h-3.5" />
+            <LineChartIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Curves</span>
           </button>
           <button
             onClick={() => setViewMode('table')}
-            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md transition-all ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[44px] text-xs font-medium rounded-md transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
               viewMode === 'table'
-                ? 'bg-slate-800 text-purple-400 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
+                ? 'bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm font-semibold'
+                : 'text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'
             }`}
             title="Switch to Accessible Table View"
             aria-label="Switch to Accessible Table View"
           >
-            <TableIcon className="w-3.5 h-3.5" />
+            <TableIcon className="w-4 h-4" />
             <span className="hidden sm:inline">Table</span>
           </button>
         </div>
@@ -184,20 +188,20 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
       <CardContent className="pt-4 space-y-4">
         {/* Prompt Selector Bar */}
         <div className="flex items-center justify-between flex-wrap gap-2 pb-2">
-          <div className="flex items-center gap-1 text-xs font-semibold text-slate-400">
+          <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
             <span>Select Prompt:</span>
           </div>
 
-          <div className="flex items-center gap-1 overflow-x-auto py-1 max-w-full">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((pid) => (
               <button
                 key={pid}
                 id={`tab-prompt-${pid}`}
                 onClick={() => handleSelectPrompt(pid)}
-                className={`px-2.5 py-1 text-xs font-mono font-bold rounded-lg border transition-all ${
+                className={`px-3 py-2 min-h-[44px] text-xs font-mono font-bold rounded-lg border transition-all flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                   selectedPrompt === pid
-                    ? 'bg-purple-600/20 text-purple-300 border-purple-500 shadow-sm'
-                    : 'bg-slate-900/60 text-slate-400 border-slate-800 hover:text-slate-200 hover:border-slate-700'
+                    ? 'bg-purple-50 dark:bg-purple-600/20 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-500 shadow-sm'
+                    : 'bg-white dark:bg-slate-900/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-slate-200 hover:border-slate-300 dark:hover:border-slate-700'
                 }`}
               >
                 Prompt {pid}
@@ -207,28 +211,28 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
         </div>
 
         {/* Model Metrics Status Banner */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
           <div>
-            <div className="text-slate-400 text-[11px]">Best Checkpoint</div>
-            <div className="font-mono font-bold text-white flex items-center gap-1">
+            <div className="text-slate-500 dark:text-slate-400 text-[11px]">Best Checkpoint</div>
+            <div className="font-mono font-bold text-slate-900 dark:text-white flex items-center gap-1">
               Step {bestPoint?.step ?? '—'}
             </div>
           </div>
           <div>
-            <div className="text-slate-400 text-[11px]">Best Val Loss</div>
-            <div className="font-mono font-bold text-purple-400">
+            <div className="text-slate-500 dark:text-slate-400 text-[11px]">Best Val Loss</div>
+            <div className="font-mono font-bold text-purple-600 dark:text-purple-400">
               {bestPoint?.val_loss?.toFixed(4) ?? '—'}
             </div>
           </div>
           <div>
-            <div className="text-slate-400 text-[11px]">Final Train Loss</div>
-            <div className="font-mono font-bold text-sky-400">
+            <div className="text-slate-500 dark:text-slate-400 text-[11px]">Final Train Loss</div>
+            <div className="font-mono font-bold text-sky-600 dark:text-sky-400">
               {latestPoint?.train_loss?.toFixed(4) ?? '—'}
             </div>
           </div>
           <div>
-            <div className="text-slate-400 text-[11px]">Overfitting Gap</div>
-            <div className="font-mono font-bold text-emerald-400">
+            <div className="text-slate-500 dark:text-slate-400 text-[11px]">Overfitting Gap</div>
+            <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
               +{gap.toFixed(4)}
             </div>
           </div>
@@ -241,20 +245,22 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                 data={currentPoints}
                 margin={{ top: 12, right: 12, left: -10, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#1E293B" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#1E293B' : '#E2E8F0'} vertical={false} />
                 <XAxis
                   dataKey="step"
-                  stroke="#64748B"
+                  stroke={isDark ? '#64748B' : '#94A3B8'}
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#334155' }}
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B' }}
+                  axisLine={{ stroke: isDark ? '#334155' : '#CBD5E1' }}
                   tickFormatter={(val) => `${val}`}
                 />
                 <YAxis
-                  stroke="#64748B"
+                  stroke={isDark ? '#64748B' : '#94A3B8'}
                   fontSize={11}
                   tickLine={false}
-                  axisLine={{ stroke: '#334155' }}
+                  tick={{ fill: isDark ? '#94A3B8' : '#64748B' }}
+                  axisLine={{ stroke: isDark ? '#334155' : '#CBD5E1' }}
                   domain={['auto', 'auto']}
                   tickFormatter={(val) => val.toFixed(2)}
                 />
@@ -265,7 +271,7 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                   height={32}
                   wrapperStyle={{ fontSize: '11px', paddingBottom: '8px' }}
                   formatter={(value) => (
-                    <span className="text-slate-300 font-medium">{value}</span>
+                    <span className="text-slate-700 dark:text-slate-300 font-medium">{value}</span>
                   )}
                 />
                 <Line
@@ -276,6 +282,9 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                   strokeWidth={2.5}
                   dot={{ r: 3, fill: '#0EA5E9', strokeWidth: 0 }}
                   activeDot={{ r: 5, stroke: '#38BDF8', strokeWidth: 2 }}
+                  isAnimationActive={!prefersReducedMotion}
+                  animationDuration={300}
+                  animationEasing="ease-out"
                 />
                 <Line
                   name="Validation Loss"
@@ -285,6 +294,9 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                   strokeWidth={2.5}
                   dot={{ r: 3, fill: '#8B5CF6', strokeWidth: 0 }}
                   activeDot={{ r: 5, stroke: '#A78BFA', strokeWidth: 2 }}
+                  isAnimationActive={!prefersReducedMotion}
+                  animationDuration={300}
+                  animationEasing="ease-out"
                 />
                 {bestPoint && bestPoint.val_loss && (
                   <ReferenceDot
@@ -292,7 +304,7 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                     y={bestPoint.val_loss}
                     r={6}
                     fill="#C084FC"
-                    stroke="#1E1B4B"
+                    stroke={isDark ? '#1E1B4B' : '#FFFFFF'}
                     strokeWidth={2}
                   />
                 )}
@@ -301,9 +313,9 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
           </div>
         ) : (
           /* Accessible Text / Table Alternative */
-          <div className="overflow-x-auto rounded-xl border border-slate-800">
-            <table className="w-full text-left text-xs text-slate-300">
-              <thead className="bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-400 border-b border-slate-800 font-semibold">
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/60">
+            <table className="w-full text-left text-xs text-slate-700 dark:text-slate-300">
+              <thead className="bg-slate-50 dark:bg-slate-900/80 text-[11px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-semibold">
                 <tr>
                   <th scope="col" className="py-2.5 px-3">Step</th>
                   <th scope="col" className="py-2.5 px-3 text-right">Train Loss</th>
@@ -313,7 +325,7 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                   <th scope="col" className="py-2.5 px-3 text-center">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-mono">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
                 {currentPoints.map((row) => {
                   const train = row.train_loss ?? 0;
                   const val = row.val_loss ?? 0;
@@ -323,36 +335,36 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
                   return (
                     <tr
                       key={row.step}
-                      className={`hover:bg-slate-800/40 transition-colors ${
-                        isBest ? 'bg-purple-950/20' : ''
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors ${
+                        isBest ? 'bg-purple-50/50 dark:bg-purple-950/20' : ''
                       }`}
                     >
-                      <td className="py-2.5 px-3 font-medium text-white flex items-center gap-1.5">
+                      <td className="py-2.5 px-3 font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
                         <span>{row.step}</span>
                         {isBest && (
-                          <Badge variant="outline" className="text-[10px] bg-purple-500/20 text-purple-300 border-purple-500/30">
+                          <Badge variant="outline" className="text-[10px] bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-500/30">
                             Best
                           </Badge>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-sky-400 font-semibold">
+                      <td className="py-2.5 px-3 text-right text-sky-600 dark:text-sky-400 font-semibold">
                         {train.toFixed(4)}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-purple-400 font-bold">
+                      <td className="py-2.5 px-3 text-right text-purple-600 dark:text-purple-400 font-bold">
                         {val.toFixed(4)}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-slate-300">
+                      <td className="py-2.5 px-3 text-right text-slate-700 dark:text-slate-300">
                         +{diff.toFixed(4)}
                       </td>
-                      <td className="py-2.5 px-3 text-right text-slate-400">
+                      <td className="py-2.5 px-3 text-right text-slate-500 dark:text-slate-400">
                         {row.learning_rate ? String(row.learning_rate) : '2e-5'}
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-sans font-semibold ${
                             diff <= 0.05
-                              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                              ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/20'
+                              : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-500/20'
                           }`}
                         >
                           {diff <= 0.05 ? 'Optimal' : 'Slight Gap'}
@@ -366,7 +378,7 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800/60">
+        <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800/60">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-500 inline-block" />
@@ -383,3 +395,6 @@ export const LossCurvesChart: React.FC<LossCurvesChartProps> = ({
     </Card>
   );
 };
+
+export const LossCurvesChart = React.memo(LossCurvesChartComponent);
+export default LossCurvesChart;

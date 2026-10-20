@@ -231,6 +231,20 @@
   --role-viewer-bg:     rgba(100, 116, 139, 0.1);
   --role-viewer-text:   #334155;
   --role-viewer-border: rgba(100, 116, 139, 0.3);
+
+  /* ==========================================================================
+     9. MOTION & ANIMATION TOKENS (PROMPT 18)
+     Consistent 150-300ms durations with cubic ease-out deceleration
+     ========================================================================== */
+  --motion-duration-fast:     150ms; /* Button press, toggle switch, tooltip */
+  --motion-duration-normal:   200ms; /* Page enter, modal scale, toast slide */
+  --motion-duration-moderate: 250ms; /* Drawer slide-over, accordion expand */
+  --motion-duration-slow:     300ms; /* Score count-up, chart draw-in */
+
+  --motion-ease-out:    cubic-bezier(0.16, 1, 0.3, 1); /* Decelerate into view */
+  --motion-ease-in:     cubic-bezier(0.7, 0, 0.84, 0);  /* Accelerate away */
+  --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);   /* Smooth morph */
+  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* Micro tactile pop */
 }
 
 /* ==========================================================================
@@ -311,3 +325,147 @@
   --shadow-xl:    0 20px 25px -5px rgb(0 0 0 / 0.65), 0 8px 10px -6px rgb(0 0 0 / 0.6);
   --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.45);
 }
+
+/* ==========================================================================
+   10. KEYFRAME ANIMATIONS & PURPOSEFUL MOTION CLASSES (PROMPT 18)
+   Subtle, purposeful motion (150-300ms) with consistent easing
+   ========================================================================== */
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes modalBackdropIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes modalCardIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes drawerRightIn {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawerLeftIn {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes drawerBottomIn {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes toastSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateX(1rem) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Purposeful Motion Utilities */
+.animate-page-enter {
+  animation: pageEnter var(--motion-duration-normal) var(--motion-ease-out) both;
+}
+
+.animate-backdrop-in {
+  animation: modalBackdropIn var(--motion-duration-fast) var(--motion-ease-out) both;
+}
+
+.animate-modal-in {
+  animation: modalCardIn var(--motion-duration-normal) var(--motion-ease-out) both;
+}
+
+.animate-drawer-right-in {
+  animation: drawerRightIn var(--motion-duration-moderate) var(--motion-ease-out) both;
+}
+
+.animate-drawer-left-in {
+  animation: drawerLeftIn var(--motion-duration-moderate) var(--motion-ease-out) both;
+}
+
+.animate-drawer-bottom-in {
+  animation: drawerBottomIn var(--motion-duration-moderate) var(--motion-ease-out) both;
+}
+
+.animate-toast-slide-in {
+  animation: toastSlideIn var(--motion-duration-normal) var(--motion-ease-out) both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(226, 232, 240, 0.4) 0%,
+    rgba(241, 245, 249, 0.9) 50%,
+    rgba(226, 232, 240, 0.4) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.8s infinite linear;
+}
+
+.dark .animate-shimmer,
+[data-theme="dark"] .animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(30, 41, 59, 0.4) 0%,
+    rgba(51, 65, 85, 0.8) 50%,
+    rgba(30, 41, 59, 0.4) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.8s infinite linear;
+}
+
+/* Tactile button press */
+.btn-press {
+  transition: transform var(--motion-duration-fast) var(--motion-ease-out);
+}
+.btn-press:active {
+  transform: scale(0.98);
+}
+

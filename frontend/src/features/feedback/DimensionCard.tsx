@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { DimensionScoreDetail } from '../../api';
 import { DimensionKey } from '../scoring/ControlRail';
+import { ContextHelp } from '../../components/ui';
 import {
   PenTool,
   Layers,
@@ -32,7 +33,7 @@ export interface FeedbackItem {
 }
 
 // WHY: Expandable dimension card featuring radial/bar sub-score gauge, synthesized one-line summary, and severity-sorted feedback items.
-export const DimensionCard: React.FC<DimensionCardProps> = ({
+const DimensionCardComponent: React.FC<DimensionCardProps> = ({
   dimension,
   dimKey,
   isVisible,
@@ -57,16 +58,16 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
         return {
           title: 'Grammar & Mechanics',
           icon: PenTool,
-          iconColor: 'text-rose-400',
-          iconBg: 'bg-rose-500/10 border-rose-500/20',
+          iconColor: 'text-rose-600 dark:text-rose-400',
+          iconBg: 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/20',
           borderActive: 'border-l-4 border-l-rose-500',
         };
       case 'coherence':
         return {
           title: 'Coherence & Organization',
           icon: Layers,
-          iconColor: 'text-amber-400',
-          iconBg: 'bg-amber-500/10 border-amber-500/20',
+          iconColor: 'text-amber-600 dark:text-amber-400',
+          iconBg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20',
           borderActive: 'border-l-4 border-l-amber-500',
         };
       case 'argumentation':
@@ -74,8 +75,8 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
         return {
           title: 'Argumentation & Evidence',
           icon: Scale,
-          iconColor: 'text-emerald-400',
-          iconBg: 'bg-emerald-500/10 border-emerald-500/20',
+          iconColor: 'text-emerald-600 dark:text-emerald-400',
+          iconBg: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20',
           borderActive: 'border-l-4 border-l-emerald-500',
         };
     }
@@ -86,19 +87,19 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
     if (normalized < 0.35) {
       return {
         label: 'High Priority',
-        badgeClass: 'bg-rose-500/15 text-rose-300 border-rose-500/40',
+        badgeClass: 'bg-rose-100 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-500/40',
         strokeColor: '#f43f5e',
       };
     } else if (normalized < 0.70) {
       return {
         label: 'Moderate',
-        badgeClass: 'bg-amber-500/15 text-amber-300 border-amber-500/40',
+        badgeClass: 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/40',
         strokeColor: '#f59e0b',
       };
     } else {
       return {
         label: 'Proficient',
-        badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40',
+        badgeClass: 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/40',
         strokeColor: '#10b981',
       };
     }
@@ -131,7 +132,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
       const lower = sentence.toLowerCase();
       let severity: 'high' | 'moderate' | 'proficient' = 'moderate';
       let chipLabel = 'Moderate';
-      let chipClass = 'bg-amber-500/15 text-amber-300 border-amber-500/40';
+      let chipClass = 'bg-amber-100 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-500/40';
       let category = 'Growth Area';
 
       if (
@@ -147,7 +148,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
       ) {
         severity = 'high';
         chipLabel = 'High Priority';
-        chipClass = 'bg-rose-500/15 text-rose-300 border-rose-500/40';
+        chipClass = 'bg-rose-100 dark:bg-rose-500/15 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-500/40';
         category = 'Priority Fix';
       } else if (
         lower.includes('exemplary') ||
@@ -159,7 +160,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
       ) {
         severity = 'proficient';
         chipLabel = 'Proficient';
-        chipClass = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40';
+        chipClass = 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-500/40';
         category = 'Strength';
       }
 
@@ -208,7 +209,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
       }`}
     >
       <div
-        className={`bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-md transition-all hover:border-slate-700/80 ${
+        className={`bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-md transition-all hover:border-slate-300 dark:hover:border-slate-700/80 ${
           meta.borderActive
         }`}
       >
@@ -230,7 +231,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
               if (onSelectDimension) onSelectDimension(dimKey);
             }
           }}
-          className="p-4 cursor-pointer select-none flex items-start justify-between gap-3 bg-slate-900/60 hover:bg-slate-800/40 transition-colors"
+          className="p-4 cursor-pointer select-none flex items-start justify-between gap-3 bg-slate-50/80 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800/40 transition-colors"
         >
           {/* Left: Icon + Title + One-line Summary */}
           <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -242,9 +243,10 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
 
             <div className="min-w-0 flex-1 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-white">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
                   {meta.title}
                 </h4>
+                <ContextHelp topic={dimKey} position="bottom" />
                 <span
                   className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${severityBadge.badgeClass}`}
                 >
@@ -253,7 +255,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
               </div>
 
               {/* One-Line Summary */}
-              <p className="text-xs text-slate-300 leading-snug line-clamp-2 font-sans pr-2">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-snug line-clamp-2 font-sans pr-2">
                 {oneLineSummary}
               </p>
             </div>
@@ -272,7 +274,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
                     r={circleR}
                     stroke="currentColor"
                     strokeWidth="3"
-                    className="text-slate-800"
+                    className="text-slate-200 dark:text-slate-800"
                     fill="none"
                   />
                   {/* Progress Circle */}
@@ -289,13 +291,13 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
                     fill="none"
                   />
                 </svg>
-                <span className="absolute font-mono text-[9px] font-bold text-white">
+                <span className="absolute font-mono text-[9px] font-bold text-slate-900 dark:text-white">
                   {percent}%
                 </span>
               </div>
 
               <div className="text-right">
-                <div className="font-mono text-xs font-black text-white">
+                <div className="font-mono text-xs font-black text-slate-900 dark:text-white">
                   {currentScore.toFixed(1)}
                 </div>
                 <div className="text-[10px] font-mono text-slate-500">
@@ -306,7 +308,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
 
             {/* Expand / Collapse Chevron */}
             <div
-              className={`p-1 text-slate-400 hover:text-white rounded transition-transform duration-200 ${
+              className={`p-1 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded transition-transform duration-200 ${
                 isExpanded ? 'rotate-180' : 'rotate-0'
               }`}
             >
@@ -316,7 +318,7 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
         </div>
 
         {/* Small Horizontal Gauge Bar right under header */}
-        <div className="h-1 w-full bg-slate-800/80 overflow-hidden">
+        <div className="h-1 w-full bg-slate-100 dark:bg-slate-800/80 overflow-hidden">
           <div
             className="h-full transition-all duration-500 ease-out"
             style={{
@@ -327,70 +329,77 @@ export const DimensionCard: React.FC<DimensionCardProps> = ({
         </div>
 
         {/* ===================================================================
-            EXPANDED CONTENT: Feedback items sorted by severity with chips
+            EXPANDED CONTENT: Feedback items sorted by severity with chips (CSS Grid Accordion)
             =================================================================== */}
-        {isExpanded && (
-          <div className="p-4 pt-3 border-t border-slate-800/70 bg-slate-950/50 space-y-3 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800/50">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Diagnostic Observations ({feedbackItems.length})
-              </span>
-              <span className="text-[10px] font-mono text-slate-500">Sorted by Severity</span>
-            </div>
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-250 ease-out ${
+            isExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="p-4 pt-3 border-t border-slate-200 dark:border-slate-800/70 bg-slate-50/50 dark:bg-slate-950/50 space-y-3">
+              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pb-1 border-b border-slate-200 dark:border-slate-800/50">
+                <span className="font-semibold uppercase tracking-wider text-[10px]">
+                  Diagnostic Observations ({feedbackItems.length})
+                </span>
+                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500">Sorted by Severity</span>
+              </div>
 
-            <div className="space-y-2.5">
-              {feedbackItems.map((item) => {
-                let SeverityIcon = AlertTriangle;
-                if (item.severity === 'high') SeverityIcon = AlertCircle;
-                else if (item.severity === 'proficient') SeverityIcon = CheckCircle2;
+              <div className="space-y-2.5">
+                {feedbackItems.map((item) => {
+                  let SeverityIcon = AlertTriangle;
+                  if (item.severity === 'high') SeverityIcon = AlertCircle;
+                  else if (item.severity === 'proficient') SeverityIcon = CheckCircle2;
 
-                return (
-                  <div
-                    key={item.id}
-                    className="p-3 rounded-lg bg-slate-900/80 border border-slate-800/80 text-xs space-y-1.5 transition-colors hover:border-slate-700/80"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <SeverityIcon className="w-3.5 h-3.5 text-slate-400" />
-                        <span className="font-bold text-[11px] text-slate-200">
-                          {item.category}
+                  return (
+                    <div
+                      key={item.id}
+                      className="p-3 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800/80 text-xs space-y-1.5 transition-colors hover:border-slate-300 dark:hover:border-slate-700/80 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <SeverityIcon className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="font-bold text-[11px] text-slate-800 dark:text-slate-200">
+                            {item.category}
+                          </span>
+                        </div>
+                        <span
+                          className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${item.chipClass}`}
+                        >
+                          {item.chipLabel}
                         </span>
                       </div>
-                      <span
-                        className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${item.chipClass}`}
-                      >
-                        {item.chipLabel}
-                      </span>
+
+                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed font-sans pl-5">
+                        {item.text}
+                      </p>
+
+                      {onSelectDimension && (
+                        <div className="flex justify-end pt-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectDimension(dimKey);
+                            }}
+                            className="text-[10px] text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition flex items-center gap-1"
+                          >
+                            <span>Locate in essay</span>
+                            <span>&rarr;</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
-
-                    <p className="text-slate-300 leading-relaxed font-sans pl-5">
-                      {item.text}
-                    </p>
-
-                    {onSelectDimension && (
-                      <div className="flex justify-end pt-0.5">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectDimension(dimKey);
-                          }}
-                          className="text-[10px] text-primary-400 hover:text-primary-300 font-semibold transition flex items-center gap-1"
-                        >
-                          <span>Locate in essay</span>
-                          <span>&rarr;</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
 };
 
+export const DimensionCard = React.memo(DimensionCardComponent);
 export default DimensionCard;

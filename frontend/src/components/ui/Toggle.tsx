@@ -63,10 +63,10 @@ export const Toggle: React.FC<ToggleProps> = ({
         onClick={() => !disabled && onChange(!checked)}
         onKeyDown={handleKeyDown}
         className={`relative inline-flex shrink-0 items-center rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer
-          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900
           disabled:opacity-50 disabled:cursor-not-allowed
           ${styles.track}
-          ${checked ? 'bg-primary-600' : 'bg-slate-700'}`}
+          ${checked ? 'bg-primary-600' : 'bg-slate-300 dark:bg-slate-700'}`}
       >
         <span
           aria-hidden="true"
@@ -82,12 +82,12 @@ export const Toggle: React.FC<ToggleProps> = ({
           onClick={() => !disabled && onChange(!checked)}
         >
           {label && (
-            <label htmlFor={toggleId} className="text-xs font-semibold text-slate-200 cursor-pointer">
+            <label htmlFor={toggleId} className="text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
               {label}
             </label>
           )}
           {description && (
-            <p id={descId} className="text-[11px] text-slate-400">
+            <p id={descId} className="text-[11px] text-slate-500 dark:text-slate-400">
               {description}
             </p>
           )}

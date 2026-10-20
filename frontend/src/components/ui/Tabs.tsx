@@ -58,9 +58,9 @@ export const TabList: React.FC<TabListProps> = ({
   if (!context) throw new Error('TabList must be used inside Tabs');
 
   const listStyles = {
-    pills: 'bg-slate-900/90 p-1 border border-slate-800 rounded-xl inline-flex items-center gap-1',
-    underline: 'border-b border-slate-700/80 flex items-center gap-6',
-    bordered: 'border border-slate-700 rounded-lg p-0.5 inline-flex items-center gap-1 bg-slate-900',
+    pills: 'bg-slate-100 dark:bg-slate-900/90 p-1 border border-slate-200 dark:border-slate-800 rounded-xl inline-flex items-center gap-1',
+    underline: 'border-b border-slate-200 dark:border-slate-700/80 flex items-center gap-6',
+    bordered: 'border border-slate-300 dark:border-slate-700 rounded-lg p-0.5 inline-flex items-center gap-1 bg-slate-50 dark:bg-slate-900',
   }[context.variant];
 
   return (
@@ -96,13 +96,13 @@ export const TabTrigger: React.FC<TabTriggerProps> = ({
   const triggerStyles = {
     pills: isSelected
       ? 'bg-primary-600 text-white shadow-sm font-semibold'
-      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 font-medium',
+      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60 font-medium',
     underline: isSelected
-      ? 'border-b-2 border-primary-500 text-primary-400 font-semibold pb-2.5 -mb-[1px]'
-      : 'text-slate-400 hover:text-slate-200 font-medium pb-2.5 border-b-2 border-transparent',
+      ? 'border-b-2 border-primary-500 text-primary-600 dark:text-primary-400 font-semibold pb-2.5 -mb-[1px]'
+      : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium pb-2.5 border-b-2 border-transparent',
     bordered: isSelected
-      ? 'bg-slate-800 text-white font-semibold'
-      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40 font-medium',
+      ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-semibold shadow-sm'
+      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/40 dark:hover:bg-slate-800/40 font-medium',
   }[context.variant];
 
   return (
@@ -114,7 +114,7 @@ export const TabTrigger: React.FC<TabTriggerProps> = ({
       tabIndex={isSelected ? 0 : -1}
       onClick={() => context.setActiveTab(value)}
       className={`inline-flex items-center justify-center gap-2 px-3.5 py-1.5 text-xs rounded-lg transition-all select-none
-        focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 focus-visible:ring-offset-slate-900
+        focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-1 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900
         disabled:opacity-50 disabled:cursor-not-allowed
         ${triggerStyles}
         ${className}`}

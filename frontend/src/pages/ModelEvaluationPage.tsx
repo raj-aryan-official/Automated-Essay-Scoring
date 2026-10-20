@@ -353,10 +353,10 @@ export const ModelEvaluationPage: React.FC = () => {
 
         {/* Detailed Benchmark Prompts Table (satisfies #qwk-table E2E expectation) */}
         <Card>
-          <CardHeader className="pb-3 border-b border-slate-800">
+          <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
             <CardTitle className="text-sm flex items-center justify-between">
               <span>ASAP Prompts Evaluation Matrix</span>
-              <span className="text-xs font-normal text-slate-400">
+              <span className="text-xs font-normal text-slate-500 dark:text-slate-400">
                 Click a prompt row to inspect convergence loss curves
               </span>
             </CardTitle>
@@ -365,7 +365,7 @@ export const ModelEvaluationPage: React.FC = () => {
             <div className="overflow-x-auto">
               <table id="qwk-table" className="w-full text-left text-xs border-collapse">
                 <thead>
-                  <tr className="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                  <tr className="bg-slate-50 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
                     <th className="py-3 px-4">Prompt</th>
                     <th className="py-3 px-4">Genre</th>
                     <th className="py-3 px-4">Rubric Range</th>
@@ -376,7 +376,7 @@ export const ModelEvaluationPage: React.FC = () => {
                     <th className="py-3 px-4 text-right">Gate Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800/60 font-mono">
+                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
                   {qwk_summary.prompts.map((p) => {
                     const delta = p.qwk - (p.target_qwk || qwk_summary.target_qwk);
                     const isSelected = selectedPrompt === p.prompt_id;
@@ -385,11 +385,11 @@ export const ModelEvaluationPage: React.FC = () => {
                       <tr
                         key={p.prompt_id}
                         onClick={() => setSelectedPrompt(p.prompt_id)}
-                        className={`hover:bg-slate-800/50 transition-colors cursor-pointer ${
-                          isSelected ? 'bg-primary-950/40 border-l-2 border-primary-500' : ''
+                        className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
+                          isSelected ? 'bg-primary-50/60 dark:bg-primary-950/40 border-l-2 border-primary-500' : ''
                         }`}
                       >
-                        <td className="py-3 px-4 font-bold text-white flex items-center gap-2">
+                        <td className="py-3 px-4 font-bold text-slate-900 dark:text-white flex items-center gap-2">
                           <span>Prompt {p.prompt_id}</span>
                           {isSelected && (
                             <Badge variant="primary" size="sm" className="text-[10px]">
@@ -397,14 +397,14 @@ export const ModelEvaluationPage: React.FC = () => {
                             </Badge>
                           )}
                         </td>
-                        <td className="py-3 px-4 font-sans capitalize text-slate-300">{p.genre}</td>
-                        <td className="py-3 px-4 text-slate-300">
+                        <td className="py-3 px-4 font-sans capitalize text-slate-700 dark:text-slate-300">{p.genre}</td>
+                        <td className="py-3 px-4 text-slate-700 dark:text-slate-300">
                           [{p.rubric_min}, {p.rubric_max}]
                         </td>
-                        <td className="py-3 px-4 text-slate-400">{p.n_test_samples}</td>
-                        <td className="py-3 px-4 text-amber-400">&ge; {p.target_qwk.toFixed(2)}</td>
-                        <td className="py-3 px-4 font-bold text-emerald-400">{p.qwk.toFixed(4)}</td>
-                        <td className="py-3 px-4 font-bold text-emerald-400">
+                        <td className="py-3 px-4 text-slate-500 dark:text-slate-400">{p.n_test_samples}</td>
+                        <td className="py-3 px-4 text-amber-600 dark:text-amber-400">&ge; {p.target_qwk.toFixed(2)}</td>
+                        <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">{p.qwk.toFixed(4)}</td>
+                        <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">
                           +{delta.toFixed(4)}
                         </td>
                         <td className="py-3 px-4 text-right">

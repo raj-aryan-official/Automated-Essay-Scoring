@@ -90,10 +90,10 @@ const VARIANT_ICONS = {
 };
 
 const VARIANT_CONTAINERS = {
-  success: 'border-emerald-500/30 bg-slate-900/95',
-  error: 'border-rose-500/30 bg-slate-900/95',
-  warning: 'border-amber-500/30 bg-slate-900/95',
-  info: 'border-sky-500/30 bg-slate-900/95',
+  success: 'border-emerald-500/40 bg-white/95 dark:bg-slate-900/95 shadow-lg',
+  error: 'border-rose-500/40 bg-white/95 dark:bg-slate-900/95 shadow-lg',
+  warning: 'border-amber-500/40 bg-white/95 dark:bg-slate-900/95 shadow-lg',
+  info: 'border-sky-500/40 bg-white/95 dark:bg-slate-900/95 shadow-lg',
 };
 
 export const ToastContainer: React.FC<{
@@ -104,22 +104,27 @@ export const ToastContainer: React.FC<{
 
   return (
     <div
+      role="region"
+      aria-label="Notifications"
       aria-live="polite"
+      aria-atomic="false"
       className="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 max-w-sm w-full pointer-events-none"
     >
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto border rounded-xl p-3.5 shadow-2xl backdrop-blur-md flex items-start justify-between gap-3 animate-in slide-in-from-bottom-2 duration-200 ${VARIANT_CONTAINERS[toast.variant]}`}
+          role={toast.variant === 'error' ? 'alert' : 'status'}
+          aria-atomic="true"
+          className={`pointer-events-auto border rounded-xl p-3.5 shadow-2xl backdrop-blur-md flex items-start justify-between gap-3 animate-toast-slide-in ${VARIANT_CONTAINERS[toast.variant]}`}
         >
           <div className="flex items-start gap-2.5">
             {VARIANT_ICONS[toast.variant]}
             <div className="flex flex-col space-y-0.5 pr-2">
-              <span className="text-xs font-semibold text-white tracking-tight">
+              <span className="text-xs font-semibold text-slate-900 dark:text-white tracking-tight">
                 {toast.title}
               </span>
               {toast.message && (
-                <span className="text-[11px] text-slate-400 leading-snug">
+                <span className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
                   {toast.message}
                 </span>
               )}
@@ -129,8 +134,8 @@ export const ToastContainer: React.FC<{
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            aria-label="Dismiss toast"
-            className="text-slate-500 hover:text-slate-300 rounded p-0.5 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+            aria-label={`Dismiss notification: ${toast.title}`}
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-white rounded p-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
           </button>

@@ -35,7 +35,9 @@ import {
   EssayTableSkeleton,
   ModelEvaluationSkeleton,
   ErrorState,
+  ContextHelp,
 } from '../components/ui';
+import { useTour } from '../context/TourContext';
 import {
   Search,
   Sparkles,
@@ -74,11 +76,12 @@ import {
   LossCurvesChart,
   JobStatusDonutChart,
 } from '../features/analytics';
+import { useReducedMotion, useCountUp } from '../hooks';
 
 export const DevComponentsPage: React.FC = () => {
   const toast = useToast();
+  const { openTour } = useTour();
 
-  // Interactive component states
   const [sliderVal, setSliderVal] = React.useState<number>(85);
   const [toggleChecked, setToggleChecked] = React.useState<boolean>(true);
   const [isModalOpen, setIsModalOpen] = React.useState<boolean>(false);
@@ -88,6 +91,12 @@ export const DevComponentsPage: React.FC = () => {
   const [demoHighlights, setDemoHighlights] = React.useState<boolean>(true);
   const [selectedSpanId, setSelectedSpanId] = React.useState<string | null>(null);
   const [showEmptySpans, setShowEmptySpans] = React.useState<boolean>(false);
+
+  // Motion & Microinteraction demo states (Prompt 18)
+  const prefersReducedMotion = useReducedMotion();
+  const [demoCountScore, setDemoCountScore] = React.useState<number>(9.5);
+  const animatedDemoScore = useCountUp(demoCountScore, 2.0, 300);
+  const [demoAccordionExpanded, setDemoAccordionExpanded] = React.useState<boolean>(false);
 
   // Section 15: Async-Job UX states (Prompt 11)
   const [stepperElapsed, setStepperElapsed] = React.useState<number>(4);
@@ -114,17 +123,17 @@ export const DevComponentsPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 space-y-12">
       {/* Header */}
-      <div className="border-b border-slate-800 pb-6 flex items-center justify-between">
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-6 flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-black text-white tracking-tight">
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
               Design System Component Showcase
             </h1>
             <Badge variant="primary" size="md">
               /dev/components
             </Badge>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Typed, accessible, token-driven component library with dark-mode contrast guarantees.
           </p>
         </div>
@@ -132,9 +141,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 1. Buttons */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Layers className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Layers className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             1. Buttons &amp; Loading States
           </h2>
         </div>
@@ -142,7 +151,7 @@ export const DevComponentsPage: React.FC = () => {
         <Card>
           <CardContent className="p-6 space-y-6">
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-3">Variants</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">Variants</p>
               <div className="flex flex-wrap items-center gap-3">
                 <Button variant="primary">Primary Action</Button>
                 <Button variant="secondary">Secondary Action</Button>
@@ -154,7 +163,7 @@ export const DevComponentsPage: React.FC = () => {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-3">Sizes</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">Sizes</p>
               <div className="flex flex-wrap items-center gap-3">
                 <Button size="xs">Extra Small (xs)</Button>
                 <Button size="sm">Small (sm)</Button>
@@ -164,7 +173,7 @@ export const DevComponentsPage: React.FC = () => {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-3">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">
                 Icons &amp; Async Loading
               </p>
               <div className="flex flex-wrap items-center gap-3">
@@ -197,9 +206,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 2. Badges & Score Bands */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Settings className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Settings className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             2. Badges &amp; Strict Score-Band Semantics
           </h2>
         </div>
@@ -207,7 +216,7 @@ export const DevComponentsPage: React.FC = () => {
         <Card>
           <CardContent className="p-6 space-y-6">
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-3">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">
                 Strict Rubric Score Bands (Low = Red, Mid = Amber, High = Green)
               </p>
               <div className="flex flex-wrap items-center gap-3">
@@ -224,7 +233,7 @@ export const DevComponentsPage: React.FC = () => {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-3">Status Badges</p>
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">Status Badges</p>
               <div className="flex flex-wrap items-center gap-3">
                 <Badge variant="primary" withDot>
                   Primary
@@ -250,9 +259,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 3. Form Inputs */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <FileText className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <FileText className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             3. Form Inputs &amp; Controls
           </h2>
         </div>
@@ -334,9 +343,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 4. Interactive Overlays: Modal, Drawer, Tooltips & Toasts */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Sparkles className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Sparkles className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             4. Overlays: Modals, Drawers, Tooltips &amp; Toasts
           </h2>
         </div>
@@ -372,7 +381,7 @@ export const DevComponentsPage: React.FC = () => {
             </div>
 
             <div>
-              <p className="text-xs font-semibold text-slate-400 mb-3">
+              <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-3">
                 Toast Notifications
               </p>
               <div className="flex flex-wrap items-center gap-3">
@@ -434,8 +443,8 @@ export const DevComponentsPage: React.FC = () => {
           }
         >
           <div className="space-y-3">
-            <p className="text-xs text-slate-300">
-              You are overriding the automated BERT score of <strong className="text-amber-400 font-mono">9.42</strong> to <strong className="text-emerald-400 font-mono">10.50</strong> with reason <span className="italic">"Strong thesis cohesion overlooked by grammar penalty"</span>.
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              You are overriding the automated BERT score of <strong className="text-amber-500 dark:text-amber-400 font-mono">9.42</strong> to <strong className="text-emerald-500 dark:text-emerald-400 font-mono">10.50</strong> with reason <span className="italic">&quot;Strong thesis cohesion overlooked by grammar penalty&quot;</span>.
             </p>
           </div>
         </Modal>
@@ -453,27 +462,27 @@ export const DevComponentsPage: React.FC = () => {
             </Button>
           }
         >
-          <div className="space-y-4 text-xs text-slate-300">
-            <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+          <div className="space-y-4 text-xs text-slate-600 dark:text-slate-300">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-white">Grammar &amp; Mechanics</span>
+                <span className="font-semibold text-slate-900 dark:text-white">Grammar &amp; Mechanics</span>
                 <Badge variant="score-mid" size="sm">
                   Subscore: 3.2 / 4.0
                 </Badge>
               </div>
-              <p className="text-slate-400 text-[11px]">
+              <p className="text-slate-500 dark:text-slate-400 text-[11px]">
                 Minor subject-verb agreement issues detected in paragraph 2.
               </p>
             </div>
 
-            <div className="p-3 rounded-lg bg-slate-800/80 border border-slate-700">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-white">Coherence &amp; Structure</span>
+                <span className="font-semibold text-slate-900 dark:text-white">Coherence &amp; Structure</span>
                 <Badge variant="score-high" size="sm">
                   Subscore: 3.8 / 4.0
                 </Badge>
               </div>
-              <p className="text-slate-400 text-[11px]">
+              <p className="text-slate-500 dark:text-slate-400 text-[11px]">
                 Strong transitional phrases connect main argumentation points seamlessly.
               </p>
             </div>
@@ -483,9 +492,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 5. Navigation Tabs */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Layers className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Layers className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             5. Tabs Component
           </h2>
         </div>
@@ -499,13 +508,13 @@ export const DevComponentsPage: React.FC = () => {
                 <TabTrigger value="telemetry">Model Telemetry</TabTrigger>
               </TabList>
 
-              <TabContent value="overview" className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-300">
+              <TabContent value="overview" className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
                 Holistic score analysis and prompt rubric overview tab content.
               </TabContent>
-              <TabContent value="feedback" className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-300">
+              <TabContent value="feedback" className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
                 Detailed linguistic error breakdowns and pedagogical recommendations.
               </TabContent>
-              <TabContent value="telemetry" className="p-4 bg-slate-900/60 rounded-xl border border-slate-800 text-xs text-slate-300">
+              <TabContent value="telemetry" className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
                 Quadratic Weighted Kappa (QWK), loss curves, and worker latency metrics.
               </TabContent>
             </Tabs>
@@ -515,9 +524,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 6. Skeletons, Spinners & Empty State */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <AlertTriangle className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <AlertTriangle className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             6. Skeletons, Spinners &amp; Empty State
           </h2>
         </div>
@@ -565,9 +574,9 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 7. Data Tables */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Layers className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Layers className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             7. Data Table
           </h2>
         </div>
@@ -585,11 +594,11 @@ export const DevComponentsPage: React.FC = () => {
           </TableHeader>
           <TableBody>
             <TableRow>
-              <TableCell className="font-mono text-xs text-primary-400 font-semibold">
+              <TableCell className="font-mono text-xs text-primary-600 dark:text-primary-400 font-semibold">
                 #essay-9412
               </TableCell>
               <TableCell>Prompt 1: Persuasive Letter</TableCell>
-              <TableCell className="font-mono font-bold text-emerald-400">
+              <TableCell className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
                 10.42 / 12.0
               </TableCell>
               <TableCell>
@@ -610,11 +619,11 @@ export const DevComponentsPage: React.FC = () => {
             </TableRow>
 
             <TableRow>
-              <TableCell className="font-mono text-xs text-primary-400 font-semibold">
+              <TableCell className="font-mono text-xs text-primary-600 dark:text-primary-400 font-semibold">
                 #essay-9413
               </TableCell>
               <TableCell>Prompt 2: Censorship Argument</TableCell>
-              <TableCell className="font-mono font-bold text-amber-400">
+              <TableCell className="font-mono font-bold text-amber-600 dark:text-amber-400">
                 3.20 / 6.0
               </TableCell>
               <TableCell>
@@ -635,11 +644,11 @@ export const DevComponentsPage: React.FC = () => {
             </TableRow>
 
             <TableRow>
-              <TableCell className="font-mono text-xs text-primary-400 font-semibold">
+              <TableCell className="font-mono text-xs text-primary-600 dark:text-primary-400 font-semibold">
                 #essay-9414
               </TableCell>
               <TableCell>Prompt 3: Rough Road Ahead</TableCell>
-              <TableCell className="font-mono font-bold text-rose-400">
+              <TableCell className="font-mono font-bold text-rose-600 dark:text-rose-400">
                 0.80 / 3.0
               </TableCell>
               <TableCell>
@@ -664,14 +673,14 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 11. ScoreCard Visualization (Prompt 7) */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Sparkles className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Sparkles className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             11. ScoreCard Visualization (Prompt 7)
           </h2>
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Features animated count-up, &quot;out of &#123;rubric_max&#125;&quot;, segmented rubric bands, confidence meter with plain-words tooltip, and dynamic low-confidence threshold alert.
         </p>
 
@@ -697,14 +706,14 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 12. Dimension Feedback Panels & 3-Axis Radar (Prompt 8) */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Layers className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Layers className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             12. Dimension Feedback Panels &amp; 3-Axis Radar (Prompt 8)
           </h2>
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Features 3-axis radar chart summarizing Grammar, Coherence, and Argumentation, alongside expandable dimension cards with radial gauges, one-line summaries, and severity chips.
         </p>
 
@@ -742,10 +751,10 @@ export const DevComponentsPage: React.FC = () => {
 
       {/* 13. Essay Text Highlighting & Span-Level Feedback (Prompt 9) */}
       <section className="space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2">
           <div className="flex items-center gap-2">
-            <PenTool className="w-4 h-4 text-primary-400" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+            <PenTool className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               13. Essay Text Highlighting &amp; Span-Level Feedback (Prompt 9)
             </h2>
           </div>
@@ -761,11 +770,11 @@ export const DevComponentsPage: React.FC = () => {
           </div>
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Features inline highlighting with wavy underlines (Grammar), soft background (Coherence), and colored side markers (Argumentation). Hover for tooltips, click to inspect, master toggle, visual legend, and graceful zero-span degradation.
         </p>
 
-        <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl">
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl">
           <AnnotatedEssayReader
             rawText={`Technology has irreversibly changed human communication over the past several decades. While proponents argue that handheld smartphones allow immediate connectivity worldwide, empirical evidence suggests that excessive screen time impairs interpersonal empathy.
 
@@ -823,14 +832,14 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
 
       {/* 14. Reviewer Override Panel & Pedagogical Audit Trail (Prompt 10) */}
       <section className="space-y-4">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <ShieldCheck className="w-4 h-4 text-purple-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <ShieldCheck className="w-4 h-4 text-purple-500 dark:text-purple-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             14. Reviewer Override Panel &amp; Pedagogical Audit Trail (Prompt 10)
           </h2>
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Features side-by-side AI vs Override delta indicator, bounded rubric range stepper &amp; slider, mandatory character minimum with quick-select chips, pre-commit confirmation modal, and chronological audit trail timeline.
         </p>
 
@@ -863,21 +872,21 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
 
       {/* 15. Async-Job UX, Scoring Stepper & Layout Skeletons (Prompt 11) */}
       <section className="space-y-6">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Activity className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Activity className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             15. Async-Job UX, Scoring Stepper &amp; Layout Skeletons (Prompt 11)
           </h2>
         </div>
 
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Features 5-step async scoring stepper (Queued &rarr; Processing &rarr; Scoring &rarr; Generating feedback &rarr; Done) driven by job state, elapsed time ticker, friendly step narratives, slow-job &quot;Still working…&quot; fallback with cancel/refresh, and layout-matching skeleton screens.
         </p>
 
         {/* Stepper Test Controls */}
-        <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-xl space-y-4">
+        <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               Simulate Stepper Lifecycle Transitions:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -965,23 +974,23 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Layout-Matching Skeleton Screens (No generic spinners)
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Skeletons match exact content layouts for Score Workspace, Dashboard, Tables, and Model Telemetry.
               </p>
             </div>
 
             {/* Skeleton Switcher */}
-            <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg text-xs">
+            <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">
               <button
                 type="button"
                 onClick={() => setSelectedSkeletonTab('WORKSPACE')}
                 className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
                   selectedSkeletonTab === 'WORKSPACE'
                     ? 'bg-primary-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Score Workspace
@@ -992,7 +1001,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                 className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
                   selectedSkeletonTab === 'DASHBOARD'
                     ? 'bg-primary-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Dashboard
@@ -1003,7 +1012,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                 className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
                   selectedSkeletonTab === 'TABLE'
                     ? 'bg-primary-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Table
@@ -1014,7 +1023,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                 className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
                   selectedSkeletonTab === 'EVALUATION'
                     ? 'bg-primary-600 text-white'
-                    : 'text-slate-400 hover:text-white'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Model Telemetry
@@ -1022,7 +1031,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
             </div>
           </div>
 
-          <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
+          <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-inner">
             {selectedSkeletonTab === 'WORKSPACE' && <ScoreWorkspaceSkeleton />}
             {selectedSkeletonTab === 'DASHBOARD' && <DashboardSkeleton />}
             {selectedSkeletonTab === 'TABLE' && <EssayTableSkeleton />}
@@ -1032,14 +1041,14 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
       </section>
 
       {/* 16. Error, Empty, and Edge-Case States (Prompt 12) */}
-      <section className="space-y-8 pt-6 border-t border-slate-800">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <AlertOctagon className="w-4 h-4 text-rose-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+      <section className="space-y-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <AlertOctagon className="w-4 h-4 text-rose-500 dark:text-rose-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             16. Error, Empty, and Edge-Case States (Prompt 12)
           </h2>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Friendly HTTP error states (401/403/404/413/422/500/Network) with retry, empty states with clear CTAs, global error boundaries, toast notifications, and failed async job diagnostics.
         </p>
 
@@ -1047,15 +1056,15 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 A. Friendly HTTP Status Error Simulator
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Transforms technical HTTP response codes into clear, polite explanations with category icons and recovery actions.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">
               {(['401', '403', '404', '413', '422', '500', 'NETWORK'] as const).map((code) => (
                 <button
                   key={code}
@@ -1064,7 +1073,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                   className={`px-2.5 py-1 rounded text-xs font-semibold transition ${
                     simulatedErrorCode === code
                       ? 'bg-rose-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {code === 'NETWORK' ? 'Network' : code}
@@ -1073,7 +1082,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
             </div>
           </div>
 
-          <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl">
+          <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl">
             <ErrorState
               error={
                 simulatedErrorCode === '401'
@@ -1111,15 +1120,15 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 B. Failed Inference Job Diagnostic View
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 Explains Celery worker crashes, CUDA timeouts, and token limits in plain language with immediate retry options.
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-lg text-xs">
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">
               {(['timeout', 'token_overflow', 'pdf_corrupt', 'cuda_oom'] as const).map((key) => (
                 <button
                   key={key}
@@ -1128,7 +1137,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                   className={`px-2.5 py-1 rounded text-xs font-semibold capitalize transition ${
                     simulatedJobErrorKey === key
                       ? 'bg-amber-600 text-white shadow-sm'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {key.replace('_', ' ')}
@@ -1137,7 +1146,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
             </div>
           </div>
 
-          <div className="p-4 bg-slate-950/70 border border-slate-800 rounded-2xl">
+          <div className="p-4 bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl">
             <FailedJobView
               essayId="essay-demo-failed-job"
               status={
@@ -1167,10 +1176,10 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         {/* 16.C Empty States Showcase */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               C. Canonical Empty States Gallery
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               All empty views feature an illustrative icon, clear pedagogical explanation, and a single primary CTA.
             </p>
           </div>
@@ -1179,7 +1188,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
             <Card>
               <CardContent className="p-6">
                 <EmptyState
-                  icon={<FileText className="w-8 h-8 text-primary-400" />}
+                  icon={<FileText className="w-8 h-8 text-primary-500 dark:text-primary-400" />}
                   title="No essays yet — submit your first"
                   description="Submit an essay to generate automated scoring, multi-dimensional feedback, and confidence telemetry."
                   action={{
@@ -1209,10 +1218,10 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         {/* 16.D Toast Notifications Hub */}
         <div className="space-y-4">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
               D. Toast Notifications Hub
             </h3>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Instant feedback toasts for submission dispatch, scoring completion, reviewer overrides, and errors.
             </p>
           </div>
@@ -1276,27 +1285,27 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
       </section>
 
       {/* 17. Essay Manager List and Search Showcase (Prompt 13) */}
-      <section className="space-y-8 pt-6 border-t border-slate-800">
-        <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
-          <Layers className="w-4 h-4 text-primary-400" />
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300">
+      <section className="space-y-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800/80 pb-2">
+          <Layers className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
             17. Essay Manager List &amp; Search (Prompt 13)
           </h2>
         </div>
-        <p className="text-xs text-slate-400">
+        <p className="text-xs text-slate-500 dark:text-slate-400">
           Sortable, paginated essay table with color-coded status chips, rubric band badges, multi-criteria filters (status, prompt, date range, band), saved URL state, row hover actions, bulk selection with floating action dock, and responsive mobile cards.
         </p>
 
         {/* View mode switcher: Desktop Table vs Mobile Cards */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-slate-300">Layout Preview:</span>
-            <div className="flex items-center p-1 bg-slate-900 border border-slate-800 rounded-lg text-xs">
+            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">Layout Preview:</span>
+            <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg text-xs">
               <button
                 type="button"
                 onClick={() => setDemoViewMode('table')}
                 className={`px-3 py-1 rounded text-xs font-semibold transition ${
-                  demoViewMode === 'table' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white'
+                  demoViewMode === 'table' ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Sortable Table
@@ -1305,7 +1314,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                 type="button"
                 onClick={() => setDemoViewMode('mobile-cards')}
                 className={`px-3 py-1 rounded text-xs font-semibold transition ${
-                  demoViewMode === 'mobile-cards' ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-white'
+                  demoViewMode === 'mobile-cards' ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 Mobile Card View
@@ -1314,7 +1323,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
           </div>
 
           <div className="flex items-center gap-2 text-xs">
-            <span className="text-slate-400">Status Filter:</span>
+            <span className="text-slate-500 dark:text-slate-400">Status Filter:</span>
             <div className="flex items-center gap-1">
               {['ALL', 'SCORED', 'UNDER_REVIEW', 'FINALIZED', 'PROCESSING_FAILED'].map((st) => (
                 <button
@@ -1323,8 +1332,8 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                   onClick={() => setDemoStatusFilter(st)}
                   className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
                     demoStatusFilter === st
-                      ? 'bg-slate-700 text-white'
-                      : 'text-slate-400 hover:text-slate-200'
+                      ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   {st.replace('_', ' ')}
@@ -1590,10 +1599,10 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
               ].map((card) => (
                 <Card key={card.id}>
                   <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
                       <div className="flex items-center gap-2">
-                        <CheckSquare className="w-4 h-4 text-primary-400" />
-                        <span className="font-mono text-xs font-bold text-primary-400">
+                        <CheckSquare className="w-4 h-4 text-primary-500 dark:text-primary-400" />
+                        <span className="font-mono text-xs font-bold text-primary-600 dark:text-primary-400">
                           #{card.id}
                         </span>
                       </div>
@@ -1606,19 +1615,19 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                       </Badge>
                     </div>
 
-                    <div className="font-bold text-white text-xs">{card.prompt}</div>
+                    <div className="font-bold text-slate-900 dark:text-white text-xs">{card.prompt}</div>
 
-                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-900 border border-slate-800 text-xs">
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-xs">
                       <div>
-                        <span className="text-[10px] text-slate-400 block font-semibold">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">
                           Score
                         </span>
-                        <span className="font-mono font-black text-emerald-400">
+                        <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">
                           {card.score}
                         </span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-slate-400 block font-semibold">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-semibold">
                           Band
                         </span>
                         <Badge
@@ -1631,7 +1640,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
                       <span>{card.submitter}</span>
                       <span>{card.date}</span>
                     </div>
@@ -1647,7 +1656,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
 
           {/* Floating Bulk Action Dock Demo */}
           {demoSelectedIds.length > 0 && (
-            <div className="p-3.5 bg-slate-900/95 border border-primary-500/40 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
+            <div className="p-3.5 bg-slate-900 text-white dark:bg-slate-900/95 border border-primary-500/40 rounded-2xl flex flex-wrap items-center justify-between gap-3 shadow-lg">
               <div className="flex items-center gap-2">
                 <span className="w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold font-mono">
                   {demoSelectedIds.length}
@@ -1689,13 +1698,13 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
       </section>
 
       {/* Section 18: Dashboard & Charts Polish (Prompt 14) */}
-      <section className="space-y-8 pt-6 border-t border-slate-800">
+      <section className="space-y-8 pt-6 border-t border-slate-200 dark:border-slate-800">
         <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
             <span>Section 18: Dashboard & Charts Polish (Prompt 14)</span>
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Production-ready telemetry suite: KPI cards with directional trend arrows, per-prompt QWK bar chart with 0.70 reference line, score-band distribution drift view, loss curves with prompt selector, and job-status donut. Every chart includes responsive sizing, design token colors, and an accessible text/table alternative.
           </p>
         </div>
@@ -1703,10 +1712,10 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         {/* 18.1 Top-Row KPI Cards with Trend Arrows */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
               18.1 Top-Row KPI Cards with Trend Arrows
             </h3>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
               Variant color accents: Emerald, Primary, Sky, Amber
             </span>
           </div>
@@ -1769,7 +1778,7 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         {/* 18.2 Per-Prompt QWK Bar Chart with 0.70 Target Reference Line */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
               18.2 Per-Prompt QWK Bar Chart (0.70 Target Reference Line + Table Alternative)
             </h3>
             <Badge variant="success" size="sm" withDot>
@@ -1795,14 +1804,14 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
         {/* 18.3 Score-Band Distribution Drift View vs ASAP Baseline & Job-Status Donut */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
               18.3 Score-Band Distribution vs. ASAP Baseline (Drift View)
             </h3>
             <ScoreBandDriftChart selectedPrompt="all" />
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
               18.4 Job-Status Donut (Async Worker Queue Breakdown)
             </h3>
             <JobStatusDonutChart
@@ -1820,10 +1829,394 @@ Furthermore, society frequently overlooks the psychological toll on adolescent c
 
         {/* 18.5 Loss Curves with Prompt Selector (P1 to P8) */}
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-slate-200 uppercase tracking-wider">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
             18.5 Loss Curves with Prompt Selector & Checkpoint Tracker
           </h3>
           <LossCurvesChart initialPromptId={1} />
+        </div>
+      </section>
+
+      {/* Section 19: Microinteractions and Purposeful Motion (Prompt 18) */}
+      <section className="space-y-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-500 dark:text-indigo-400" />
+              <span>Section 19: Microinteractions & Purposeful Motion (Prompt 18)</span>
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              Purposeful motion design tokens: 150–300 ms durations, cubic ease-out acceleration curves, non-blocking click targets, and 100% disabled under <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-mono">prefers-reduced-motion</code>.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Reduced Motion:</span>
+            <Badge
+              variant={prefersReducedMotion ? 'warning' : 'default'}
+              className={
+                prefersReducedMotion
+                  ? 'bg-amber-100 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-500/30'
+                  : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-500/30'
+              }
+            >
+              {prefersReducedMotion ? 'Active (Animations Zeroed)' : 'Standard (150–300ms Active)'}
+            </Badge>
+          </div>
+        </div>
+
+        {/* 19.1 Motion Token Palette Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4 space-y-1.5">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">150 ms (Fast)</span>
+              <div className="font-mono font-bold text-sm text-slate-800 dark:text-slate-200">--motion-duration-fast</div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Button press feedback, toggle switches, tooltips</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 space-y-1.5">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">200 ms (Normal)</span>
+              <div className="font-mono font-bold text-sm text-slate-800 dark:text-slate-200">--motion-duration-normal</div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Page enter transitions, modal scaling, toast slide-in</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 space-y-1.5">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">250 ms (Moderate)</span>
+              <div className="font-mono font-bold text-sm text-slate-800 dark:text-slate-200">--motion-duration-moderate</div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Slide-over drawer panels, accordion expand/collapse</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4 space-y-1.5">
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">300 ms (Slow)</span>
+              <div className="font-mono font-bold text-sm text-slate-800 dark:text-slate-200">--motion-duration-slow</div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Score numeric count-up, SVG and Recharts draw-in</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 19.2 Interactive Motion Demonstrators */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Demo 1: Score Count-Up */}
+          <Card>
+            <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>1. Score Count-Up (300ms Ease-Out)</span>
+                <span className="text-xs font-mono text-primary-600 dark:text-primary-400">useCountUp()</span>
+              </CardTitle>
+              <CardDescription>
+                Simulates real-time holistic essay score resolution with non-blocking cubic ease-out interpolation.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                <div>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Interpolated Output</span>
+                  <span className="text-4xl font-black font-mono text-slate-900 dark:text-white">
+                    {animatedDemoScore.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-slate-500 ml-2">/ 12.0 pts</span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDemoCountScore(Math.round((Math.random() * 8 + 4) * 10) / 10)}
+                  >
+                    Randomize Score
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Demo 2: Tactile Button Press Feedback */}
+          <Card>
+            <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>2. Tactile Button Press (150ms)</span>
+                <span className="text-xs font-mono text-primary-600 dark:text-primary-400">active:scale-[0.98]</span>
+              </CardTitle>
+              <CardDescription>
+                Zero-delay tactile micro-compression gives instant sensory acknowledgment on click/tap.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="primary">Primary Press</Button>
+                <Button variant="secondary">Secondary Press</Button>
+                <Button variant="outline">Outline Press</Button>
+                <Button variant="danger">Danger Press</Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Demo 3: Accordion Expand & Collapse */}
+          <Card>
+            <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>3. Accordion Expand (250ms CSS Grid)</span>
+                <span className="text-xs font-mono text-primary-600 dark:text-primary-400">grid-rows-[0fr&rarr;1fr]</span>
+              </CardTitle>
+              <CardDescription>
+                Smooth height interpolation without measuring DOM elements or causing layout jumps.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900">
+                <button
+                  type="button"
+                  onClick={() => setDemoAccordionExpanded(!demoAccordionExpanded)}
+                  className="w-full p-4 flex items-center justify-between bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <span className="font-semibold text-sm text-slate-800 dark:text-slate-200">
+                    Rubric Alignment Diagnostic Details
+                  </span>
+                  <span className="text-xs font-mono text-primary-600 dark:text-primary-400">
+                    {demoAccordionExpanded ? 'Collapse ▲' : 'Expand ▼'}
+                  </span>
+                </button>
+                <div
+                  className={`grid transition-[grid-template-rows,opacity] duration-250 ease-out ${
+                    demoAccordionExpanded ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'
+                  }`}
+                >
+                  <div className="overflow-hidden">
+                    <div className="p-4 text-xs text-slate-600 dark:text-slate-300 border-t border-slate-200 dark:border-slate-800 space-y-2">
+                      <p>• Coherence and organizational thesis statement is clearly established in paragraph 1.</p>
+                      <p>• Evidence density is strong with 4 citations cross-referenced to historical documents.</p>
+                      <p>• Sentence variation shows high syntactic maturity across complex clauses.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Demo 4: Skeleton Shimmer vs Static */}
+          <Card>
+            <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
+              <CardTitle className="text-base flex items-center justify-between">
+                <span>4. Skeleton Shimmer</span>
+                <span className="text-xs font-mono text-primary-600 dark:text-primary-400">.animate-shimmer</span>
+              </CardTitle>
+              <CardDescription>
+                Continuous gradient wave indicating asynchronous background scoring without content jumps.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+                <Skeleton width="60%" height={16} />
+                <Skeleton width="90%" height={12} />
+                <Skeleton width="75%" height={12} />
+                <div className="flex gap-2 pt-2">
+                  <Skeleton width={80} height={28} className="rounded-md" />
+                  <Skeleton width={100} height={28} className="rounded-md" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 19.3 Overlay Modals & Drawers and Toasts Trigger Bar */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+              Overlay &amp; Notification Motion Controls
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Test animate-modal-in (200ms), animate-drawer-in (250ms), and animate-toast-slide-in (200ms).
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setDrawerPosition('right');
+                setIsDrawerOpen(true);
+              }}
+            >
+              Open Right Drawer
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setDrawerPosition('left');
+                setIsDrawerOpen(true);
+              }}
+            >
+              Open Left Drawer
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setDrawerPosition('bottom');
+                setIsDrawerOpen(true);
+              }}
+            >
+              Open Bottom Drawer
+            </Button>
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => setIsModalOpen(true)}
+            >
+              Open Modal Dialog
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => toast.success('Score calibrated', 'Automated rubric score computed in 240ms.')}
+            >
+              Trigger Slide Toast
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 20: Onboarding, Help & Guidance (Prompt 19) */}
+      <section className="space-y-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <HelpCircle className="w-5 h-5 text-sky-500 dark:text-sky-400" />
+              <span>Section 20: Onboarding, Help &amp; Guidance (Prompt 19)</span>
+            </h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+              First-run teacher guidance suite: 4-step modal product tour, contextual &apos;?&apos; tooltips with plain-language definitions, searchable FAQ knowledge base (/help), and 1-click sample essay presets.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="primary"
+              onClick={() => openTour(0)}
+              leftIcon={<Sparkles className="w-4 h-4" />}
+            >
+              Launch Product Tour
+            </Button>
+          </div>
+        </div>
+
+        {/* 20.1 Contextual Help Tooltips Matrix */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+              20.1 Contextual &apos;?&apos; Help Tooltip Components
+            </h3>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+              Hover or click any &apos;?&apos; to view plain-language definitions
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Confidence Metric</span>
+                  <ContextHelp topic="confidence" position="bottom" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Explains statistical certainty distance from training distributions and when to trigger overrides.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Quadratic Weighted Kappa (QWK)</span>
+                  <ContextHelp topic="qwk" position="bottom" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Explains human-machine agreement standards and the significance of the 0.70 acceptance gate.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Rubric Performance Band</span>
+                  <ContextHelp topic="rubricBand" position="bottom" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Explains mapping from raw regression scores into qualitative proficiency tiers.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Grammar &amp; Mechanics</span>
+                  <ContextHelp topic="grammar" position="bottom" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Explains syntactic evaluation, run-ons, comma splices, and typographical conventions.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Coherence &amp; Organization</span>
+                  <ContextHelp topic="coherence" position="bottom" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Explains discourse structure, transitional connectivity, and thesis continuity.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">Argumentation &amp; Evidence</span>
+                  <ContextHelp topic="argumentation" position="bottom" />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Explains reasoning depth, claim elaboration, counterarguments, and citation evidence.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* 20.2 Tour Step Jump Station & Help Page Link */}
+        <div className="p-6 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+              Product Tour Jump Station &amp; Documentation
+            </h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Jump directly to any specific step of the tour or visit the dedicated Help &amp; FAQ knowledge base.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => openTour(0)}>
+              Step 1: Submit
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => openTour(1)}>
+              Step 2: Score
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => openTour(2)}>
+              Step 3: Feedback
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => openTour(3)}>
+              Step 4: Override
+            </Button>
+          </div>
         </div>
       </section>
     </div>

@@ -242,17 +242,17 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-                <FileText className="w-4 h-4 text-primary-400" />
+              <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <FileText className="w-4 h-4 text-primary-500 dark:text-primary-400" />
                 <span>Recent Submissions</span>
               </h2>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Latest essays processed by the automated scoring engine.
               </p>
             </div>
             <Link
               to="/essays"
-              className="text-xs text-primary-400 hover:text-primary-300 font-semibold flex items-center gap-1 transition-colors"
+              className="text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 font-semibold flex items-center gap-1 transition-colors"
             >
               <span>View All Essays</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -264,7 +264,7 @@ export const DashboardPage: React.FC = () => {
               {recentEssays.length === 0 ? (
                 <div className="p-8">
                   <EmptyState
-                    icon={<FileText className="w-8 h-8 text-slate-500" />}
+                    icon={<FileText className="w-8 h-8 text-slate-400 dark:text-slate-500" />}
                     title="No essays submitted yet"
                     description="Submit your first essay to view automated scores and multi-dimensional feedback."
                     action={{
@@ -277,7 +277,7 @@ export const DashboardPage: React.FC = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
-                      <tr className="bg-slate-900/80 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
+                      <tr className="bg-slate-50 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] tracking-wider font-semibold">
                         <th className="py-3 px-4">Essay ID</th>
                         <th className="py-3 px-4">Prompt</th>
                         <th className="py-3 px-4">Source</th>
@@ -286,7 +286,7 @@ export const DashboardPage: React.FC = () => {
                         <th className="py-3 px-4 text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60 font-mono">
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
                       {recentEssays.map((essay) => {
                         const isScored = essay.status === 'SCORED' || essay.status === 'COMPLETED';
                         const isProcessing = essay.status === 'PROCESSING' || essay.status === 'QUEUED';
@@ -294,16 +294,16 @@ export const DashboardPage: React.FC = () => {
                         return (
                           <tr
                             key={essay.id}
-                            className="hover:bg-slate-800/40 transition-colors cursor-pointer group"
-                            onClick={() => navigate(`/essays/${essay.id}/score`)}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer group"
+                            onClick={() => navigate(`/essays/${essay.id}`)}
                           >
-                            <td className="py-3 px-4 font-bold text-white group-hover:text-primary-400 transition-colors">
+                            <td className="py-3 px-4 font-bold text-slate-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
                               #{essay.id.slice(0, 8)}
                             </td>
-                            <td className="py-3 px-4 font-sans text-slate-300">
+                            <td className="py-3 px-4 font-sans text-slate-700 dark:text-slate-300">
                               Prompt {essay.prompt_id}
                             </td>
-                            <td className="py-3 px-4 font-sans text-slate-400 uppercase text-[10px]">
+                            <td className="py-3 px-4 font-sans text-slate-500 dark:text-slate-400 uppercase text-[10px]">
                               {essay.source_type}
                             </td>
                             <td className="py-3 px-4">
@@ -323,11 +323,11 @@ export const DashboardPage: React.FC = () => {
                                 {essay.status}
                               </Badge>
                             </td>
-                            <td className="py-3 px-4 text-slate-400 font-sans text-[11px]">
+                            <td className="py-3 px-4 text-slate-500 dark:text-slate-400 font-sans text-[11px]">
                               {new Date(essay.created_at).toLocaleDateString()}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <span className="inline-flex items-center gap-1 text-primary-400 group-hover:text-primary-300 font-sans font-semibold text-xs">
+                              <span className="inline-flex items-center gap-1 text-primary-600 dark:text-primary-400 group-hover:text-primary-700 dark:group-hover:text-primary-300 font-sans font-semibold text-xs">
                                 <span>Inspect</span>
                                 <ArrowUpRight className="w-3.5 h-3.5" />
                               </span>
@@ -346,20 +346,20 @@ export const DashboardPage: React.FC = () => {
         {/* Quick Operations & Model Evaluation Link */}
         <div className="space-y-4">
           <div>
-            <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-sky-400" />
+            <h2 className="text-base font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <span>Model Telemetry</span>
             </h2>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Architecture health and acceptance gate status.
             </p>
           </div>
 
-          <Card className="bg-gradient-to-br from-slate-900 via-slate-900 to-primary-950/20 border-slate-800">
-            <CardHeader className="pb-3 border-b border-slate-800">
+          <Card className="bg-white dark:bg-gradient-to-br dark:from-slate-900 dark:via-slate-900 dark:to-primary-950/20 border-slate-200 dark:border-slate-800">
+            <CardHeader className="pb-3 border-b border-slate-200 dark:border-slate-800">
               <CardTitle className="text-sm flex items-center justify-between">
                 <span>Architecture Diagnostics</span>
-                <span className="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                <span className="text-[10px] font-mono bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
                   GATE PASS
                 </span>
               </CardTitle>
@@ -368,21 +368,21 @@ export const DashboardPage: React.FC = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-3 text-xs">
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Target QWK Threshold:</span>
-                <span className="font-mono text-amber-400 font-bold">&ge; 0.7000</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800/60">
+                <span className="text-slate-500 dark:text-slate-400">Target QWK Threshold:</span>
+                <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">&ge; 0.7000</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Achieved Held-Out QWK:</span>
-                <span className="font-mono text-emerald-400 font-black">0.7842</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800/60">
+                <span className="text-slate-500 dark:text-slate-400">Achieved Held-Out QWK:</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-black">0.7842</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Kolmogorov Drift Index:</span>
-                <span className="font-mono text-sky-400 font-semibold">0.018 (Calibrated)</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800/60">
+                <span className="text-slate-500 dark:text-slate-400">Kolmogorov Drift Index:</span>
+                <span className="font-mono text-sky-600 dark:text-sky-400 font-semibold">0.018 (Calibrated)</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-slate-800/60">
-                <span className="text-slate-400">Live Worker Concurrency:</span>
-                <span className="font-mono text-white font-semibold">4 Workers Active</span>
+              <div className="flex justify-between items-center py-1 border-b border-slate-200 dark:border-slate-800/60">
+                <span className="text-slate-500 dark:text-slate-400">Live Worker Concurrency:</span>
+                <span className="font-mono text-slate-900 dark:text-white font-semibold">4 Workers Active</span>
               </div>
 
               <div className="pt-2">
@@ -400,11 +400,11 @@ export const DashboardPage: React.FC = () => {
           </Card>
 
           {/* Quick Submit CTA */}
-          <Card className="bg-slate-900/60 border-slate-800">
+          <Card className="bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800">
             <CardContent className="p-4 flex items-center justify-between gap-3">
               <div className="space-y-0.5">
-                <div className="text-xs font-bold text-white">Need to score an essay?</div>
-                <div className="text-[11px] text-slate-400">
+                <div className="text-xs font-bold text-slate-900 dark:text-white">Need to score an essay?</div>
+                <div className="text-[11px] text-slate-500 dark:text-slate-400">
                   Upload PDF, DOCX or paste raw text.
                 </div>
               </div>
