@@ -74,7 +74,7 @@ class JobResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="after")
-    def sync_job_id(self) -> "JobResponse":
+    def sync_job_id(self) -> JobResponse:
         if self.job_id is None:
             self.job_id = self.id
         return self

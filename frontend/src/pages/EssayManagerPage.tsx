@@ -26,10 +26,12 @@ import {
   Calendar,
   Download,
   FileText,
+  ListChecks,
+  Loader2,
   PenTool,
+  Play,
   RefreshCw,
   Search,
-  Sparkles,
   Square,
   CheckSquare,
   User,
@@ -471,7 +473,7 @@ export const EssayManagerPage: React.FC = () => {
                         {essay.reviewer_override_score != null ? (
                           <div className="flex flex-col">
                             <span className="font-mono font-bold text-sm text-heading">{essay.reviewer_override_score.toFixed(2)}</span>
-                            <span className="text-[10px] text-muted font-mono">AI: {essay.holistic_score?.toFixed(2) ?? '—'}</span>
+                            <span className="text-[10px] text-muted font-mono">Automated: {essay.holistic_score?.toFixed(2) ?? '—'}</span>
                           </div>
                         ) : essay.holistic_score != null ? (
                           <div className="flex flex-col">
@@ -496,7 +498,7 @@ export const EssayManagerPage: React.FC = () => {
                             <Button
                               size="xs"
                               variant="primary"
-                              leftIcon={<Sparkles className="w-3 h-3" />}
+                              leftIcon={<Play className="w-3 h-3" />}
                               onClick={(e) => handleQuickScore(essay.id, e)}
                             >
                               Score
@@ -594,7 +596,7 @@ export const EssayManagerPage: React.FC = () => {
                         <Button
                           size="sm"
                           variant="primary"
-                          leftIcon={<Sparkles className="w-3.5 h-3.5" />}
+                          leftIcon={<Play className="w-3.5 h-3.5" />}
                           onClick={(e) => handleQuickScore(essay.id, e)}
                           className="flex-1 min-h-[44px]"
                         >
@@ -692,7 +694,13 @@ export const EssayManagerPage: React.FC = () => {
             <Button
               size="xs"
               variant="primary"
-              leftIcon={<Sparkles className={`w-3.5 h-3.5 ${isBatchScoring ? 'animate-spin' : ''}`} />}
+              leftIcon={
+                isBatchScoring ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <ListChecks className="w-3.5 h-3.5" />
+                )
+              }
               disabled={isBatchScoring}
               onClick={handleBatchScore}
             >

@@ -236,6 +236,26 @@ export default {
           '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        backdropIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        drawerLeftIn: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        drawerRightIn: {
+          '0%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(0)' },
+        },
+        drawerBottomIn: {
+          '0%': { transform: 'translateY(100%)' },
+          '100%': { transform: 'translateY(0)' },
+        },
         modalCardIn: {
           '0%': { opacity: '0', transform: 'scale(0.96) translateY(4px)' },
           '100%': { opacity: '1', transform: 'scale(1) translateY(0)' },
@@ -248,8 +268,14 @@ export default {
 
       animation: {
         'page-enter': 'pageEnter 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'fade-in': 'fadeIn 150ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'backdrop-in': 'backdropIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'drawer-left-in': 'drawerLeftIn 250ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'drawer-right-in': 'drawerRightIn 250ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'drawer-bottom-in': 'drawerBottomIn 250ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'modal-in': 'modalCardIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
         'toast-in': 'toastSlideIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
+        'toast-slide-in': 'toastSlideIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both',
       },
     },
   },

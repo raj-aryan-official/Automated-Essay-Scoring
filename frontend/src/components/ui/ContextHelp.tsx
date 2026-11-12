@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useId } from 'react';
-import { HelpCircle, X, Sparkles, BookOpen, Layers, ShieldCheck } from 'lucide-react';
+import { HelpCircle, X, Gauge, BookOpen, Layers, ShieldCheck } from 'lucide-react';
 
 export type HelpTopic =
   | 'confidence'
@@ -22,9 +22,9 @@ export interface HelpTopicDefinition {
 export const HELP_TOPICS: Record<HelpTopic, HelpTopicDefinition> = {
   confidence: {
     title: 'Model Confidence',
-    badge: 'Certainty Metric',
+    badge: 'Model confidence',
     badgeColor: 'bg-sky-100 dark:bg-sky-500/20 text-sky-800 dark:text-sky-300 border-sky-300 dark:border-sky-500/30',
-    icon: Sparkles,
+    icon: Gauge,
     summary: 'Measures how certain the fine-tuned BERT model is about this essay score (0% to 100%).',
     details:
       'High confidence (85%+) means the essay clearly matches standard patterns in the ASAP training corpus. Lower confidence occurs on borderline scores or unusual writing styles, flagging the essay for teacher inspection.',

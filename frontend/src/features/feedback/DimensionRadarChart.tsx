@@ -74,9 +74,9 @@ const DimensionRadarChartComponent: React.FC<DimensionRadarChartProps> = ({
     >
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-2">
         <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary-500 dark:bg-primary-400 animate-pulse" />
+          <div className="w-2 h-2 rounded-full bg-primary-500 dark:bg-primary-400" />
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-            3-Axis Dimensional Profile
+            Dimensional Profile
           </h3>
         </div>
         <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400">

@@ -13,7 +13,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Sparkles,
+  ClipboardCheck,
   Edit3,
 } from 'lucide-react';
 
@@ -512,7 +512,7 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
                   disabled={isSubmitting || !isReasonValid}
                   className="ml-auto px-4 py-2 bg-purple-600 hover:bg-purple-500 disabled:bg-slate-200 disabled:text-slate-400 dark:disabled:bg-slate-800 dark:disabled:text-slate-500 text-white text-xs font-semibold rounded-lg shadow-md transition flex items-center gap-1.5"
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
+                  <ClipboardCheck className="w-3.5 h-3.5" />
                   <span>Review &amp; Submit Override</span>
                 </button>
               </div>

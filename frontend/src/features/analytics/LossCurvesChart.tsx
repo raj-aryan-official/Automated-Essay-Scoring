@@ -12,7 +12,7 @@ import {
 } from 'recharts';
 import { LossCurvePoint } from '../../api';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Badge } from '../../components/ui';
-import { Table as TableIcon, LineChart as LineChartIcon, Activity, Sparkles } from 'lucide-react';
+import { Table as TableIcon, LineChart as LineChartIcon, Activity, Trophy } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useReducedMotion } from '../../hooks';
 
@@ -80,7 +80,7 @@ const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
             <span className="font-mono">Training Step {label}</span>
             {isBest && (
               <span className="flex items-center gap-1 bg-purple-50 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-500/40 px-1.5 py-0.5 rounded text-[10px] font-semibold">
-                <Sparkles className="w-3 h-3 text-purple-600 dark:text-purple-400" /> Best Epoch
+                <Trophy className="w-3 h-3 text-purple-600 dark:text-purple-400" /> Best Epoch
               </span>
             )}
           </div>

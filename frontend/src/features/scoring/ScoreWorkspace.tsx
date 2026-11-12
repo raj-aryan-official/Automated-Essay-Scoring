@@ -14,7 +14,6 @@ import {
   Sliders,
   ChevronUp,
   ChevronDown,
-  Sparkles,
   PenTool,
   Layers,
   Scale,
@@ -450,14 +449,11 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
             <div id="mobile-dimensions-tabs" className="mt-8 pt-6 border-t border-slate-800 space-y-4">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-primary-400" />
+                  <Layers className="w-4 h-4 text-primary-400" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
                     Dimensional Analysis
                   </h3>
                 </div>
-                <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded-full border border-slate-700">
-                  Touch-ready (44px)
-                </span>
               </div>
 
               {/* Mobile Dimension Tabs Bar (min-h-[44px] touch targets) */}

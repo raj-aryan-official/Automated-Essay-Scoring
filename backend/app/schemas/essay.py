@@ -61,7 +61,7 @@ class EssayCreate(EssayBase):
     )
 
     @model_validator(mode="after")
-    def validate_source_and_content(self) -> "EssayCreate":
+    def validate_source_and_content(self) -> EssayCreate:
         if self.source_type == SourceTypeEnum.PASTE:
             if not (self.raw_text and self.raw_text.strip()):
                 raise ValueError(

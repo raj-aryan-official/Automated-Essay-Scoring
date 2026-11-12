@@ -25,7 +25,7 @@ import {
   LossCurvesChart,
   PerPromptQwkChart,
 } from '../features/analytics';
-import { BarChart3, Clock, FileCheck2, RefreshCw, Sparkles } from 'lucide-react';
+import { BarChart3, Clock, FileCheck2, RefreshCw, Target } from 'lucide-react';
 
 export const ModelEvaluationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -177,7 +177,7 @@ export const ModelEvaluationPage: React.FC = () => {
           value={qwk_summary.average_qwk.toFixed(4)}
           subtitle={`target ≥ ${qwk_summary.target_qwk.toFixed(2)}`}
           variant="primary"
-          icon={<Sparkles className="w-5 h-5" />}
+          icon={<Target className="w-5 h-5" />}
         />
         <KpiCard
           title="Prompts Evaluated"

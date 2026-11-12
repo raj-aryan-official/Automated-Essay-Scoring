@@ -6,9 +6,10 @@ import {
   HelpCircle,
   AlertTriangle,
   AlertCircle,
+  Award,
   Clock,
   CheckCircle2,
-  Sparkles,
+  Gauge,
   ArrowRight,
 } from 'lucide-react';
 
@@ -96,7 +97,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
         key: 'advanced',
         label: 'Advanced',
         descriptor: 'Exceeds Standard',
-        icon: <Sparkles className="w-3.5 h-3.5 text-teal-500 dark:text-teal-400 shrink-0" aria-hidden="true" />,
+        icon: <Award className="w-3.5 h-3.5 text-teal-500 dark:text-teal-400 shrink-0" aria-hidden="true" />,
         min: rubricMin + 0.75 * rubricSpan,
         max: rubricMax,
         colorClass: 'text-teal-500 dark:text-teal-400',
@@ -156,9 +157,6 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
           : 'bg-white dark:bg-slate-900/90'
       } border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 sm:p-5 transition-all mb-6 space-y-4 sm:space-y-5 ${className}`}
     >
-      {/* ===================================================================
-          ROW 1: Large Score Number + Denominator + Summary Stats + Quick Actions
-          =================================================================== */}
       {/* ===================================================================
           ROW 1: Large Score Number + Denominator + Summary Stats + Quick Actions
           =================================================================== */}
@@ -239,7 +237,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Certainty Metric
+                Model confidence
               </span>
               <ContextHelp topic="confidence" position="bottom" />
             </div>
@@ -296,7 +294,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
               id="confidence-badge"
               className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${confidenceColor}`}
             >
-              <span className={`w-2 h-2 rounded-full ${dotColor} animate-pulse`} />
+              <span className={`w-2 h-2 rounded-full ${dotColor}`} />
               <span className="font-mono font-bold">{(confidence * 100).toFixed(1)}%</span>
               <span className="text-[10px] opacity-90 hidden sm:inline">({confidenceLabel})</span>
             </div>
@@ -310,8 +308,8 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
       <div className="space-y-2.5">
         <div className="flex items-center justify-between text-xs">
           <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-            <Sparkles className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
-            <span>Rubric Band Calibration Scale</span>
+            <Gauge className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
+            <span>Rubric Band Scale</span>
             <ContextHelp topic="rubricBand" position="bottom" />
           </div>
           <div className="flex items-center gap-2">
@@ -392,7 +390,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
           className="p-3 bg-primary-50 dark:bg-primary-500/10 border border-primary-200 dark:border-primary-500/30 rounded-xl text-xs text-primary-900 dark:text-primary-200 flex flex-wrap items-center justify-between gap-3 shadow-sm"
         >
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-primary-500 dark:bg-primary-400 animate-pulse" />
+            <div className="w-2.5 h-2.5 rounded-full bg-primary-500 dark:bg-primary-400" />
             <div>
               <span className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
                 Teacher Reviewer Override:
@@ -443,7 +441,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
       {/* Optional Topbar Drawer Toggle & Model Footer Row */}
       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-800/60">
         <div className="flex items-center gap-2 font-mono text-[11px]">
-          <span>Neural Engine:</span>
+          <span>Model:</span>
           <span className="text-slate-700 dark:text-slate-300">BERT + regression head</span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
           <span>Checkpoint {modelVersion ?? 'unregistered'}</span>
@@ -455,7 +453,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
             onClick={onToggleDrawer}
             className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition flex items-center gap-1"
           >
-            <span>{isDrawerOpen ? 'Hide Diagnostics' : 'Inspect Diagnostic Drawer'}</span>
+            <span>{isDrawerOpen ? 'Hide feedback' : 'Show feedback'}</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}

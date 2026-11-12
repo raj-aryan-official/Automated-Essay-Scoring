@@ -60,7 +60,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
         <div
           id={tooltipId}
           role="tooltip"
-          className={`absolute z-50 whitespace-nowrap bg-slate-800 text-slate-100 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium rounded-md shadow-lg pointer-events-none animate-in fade-in duration-150 ${POSITION_STYLES[position]} ${className}`}
+          className={`absolute z-50 whitespace-nowrap bg-slate-800 text-slate-100 border border-slate-700/80 px-2.5 py-1 text-[11px] font-medium rounded-md shadow-lg pointer-events-none animate-fade-in ${POSITION_STYLES[position]} ${className}`}
         >
           {content}
           <div className={`absolute w-0 h-0 border-solid ${ARROW_STYLES[position]}`} />

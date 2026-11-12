@@ -75,14 +75,14 @@ export const InferenceJobsPage: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Inference Job Telemetry
+              Inference Jobs
             </h1>
             <Badge variant="info" size="sm" withDot>
-              Live Queue
+              Live
             </Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Asynchronous scoring workers claim jobs from the persistent database queue and apply the active rubric model.
+            Scoring workers claim jobs from the database queue and apply the active rubric model.
           </p>
         </div>
 
@@ -103,13 +103,13 @@ export const InferenceJobsPage: React.FC = () => {
           <CardContent className="p-5 flex items-center justify-between">
             <div className="space-y-1">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Queued Backlog
+                Queued
               </span>
               <div className="text-2xl font-black text-amber-500 dark:text-amber-400 font-mono">
                 {isLoading ? <Skeleton width={50} height={28} /> : counts?.queued ?? 0}
               </div>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                Awaiting available worker
+                Waiting for a worker
               </span>
             </div>
             <div className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 flex items-center justify-center text-amber-600 dark:text-amber-400">

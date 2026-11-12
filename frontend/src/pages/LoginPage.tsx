@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { Check, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../api';
 
@@ -103,15 +104,15 @@ export const LoginPage: React.FC = () => {
 
         <div className="space-y-3 text-sm text-muted font-serif">
           <div className="flex items-start gap-3">
-            <span className="mt-1 text-xs font-medium text-ink-500">✓</span>
+            <Check className="mt-1 w-3.5 h-3.5 text-ink-500 shrink-0" aria-hidden="true" />
             <span>Role-based access for teachers, admins, ML engineers, and viewers</span>
           </div>
           <div className="flex items-start gap-3">
-            <span className="mt-1 text-xs font-medium text-ink-500">✓</span>
+            <Check className="mt-1 w-3.5 h-3.5 text-ink-500 shrink-0" aria-hidden="true" />
             <span>ASAP benchmark rubrics with multi-trait dimension feedback</span>
           </div>
           <div className="flex items-start gap-3">
-            <span className="mt-1 text-xs font-medium text-ink-500">✓</span>
+            <Check className="mt-1 w-3.5 h-3.5 text-ink-500 shrink-0" aria-hidden="true" />
             <span>Human-in-the-loop reviewer overrides with audit trail</span>
           </div>
         </div>
@@ -183,7 +184,7 @@ export const LoginPage: React.FC = () => {
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary hover:text-body focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-500 p-1 transition-colors"
                 disabled={isSubmitting}
               >
-                {showPassword ? <span className="text-xs">🙈</span> : <span className="text-xs">👁️</span>}
+                {showPassword ? <EyeOff className="w-4 h-4" aria-hidden="true" /> : <Eye className="w-4 h-4" aria-hidden="true" />}
               </button>
             </div>
           </div>

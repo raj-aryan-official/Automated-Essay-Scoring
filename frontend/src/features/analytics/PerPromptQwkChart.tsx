@@ -62,7 +62,7 @@ const PerPromptQwkChartComponent: React.FC<PerPromptQwkChartProps> = ({
                   : 'bg-rose-50 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30'
               }`}
             >
-              {p.passed ? '✓ GATE PASS' : '✗ GATE FAIL'}
+              {p.passed ? 'GATE PASS' : 'GATE FAIL'}
             </span>
           </div>
 

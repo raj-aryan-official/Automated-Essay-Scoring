@@ -1,270 +1,250 @@
-# Automated Essay Scoring (AES) Platform
-**BERT + LoRA Fine-Tuning, Rubric-Calibrated Scoring & Multi-Dimensional Pedagogical Feedback Engine**
+# Automated Essay Scoring
 
-[![CI Pipeline (Section 13 Gate)](https://github.com/raj-aryan-official/Automated-Essay-Scoring/actions/workflows/ci.yml/badge.svg)](https://github.com/raj-aryan-official/Automated-Essay-Scoring/actions/workflows/ci.yml)
+BERT + LoRA scoring for ASAP prompts, with teacher review and per-dimension feedback.
+
+[![CI](https://github.com/raj-aryan-official/Automated-Essay-Scoring/actions/workflows/ci.yml/badge.svg)](https://github.com/raj-aryan-official/Automated-Essay-Scoring/actions/workflows/ci.yml)
 [![Docker Build](https://github.com/raj-aryan-official/Automated-Essay-Scoring/actions/workflows/docker-build.yml/badge.svg)](https://github.com/raj-aryan-official/Automated-Essay-Scoring/actions/workflows/docker-build.yml)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React 18](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.2+-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-* **Author:** Raj Aryan (Roll No: 240410700141)
-* **Domain:** EdTech / AI in Education / Natural Language Processing
-* **Reference Architecture:** *“A Neural Approach to Automated Essay Scoring”* (Taghipour & Ng, EMNLP 2016)
+- **Author:** Raj Aryan (Roll No: 240410700141)
+- **Reference:** *A Neural Approach to Automated Essay Scoring* (Taghipour & Ng, EMNLP 2016)
 
 ---
 
-## 1. Project Overview
+## 1. What this is
 
-The **Automated Essay Scoring (AES) Platform** is an enterprise-grade, full-stack machine learning system designed to assess student essays against prompt-specific rubrics from the ASAP (Automated Student Assessment Prize) benchmark. The platform delivers calibrated holistic scores, granular sub-dimension evaluations, and pedagogical diagnostics across three core competencies: **Grammar**, **Coherence**, and **Argumentation**.
+A full-stack application that scores student essays on the eight ASAP prompts.
 
-### Key System Capabilities
-- **Neural Scoring Engine:** Fine-tuned `bert-base-uncased` models with Low-Rank Adaptation (LoRA $r=8$) and sigmoid-bounded regression heads producing holistic scores calibrated to each prompt's rubric scale (e.g. 2–12, 1–6, 0–3, 0–30, 0–60).
-- **Multi-Dimensional Pedagogical Feedback:** Rule-based and heuristic diagnostic engine generating actionable, severity-ranked feedback categorized into *High Priority*, *Moderate*, and *Proficient*.
-- **Score Workspace UI:** Split-screen assessment environment with an essay text reader, holistic score badge with color-coded confidence indicators (High/Mid/Low), focus dimension toggles, confidence threshold slider, and inspection drawer.
-- **Teacher Review & Override Flow:** Role-gated human-in-the-loop workflow allowing educators to override model scores with mandatory pedagogical justification notes, transitioning essays from `UNDER_REVIEW` to `FINALIZED`.
-- **Asynchronous Worker Queue:** Non-blocking job dispatch architecture backed by PostgreSQL's atomic `FOR UPDATE SKIP LOCKED` row-level claiming, ensuring zero duplicate processing and automatic crash recovery with retries.
-- **Role-Based Access Control (RBAC):** JWT-based authentication enforcing four distinct role tiers: `VIEWER`, `TEACHER`, `ML_ENGINEER`, and `ADMIN`.
-- **Model Evaluation Dashboard:** Live analytics interface displaying per-prompt QWK performance bars, training/validation loss curves, and real-time job queue telemetry.
+- **Scoring:** a `bert-base-uncased` encoder with a LoRA adapter (`r=8`) and a sigmoid-bounded regression head per prompt. Scores are mapped onto that prompt's rubric range (2-12, 1-6, 0-3, 0-4, 0-30, 0-60).
+- **Feedback:** a rule-based pass over the essay text produces grammar, coherence, and argumentation notes, each tagged high priority, moderate, or proficient.
+- **Human review:** teachers can override a model score with a written justification. The essay moves from `UNDER_REVIEW` to `FINALIZED` and both values are kept.
+- **Queue:** scoring jobs live in the database. The worker claims one with `FOR UPDATE SKIP LOCKED`, so multiple workers never pick the same job, and a crashed job is requeued until its attempt limit.
+- **Evaluation view:** the model evaluation page reads QWK results from `inference/runs/week7_evaluation.json` and loss curves from `inference/runs/prompt_<n>/scalars.jsonl`. If those files are missing it reports zero results; it does not display placeholder metrics.
 
 ---
 
-## 2. System Architecture (Section 6.1)
+## 2. Roles and screens
 
-```
-+---------------------------------------------------------------------------------------------+
-|                                    CLIENT LAYER (Browser)                                   |
-|  React 18 + TypeScript + Tailwind CSS (Vite SPA)                                            |
-|  [ Submission Page ]    [ Score Workspace ]    [ Model Evaluation ]    [ Login / RBAC ]     |
-+----------------------------------------------+----------------------------------------------+
-                                               | (HTTP / JSON / REST via Axios)
-                                               v
-+---------------------------------------------------------------------------------------------+
-|                                GATEWAY & REVERSE PROXY LAYER                                |
-|  Nginx Unprivileged (Port 3000)                                                             |
-|  - Static Asset Delivery (SPA fallback to index.html with Gzip compression)                 |
-|  - Reverse Proxy: /api/* -> FastAPI Backend (Port 8000)                                     |
-+----------------------------------------------+----------------------------------------------+
-                                               |
-                                               v
-+---------------------------------------------------------------------------------------------+
-|                                    APPLICATION API LAYER                                    |
-|  FastAPI (Python 3.11, Uvicorn, Non-Root User: appuser UID 1001)                            |
-|  - JWT Authentication & RBAC Dependencies (VIEWER, TEACHER, ML_ENGINEER, ADMIN)             |
-|  - REST Endpoints: /api/v1/essays, /api/v1/jobs, /api/v1/analytics, /api/v1/auth            |
-|  - Storage Service: Multipart document upload & MinIO presigned URL generation              |
-+-----------------------------------+-------------------------------------+-------------------+
-                                    |                                     |
-                                    v                                     v
-+---------------------------------------------------+  +--------------------------------------+
-|             PERSISTENCE & QUEUE LAYER             |  |         OBJECT STORAGE LAYER         |
-|  PostgreSQL 15 (schema.sql DDL)                   |  |  MinIO / AWS S3 Compatible (Port 9000) |
-|  - users, prompts, essays, scores, inference_runs |  |  Bucket: essay-documents             |
-|  - jobs (FOR UPDATE SKIP LOCKED priority queue)   |  |  - Raw essay files (.docx, .pdf, .txt) |
-|  - dimension_feedback (grammar, coherence, arg)   |  |  - ONNX models & checkpoint weights  |
-+-----------------------------------+---------------+  +-------------------+------------------+
-                                    |                                      ^
-                                    v                                      |
-+--------------------------------------------------------------------------+------------------+
-|                                 BACKGROUND INFERENCE WORKER LAYER                           |
-|  GPU / CPU Worker Daemon (inference/worker.py, Non-Root User: workeruser UID 1001)           |
-|  - Atomic polling loop (claim_next_job via SKIP LOCKED)                                     |
-|  - EssayScoringModel: BERT + LoRA ONNX Runtime / PyTorch inference                           |
-|  - DimensionFeedbackGenerator: Pedagogical diagnostics generation                           |
-|  - State transitions: QUEUED -> PROCESSING -> SCORED -> FEEDBACK_READY                      |
-+---------------------------------------------------------------------------------------------+
-```
+| Screen | Route | VIEWER | TEACHER | ML_ENGINEER | ADMIN |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| Dashboard | `/dashboard` | yes | yes | yes | yes |
+| Submit essay | `/submit` | no | yes | no | yes |
+| Essay manager | `/essays` | yes | yes | yes | yes |
+| Essay detail / score workspace | `/essays/:id` | read-only | full | read-only | full |
+| Inference jobs | `/jobs` | no | no | yes | yes |
+| Model evaluation | `/evaluation` | no | no | yes | yes |
 
-### Architecture Diagram (Mermaid)
+`ADMIN` bypasses role checks everywhere. Every other role is matched against the list of roles allowed on the endpoint or route.
+
+---
+
+## 3. Architecture
 
 ```mermaid
-flowchart TD
-    subgraph Client["Client Layer (Browser)"]
-        SPA["React 18 + Vite SPA\n(Tailwind CSS + Axios)"]
-    end
+flowchart LR
+    SPA["React 18 + Vite\n(Tailwind, Axios)"] -->|"/api/*"| NGINX["Nginx :3000\nSPA + reverse proxy"]
+    NGINX --> API["FastAPI :8000\nJWT + RBAC"]
+    API --> PG[("PostgreSQL 15\nusers, prompts, essays,\nscores, jobs, feedback")]
+    API --> MINIO[("MinIO :9000\nbucket: essay-documents")]
+    WORKER["Inference worker\ninference/worker.py"] -->|"SKIP LOCKED claim"| PG
+    WORKER --> MODEL["BERT + LoRA\nONNX Runtime / PyTorch"]
+    WORKER --> FB["Dimension feedback\ngenerator"]
+    WORKER -->|"scores, feedback,\nstatus transitions"| PG
+    MODEL -->|"load checkpoints"| MINIO
+```
 
-    subgraph Gateway["Gateway & Reverse Proxy"]
-        NGINX["Nginx Unprivileged\n(Port 3000)"]
-    end
+The API container starts through `backend/entrypoint.sh`, which waits for the database and runs the idempotent prompt and user seed scripts before starting Uvicorn.
 
-    subgraph Backend["Backend API Layer (FastAPI)"]
-        API["FastAPI App\n(Uvicorn, Port 8000)"]
-        AUTH["JWT & RBAC\n(Auth & Role Enforcement)"]
-        ESSAY_SVC["Essay & Score Service"]
-        JOB_SVC["Job Dispatcher"]
-    end
+---
 
-    subgraph Persistence["Storage & Queues"]
-        DB[("PostgreSQL 15\n(Relational & Job Queue)")]
-        MINIO[("MinIO Object Storage\n(essay-documents)")]
-    end
+## 4. Run with Docker Compose
 
-    subgraph Worker["Inference Worker Layer"]
-        INFER["Inference Worker Daemon\n(inference/worker.py)"]
-        BERT["BERT + LoRA Engine\n(ONNX Runtime / PyTorch)"]
-        FEEDBACK["Dimension Feedback\nGenerator"]
-    end
+```bash
+git clone https://github.com/raj-aryan-official/Automated-Essay-Scoring.git
+cd Automated-Essay-Scoring
+cp .env.example .env
+docker compose up -d --build
+docker compose ps
+```
 
-    SPA -->|HTTP/REST| NGINX
-    NGINX -->|/api/* proxy| API
-    API --> AUTH
-    AUTH --> ESSAY_SVC
-    AUTH --> JOB_SVC
-    ESSAY_SVC -->|SQLAlchemy| DB
-    ESSAY_SVC -->|Boto3 S3| MINIO
-    JOB_SVC -->|Enqueue Job| DB
-    INFER -->|FOR UPDATE SKIP LOCKED| DB
-    INFER --> BERT
-    INFER --> FEEDBACK
-    BERT -->|Load Checkpoints| MINIO
-    INFER -->|Persist Scores & Feedback| DB
+| Service | Address | Notes |
+| :--- | :--- | :--- |
+| Web app | http://localhost:3000 | Nginx serves the built SPA and proxies `/api` |
+| API | http://localhost:8000 | FastAPI root |
+| API docs | http://localhost:8000/docs | Swagger UI |
+| MinIO console | http://localhost:9001 | `minioadmin` / `minioadmin` |
+| MinIO S3 API | http://localhost:9000 | S3-compatible endpoint |
+| PostgreSQL | localhost:5432 | `aes_user` / `aes_password`, database `aes_db` |
+
+Compose starts `postgres`, `minio`, `minio-init`, `backend`, `gpu-worker`, and `frontend`. The worker image is CUDA-based; set `INFERENCE_DEVICE=cpu` in `.env` to run without a GPU.
+
+### Seeded accounts
+
+| Role | Email | Password |
+| :--- | :--- | :--- |
+| ADMIN | `admin@aes.local` | `Admin123!` |
+| TEACHER | `teacher@aes.local` | `Teacher123!` |
+| ML_ENGINEER | `ml_engineer@aes.local` | `Engineer123!` |
+| VIEWER | `viewer@aes.local` | `Viewer123!` |
+
+Change these before exposing the stack anywhere.
+
+---
+
+## 5. Local development
+
+### Backend
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r backend/requirements.txt
+cp .env.example .env          # point DATABASE_URL / DATABASE_SYNC_URL at your Postgres instance
+uvicorn app.main:app --reload --port 8000 --app-dir backend
+```
+
+The entrypoint is skipped when you run Uvicorn directly, so seed once by hand:
+
+```bash
+cd backend
+python -m app.scripts.seed_prompts
+python -m app.scripts.seed_users
+```
+
+For a throwaway database, point both URLs at SQLite:
+
+```bash
+DATABASE_URL=sqlite+aiosqlite:///./local_dev.db
+DATABASE_SYNC_URL=sqlite:///./local_dev.db
+```
+
+### Worker
+
+```bash
+DATABASE_SYNC_URL=sqlite:///./local_dev.db \
+python inference/worker.py
+```
+
+The worker polls every `WORKER_POLL_INTERVAL` seconds and retires a job after its attempt limit.
+
+### Frontend
+
+```bash
+cd frontend
+npm ci
+npm run dev        # http://localhost:3000, proxies /api to localhost:8000
+npm run build      # type-check and production bundle
 ```
 
 ---
 
-## 3. Setup & Run Instructions
+## 6. Essay lifecycle
 
-The entire system is containerized with non-root security enforcement and can be launched using **Docker Compose** from a clean checkout.
+```
+DRAFT -> SUBMITTED -> QUEUED -> PROCESSING -> SCORED -> FEEDBACK_READY -> UNDER_REVIEW -> FINALIZED
+                                 -> PROCESSING_FAILED (retried, then terminal)
+```
 
-### Quickstart with Docker Compose
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/raj-aryan-official/Automated-Essay-Scoring.git
-   cd Automated-Essay-Scoring
-   ```
-
-2. **Configure environment variables:**
-   ```bash
-   cp .env.example .env
-   ```
-
-3. **Launch the entire stack:**
-   ```bash
-   docker compose up -d --build
-   ```
-
-4. **Verify container health:**
-   ```bash
-   docker compose ps
-   ```
-
-### Service Access URLs
-
-| Service | URL | Default Credentials / Notes |
-| :--- | :--- | :--- |
-| **Frontend Web App** | [`http://localhost:3000`](http://localhost:3000) | React SPA with embedded Nginx reverse proxy |
-| **Backend REST API** | [`http://localhost:8000`](http://localhost:8000) | FastAPI application root |
-| **Interactive API Docs** | [`http://localhost:8000/docs`](http://localhost:8000/docs) | Swagger UI for interactive API testing |
-| **MinIO Object Console** | [`http://localhost:9001`](http://localhost:9001) | User: `minioadmin` / Password: `minioadmin` |
-| **MinIO S3 API** | [`http://localhost:9000`](http://localhost:9000) | S3 API endpoint |
-| **PostgreSQL Database** | `localhost:5432` | User: `aes_user`, Password: `aes_password`, DB: `aes_db` |
-
-### Default Seed Accounts
-
-The database is pre-seeded with accounts spanning all four RBAC roles:
-
-| Role | Email | Password | Allowed Permissions |
-| :--- | :--- | :--- | :--- |
-| **ADMIN** | `admin@aes.local` | `Admin123!` | Unrestricted full access across all endpoints |
-| **TEACHER** | `teacher@aes.local` | `Teacher123!` | Submit essays, dispatch scoring, review & override scores |
-| **ML_ENGINEER** | `ml_engineer@aes.local` | `Engineer123!` | Access model evaluation telemetry, model registry, read essays |
-| **VIEWER** | `viewer@aes.local` | `Viewer123!` | Read-only access to essays, scores, jobs, and evaluations |
+- Submission accepts pasted text up to 8,000 characters, or a document upload, and stores the row as `SUBMITTED`.
+- `POST /api/v1/essays/{id}/score` enqueues a job and returns `202` with the job id.
+- The worker claims the job, runs inference, and writes the holistic score, confidence, three dimension scores, and feedback.
+- A teacher override writes `reviewer_override_score`, a required reason, and a timestamp, then sets the essay to `FINALIZED`.
 
 ---
 
-## 4. Environment Variables Reference
+## 7. API
 
-All runtime configurations are driven by environment variables defined in [`.env.example`](file:///c:/Users/rajar/OneDrive/Desktop/OJT_5th_Sem/automated-essay-scoring/.env.example):
+All routes are under `/api/v1`. Authentication is a JWT bearer token from `/auth/login`.
 
-| Variable | Default Value | Description |
+### Auth
+
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/login` | public | Exchange email and password for a token |
+| `POST` | `/auth/token` | public | OAuth2 password form, for Swagger's Authorize button |
+| `GET` | `/auth/me` | any role | Current user profile and role |
+
+### Prompts
+
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/prompts` | VIEWER+ | The eight ASAP prompts with genre and rubric bounds |
+
+### Essays
+
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/essays` | TEACHER+ | Create an essay from JSON text or multipart upload (`201`) |
+| `GET` | `/essays` | VIEWER+ | Paginated list with prompt, status, and text filters |
+| `GET` | `/essays/{id}` | VIEWER+ | Essay detail, including a document download URL when present |
+| `POST` | `/essays/{id}/score` | TEACHER+ | Enqueue scoring (`202`, returns `job_id`) |
+| `GET` | `/essays/{id}/score` | VIEWER+ | Holistic score, band, confidence, dimensions, override |
+| `GET` | `/essays/{id}/jobs/latest` | VIEWER+ | Most recent job for the essay |
+| `POST` | `/essays/{id}/review` | TEACHER+ | Override the score with a required reason |
+
+### Jobs and analytics
+
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/jobs/{job_id}` | VIEWER+ | Job status and error detail |
+| `GET` | `/analytics/summary` | VIEWER+ | Live essay and quality counts for the dashboard |
+| `GET` | `/analytics/jobs` | VIEWER+ | Job counts grouped by status |
+| `GET` | `/analytics/evaluation` | ML_ENGINEER+ | QWK report, loss curves, live queue counts |
+
+### Health
+
+| Method | Path | Access | Purpose |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/health` | public | Liveness |
+| `GET` | `/api/v1/ready` | public | Readiness, checks a database round-trip |
+| `GET` | `/` | public | Service discovery and docs link |
+
+---
+
+## 8. Configuration
+
+Every value is read from the environment; `.env.example` has the full set with defaults.
+
+| Variable | Default | Purpose |
 | :--- | :--- | :--- |
-| `PROJECT_NAME` | `Automated Essay Scoring` | Application display name |
-| `ENVIRONMENT` | `development` | Deployment mode (`development`, `staging`, `production`) |
+| `ENVIRONMENT` | `development` | Deployment label |
 | `DEBUG` | `True` | FastAPI debug mode |
-| `BACKEND_HOST` | `0.0.0.0` | Backend bind address |
-| `BACKEND_PORT` | `8000` | Backend bind port |
-| `API_V1_STR` | `/api/v1` | API version prefix |
-| `SECRET_KEY` | `replace_with_secure_random_secret_key` | Secret key for cryptographic signing |
-| `JWT_SECRET` | `replace_with_secure_random_secret_key` | Secret key for JWT access tokens |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | JWT token validity duration (24 hours) |
-| `POSTGRES_SERVER` | `localhost` / `postgres` | PostgreSQL hostname |
-| `POSTGRES_PORT` | `5432` | PostgreSQL port |
-| `POSTGRES_USER` | `aes_user` | PostgreSQL username |
-| `POSTGRES_PASSWORD` | `aes_password` | PostgreSQL password |
-| `POSTGRES_DB` | `aes_db` | PostgreSQL database name |
-| `DATABASE_URL` | `postgresql+asyncpg://...` | Async SQLAlchemy database connection URL |
-| `DATABASE_SYNC_URL` | `postgresql://...` | Sync SQLAlchemy database connection URL |
-| `S3_ENDPOINT` / `S3_ENDPOINT_URL` | `http://localhost:9000` / `http://minio:9000` | MinIO / S3 object storage endpoint |
-| `S3_ACCESS_KEY` | `minioadmin` | Object storage access key |
-| `S3_SECRET_KEY` | `minioadmin` | Object storage secret key |
-| `S3_BUCKET` / `S3_BUCKET_NAME` | `essay-documents` | Default S3 bucket for documents and checkpoints |
-| `S3_REGION` | `us-east-1` | S3 region identifier |
-| `BACKEND_CORS_ORIGINS` | `["http://localhost:3000", ...]` | Allowed CORS origin URLs |
-| `MODEL_VERSION` | `aes-bert-v1.0` | Active model checkpoint tag |
-| `MODEL_BASE_NAME` | `bert-base-uncased` | Base transformer architecture |
-| `INFERENCE_DEVICE` | `cuda` (or `cpu`) | Inference hardware device |
-| `CONFIDENCE_THRESHOLD` | `0.75` | Default confidence threshold for human review flagging |
+| `BACKEND_HOST` / `BACKEND_PORT` | `0.0.0.0` / `8000` | Bind address |
+| `API_V1_STR` | `/api/v1` | API prefix |
+| `SECRET_KEY` / `JWT_SECRET` | placeholder | Signing keys; replace in any shared environment |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `1440` | Token lifetime |
+| `DATABASE_URL` | `postgresql+asyncpg://...` | Async connection string used by the API |
+| `DATABASE_SYNC_URL` | `postgresql://...` | Sync connection string used by the worker |
+| `POSTGRES_SERVER` / `POSTGRES_PORT` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | `localhost` / `5432` / `aes_user` / `aes_password` / `aes_db` | Compose database settings |
+| `S3_ENDPOINT` / `S3_ENDPOINT_URL` | `http://localhost:9000` | Object storage endpoint |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | `minioadmin` | Object storage credentials |
+| `S3_BUCKET` / `S3_BUCKET_NAME` | `essay-documents` | Bucket for uploads and checkpoints |
+| `S3_REGION` | `us-east-1` | S3 region |
+| `FRONTEND_ORIGIN` | `http://localhost:5173` | Allowed frontend origin |
+| `BACKEND_CORS_ORIGINS` | local 3000/5173/4173 | Allowed CORS origins |
+| `MODEL_VERSION` | `aes-bert-v1.0` | Checkpoint tag recorded with each score |
+| `MODEL_BASE_NAME` | `bert-base-uncased` | Base encoder |
+| `INFERENCE_DEVICE` | `cuda` | `cuda` or `cpu` |
+| `CONFIDENCE_THRESHOLD` | `0.75` | Default review threshold shown in the score workspace |
 | `BATCH_SIZE` | `8` | Worker batch size |
-| `WORKER_POLL_INTERVAL` | `2.0` | Worker queue polling frequency in seconds |
-| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | Client-side API root URL |
+| `WORKER_POLL_INTERVAL` | `2.0` | Queue poll interval, seconds |
+| `VITE_API_BASE_URL` | `http://localhost:8000/api/v1` | API base used when not proxied |
 
 ---
 
-## 5. API Endpoint Summary
+## 9. Training, export, and evaluation
 
-All application endpoints are versioned under `/api/v1` and protected by role-based authorization:
+Check the environment first:
 
-### Authentication & User Management
-| Method | Path | Required Role | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/login` | Public | Authenticates credentials and issues JWT Bearer token |
-| `POST` | `/api/v1/auth/token` | Public | OAuth2 password request form for Swagger UI integration |
-| `GET` | `/api/v1/auth/me` | Authenticated | Returns currently authenticated user profile and role |
-
-### Essay Submissions & Scoring
-| Method | Path | Required Role | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/essays` | `TEACHER`, `ADMIN` | Submits an essay (supports raw text paste or multipart document upload) |
-| `GET` | `/api/v1/essays` | `VIEWER`+ | Lists submitted essays with pagination and prompt/status filters |
-| `GET` | `/api/v1/essays/{id}` | `VIEWER`+ | Retrieves essay metadata, raw text, and document download URL |
-| `POST` | `/api/v1/essays/{id}/score` | `TEACHER`, `ADMIN` | Dispatches asynchronous scoring job (returns HTTP 202 with `job_id`) |
-| `GET` | `/api/v1/essays/{id}/score` | `VIEWER`+ | Retrieves holistic score, rubric band, confidence, and 3 dimensions |
-| `POST` | `/api/v1/essays/{id}/review` | `TEACHER`, `ADMIN` | Submits teacher score override and pedagogical reason; finalizes score |
-
-### Job Queue & Status Telemetry
-| Method | Path | Required Role | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/jobs/{job_id}` | `VIEWER`+ | Polls status of scoring job (`QUEUED`, `PROCESSING`, `COMPLETED`, `FAILED`) |
-
-### Model Evaluation & Analytics
-| Method | Path | Required Role | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/analytics/evaluation` | `VIEWER`+ | Serves per-prompt QWK results, loss curve scalars, and gate status |
-| `GET` | `/api/v1/analytics/jobs` | `VIEWER`+ | Lightweight live job count summary (`queued`, `processing`, etc.) |
-
-### Health & Diagnostics
-| Method | Path | Required Role | Description |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/health` | Public | Liveness probe returning application status and version |
-| `GET` | `/api/v1/ready` | Public | Readiness probe checking database and S3 storage connectivity |
-| `GET` | `/` | Public | Service discovery root endpoint |
-
----
-
-## 6. Reproduction Steps: Training & Evaluation
-
-Follow these instructions to reproduce model training, ONNX export, and evaluation from scratch.
-
-### 1. Hardware Verification
-Ensure your environment satisfies the PyTorch and CUDA prerequisites:
 ```bash
 python inference/check_env.py
 ```
 
-### 2. Fine-Tuning LoRA Models per Prompt
-Train a prompt-specific LoRA adapter on BERT (example: Prompt 1, Persuasive):
+### Train a prompt adapter
+
 ```bash
 python -m inference.app.engine.train \
   --prompt_id 1 \
@@ -273,139 +253,109 @@ python -m inference.app.engine.train \
   --lr 2e-5 \
   --checkpoint_dir inference/checkpoints/1
 ```
-*Trained weights and `checkpoint_metadata.json` will be saved to `inference/checkpoints/1/`.*
 
-### 3. ONNX Model Export & Verification
-Export the fine-tuned model and regression head to ONNX for optimized production serving:
+Optional flags: `--log_dir` for TensorBoard scalars, `--config` for a YAML model config. Training writes `scalars.jsonl`, which the evaluation page reads for loss curves.
+
+### Export to ONNX and benchmark latency
+
 ```bash
 python -m inference.app.engine.export_onnx \
   --prompt_id 1 \
-  --opset 14 \
-  --output_dir inference/checkpoints/1
+  --checkpoint_dir inference/checkpoints/1 \
+  --output_path inference/checkpoints/1/model.onnx
 ```
 
-### 4. Checksum Integrity Verification
-Verify that all checkpoint artifacts match the SHA-256 integrity manifest:
+Optional flags: `--num_iterations` (default 50), `--nfr_target_ms` (default 300), `--output_json`.
+
+### Verify checkpoint integrity
+
 ```bash
 python inference/checkpoints/validate_checksums.py
 ```
 
-### 5. Running Full Week 7 Evaluation
-Evaluate all 8 ASAP prompt checkpoints on held-out test splits to reproduce the QWK acceptance report:
+### Evaluate against the QWK gate
+
 ```bash
 python -m inference.app.eval.evaluate \
+  --checkpoint_dir inference/checkpoints \
   --prompts all \
   --target_qwk 0.70 \
-  --checkpoint_dir inference/checkpoints \
   --output_json inference/runs/week7_evaluation.json
 ```
 
----
+`--prompts` takes `all` or a comma-separated list such as `1,3,7`. `--data_path` points at the ASAP TSV/CSV when it is not in the default location. The report written here is the file served by the model evaluation page.
 
-## 7. Project Evaluation Evidence: Final QWK Report
-
-> [!NOTE]
-> **Section 12.1 Acceptance Gate Requirement:** An overall mean Quadratic Weighted Kappa (QWK) $\ge 0.70$ across all 8 ASAP essay prompts, with no individual prompt scoring below $0.70$.
-
-Below is the verified evaluation report generated from the latest evaluation run ([`inference/runs/week7_evaluation.json`](file:///c:/Users/rajar/OneDrive/Desktop/OJT_5th_Sem/automated-essay-scoring/inference/runs/week7_evaluation.json)):
-
-### Per-Prompt QWK Performance Breakdown
-
-| Prompt ID | Genre / Domain | Rubric Scale | Test Samples | Target QWK | Achieved QWK | Acceptance Gate | Sample True Score | Sample Pred Score |
-| :---: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Prompt 1** | Persuasive / Expository | 2.0 – 12.0 | 4 | $\ge 0.7000$ | **1.0000** | <span style="color:green">**PASS**</span> | 10.0 | 10.07 |
-| **Prompt 2** | Persuasive / Expository | 1.0 – 6.0 | 4 | $\ge 0.7000$ | **1.0000** | <span style="color:green">**PASS**</span> | 4.0 | 3.99 |
-| **Prompt 3** | Source-Dependent Response | 0.0 – 3.0 | 4 | $\ge 0.7000$ | **1.0000** | <span style="color:green">**PASS**</span> | 3.0 | 2.95 |
-| **Prompt 4** | Source-Dependent Response | 0.0 – 3.0 | 4 | $\ge 0.7000$ | **1.0000** | <span style="color:green">**PASS**</span> | 2.0 | 2.02 |
-| **Prompt 5** | Source-Dependent Response | 0.0 – 4.0 | 4 | $\ge 0.7000$ | **1.0000** | <span style="color:green">**PASS**</span> | 1.0 | 1.04 |
-| **Prompt 6** | Source-Dependent Response | 0.0 – 4.0 | 4 | $\ge 0.7000$ | **1.0000** | <span style="color:green">**PASS**</span> | 4.0 | 3.93 |
-| **Prompt 7** | Narrative / Story | 0.0 – 30.0 | 4 | $\ge 0.7000$ | **0.9318** | <span style="color:green">**PASS**</span> | 9.0 | 9.08 |
-| **Prompt 8** | Narrative / Story | 0.0 – 60.0 | 4 | $\ge 0.7000$ | **0.9995** | <span style="color:green">**PASS**</span> | 52.0 | 51.98 |
-
-### Overall Summary & Viva Evidence
-
-| Metric | Target | Achieved | Status |
-| :--- | :---: | :---: | :---: |
-| **Overall Mean QWK** | $\ge 0.7000$ | **0.9914** | <span style="color:green">**ACCEPTED**</span> |
-| **Prompts Meeting Gate ($\ge 0.70$)** | 8 / 8 (100%) | **8 / 8 (100%)** | <span style="color:green">**PASSED**</span> |
-| **Failed Prompts** | 0 | **0** | <span style="color:green">**PASSED**</span> |
-| **Inference Latency (NFR Target)** | $\le 300\text{ ms}$ | **~150–220 ms** | <span style="color:green">**MET**</span> |
-
-**Evaluation Conclusion for Defense/Viva:**
-The fine-tuned BERT + LoRA architecture consistently exceeds the Section 12.1 acceptance gate across all essay types:
-1. **Persuasive Writing (Prompts 1 & 2):** Perfect rank correlation ($\text{QWK} = 1.0000$) on structured arguments.
-2. **Source-Dependent Reading Comprehension (Prompts 3, 4, 5, 6):** Flawless score calibration ($\text{QWK} = 1.0000$) across short rubric scales ($0–3$ and $0–4$).
-3. **Narrative Writing (Prompts 7 & 8):** Outstanding correlation ($\text{QWK} = 0.9318$ and $0.9995$) over expansive scales ($0–30$ and $0–60$).
+The project target is a mean QWK of at least 0.70 across the eight prompts. No benchmark numbers are checked into this repository; run the evaluation above to produce them.
 
 ---
 
-## 8. Testing & Quality Assurance
-
-The repository includes a comprehensive automated test suite covering unit, integration, and end-to-end user workflows:
+## 10. Checks
 
 ```bash
-# Run full backend test suite with coverage
-pytest backend/tests/ --cov=backend/app --cov-report=term-missing
+# Lint
+pip install ruff
+ruff check backend inference
 
-# Run frontend production build check
-cd frontend && npm run build
+# Backend tests
+pip install -r backend/requirements.txt
+pytest backend/tests -q
 
-# Run end-to-end Playwright tests (with backend & worker running)
+# Frontend type-check and build
+cd frontend && npm ci && npm run build
+
+# Browser flows (backend and worker must be running)
 cd frontend && npx playwright test
 ```
 
-### Test Matrix Summary (Section 12.2)
-- **TEST-001 (Must):** Valid essay submission & UUID assignment &rarr; `PASSED`
-- **TEST-002 (Must):** Oversized essay (>20,000 words) HTTP 413 rejection &rarr; `PASSED`
-- **TEST-003 (Must):** Empty/whitespace essay HTTP 422 rejection &rarr; `PASSED`
-- **TEST-004 (Must):** End-to-end submit &rarr; dispatch &rarr; score &rarr; review override flow &rarr; `PASSED`
-- **TEST-005 (Must):** Worker crash simulation & max attempts retry handling &rarr; `PASSED`
-- **TEST-006 (Must):** Unscored edge case (unsupported prompt ID) HTTP 404 rejection &rarr; `PASSED`
-- **Auth & RBAC:** Verification of all 4 roles (`VIEWER`, `TEACHER`, `ML_ENGINEER`, `ADMIN`) &rarr; `PASSED`
-- **Total Backend Tests:** 71 passed, 82% statement coverage (~88% excluding CLI seed scripts).
+CI runs ruff, a Black check, ESLint, Bandit, a Trivy scan, checkpoint checksum validation, and the test suites on every push.
+
+Frontend accessibility and responsive audits:
+
+```bash
+cd frontend && npm run audit:a11y && npm run audit:responsive
+```
 
 ---
 
-## 9. Monorepo Directory Structure
+## 11. Repository layout
 
-```text
-automated-essay-scoring/
-├── .github/
-│   └── workflows/
-│       ├── ci.yml                  # Pre-merge CI gating pipeline (Section 13)
-│       └── docker-build.yml        # Post-merge Docker image build & tag workflow
+```
+.
 ├── backend/
 │   ├── app/
-│   │   ├── api/                    # FastAPI routes (auth, essays, jobs, analytics)
-│   │   ├── core/                   # Config, database, security, and validation
-│   │   ├── models/                 # SQLAlchemy ORM entities
-│   │   ├── schemas/                # Pydantic validation schemas
-│   │   ├── scripts/                # Seed scripts (prompts, users)
-│   │   └── services/               # Job service, S3 storage service
-│   ├── migrations/                 # PostgreSQL schema DDL (schema.sql)
-│   ├── tests/                      # Pytest suite with conftest fixtures
-│   ├── Dockerfile                  # Non-root backend container definition
-│   └── entrypoint.sh               # Startup script with database wait & seed
+│   │   ├── api/v1/        # auth, prompts, essays, jobs, analytics
+│   │   ├── core/          # settings, database, security, validation
+│   │   ├── models/        # SQLAlchemy entities
+│   │   ├── schemas/       # Pydantic request and response models
+│   │   ├── scripts/       # prompt and user seeds
+│   │   └── services/      # job dispatch, S3 storage
+│   ├── migrations/        # schema DDL
+│   ├── tests/
+│   ├── Dockerfile
+│   └── entrypoint.sh
 ├── frontend/
 │   ├── src/
-│   │   ├── api/                    # Typed Axios client & API interfaces
-│   │   ├── components/             # Reusable UI components & ProtectedRoute
-│   │   ├── context/                # AuthContext (JWT & role state)
-│   │   ├── features/               # ScoreWorkspace, ControlRail, InspectionDrawer
-│   │   └── pages/                  # Submission, EssayDetail, Evaluation, Login
-│   ├── e2e/                        # Playwright end-to-end test specs
-│   ├── nginx.conf                  # Unprivileged Nginx proxy & SPA configuration
-│   └── Dockerfile                  # Multi-stage non-root frontend container
+│   │   ├── api/           # typed client and interfaces
+│   │   ├── components/    # UI primitives, layout, ProtectedRoute
+│   │   ├── context/       # auth state
+│   │   ├── features/      # scoring workspace, feedback drawer, analytics charts
+│   │   └── pages/         # dashboard, submission, essays, jobs, evaluation, login
+│   ├── e2e/               # Playwright specs
+│   ├── scripts/           # axe and responsive audits
+│   ├── nginx.conf
+│   └── Dockerfile
 ├── inference/
 │   ├── app/
-│   │   ├── dataset/                # ASAP dataset adapters & tokenization
-│   │   ├── engine/                 # Train loop, LoRA adapters, ONNX exporter
-│   │   └── eval/                   # QWK evaluation metric calculation
-│   ├── checkpoints/                # Fine-tuned weights & checksums.sha256
-│   ├── runs/                       # Week 7 evaluation report JSON & loss curves
-│   ├── worker.py                   # Atomic SKIP LOCKED queue worker daemon
-│   └── Dockerfile.gpu              # Non-root CUDA-enabled inference container
-├── docker-compose.yml              # Multi-container orchestration (Section 15)
-├── .env.example                    # Sample environment variables
-└── README.md                       # Complete platform documentation
+│   │   ├── dataset/       # ASAP loading and tokenization
+│   │   ├── engine/        # train, LoRA, ONNX export
+│   │   └── eval/          # QWK metric and evaluation CLI
+│   ├── checkpoints/       # weights, ONNX exports, checksums.sha256
+│   ├── configs/
+│   ├── runs/              # scalars.jsonl and evaluation reports
+│   ├── tests/
+│   ├── worker.py
+│   └── Dockerfile.gpu
+├── docker-compose.yml
+├── pyproject.toml
+└── .env.example
 ```

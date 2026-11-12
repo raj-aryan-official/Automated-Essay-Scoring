@@ -145,7 +145,7 @@ export const TabContent: React.FC<TabContentProps> = ({
     <div
       role="tabpanel"
       tabIndex={0}
-      className={`focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 rounded-lg animate-in fade-in duration-150 ${className}`}
+      className={`focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500 rounded-lg animate-fade-in ${className}`}
       {...props}
     >
       {children}

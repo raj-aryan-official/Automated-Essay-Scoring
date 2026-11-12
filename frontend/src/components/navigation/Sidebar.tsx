@@ -87,7 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div>
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-primary-500/20 shrink-0 font-bold text-sm">
+            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center text-white shrink-0 font-bold text-sm">
               AES
             </div>
             {(!isCollapsed || isMobileDrawer) && (

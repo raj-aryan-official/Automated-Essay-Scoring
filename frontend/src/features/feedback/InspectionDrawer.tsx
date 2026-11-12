@@ -3,7 +3,7 @@ import { DimensionScoreDetail } from '../../api';
 import { DimensionKey } from '../scoring/ControlRail';
 import { DimensionRadarChart } from './DimensionRadarChart';
 import { DimensionCard } from './DimensionCard';
-import { X, Sparkles, ChevronsUpDown } from 'lucide-react';
+import { X, MessageSquareText, ChevronsUpDown } from 'lucide-react';
 
 export interface InspectionDrawerProps {
   dimensions: DimensionScoreDetail[];
@@ -156,7 +156,7 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
       {/* 2. Controls & List Header */}
       <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-1">
         <div className="flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
+          <MessageSquareText className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
           <span className="font-bold uppercase tracking-wider text-[11px] text-slate-700 dark:text-slate-300">
             Dimensional Feedback Panels
           </span>

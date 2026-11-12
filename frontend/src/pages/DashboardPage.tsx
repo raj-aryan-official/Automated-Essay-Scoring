@@ -27,9 +27,9 @@ import {
   BarChart3,
   Clock,
   FileText,
+  Gauge,
   PenTool,
   RefreshCw,
-  Sparkles,
   TrendingUp,
 } from 'lucide-react';
 
@@ -168,7 +168,7 @@ export const DashboardPage: React.FC = () => {
           value={averageScore}
           subtitle="holistic score across scored essays"
           variant="primary"
-          icon={<Sparkles className="w-5 h-5" />}
+          icon={<Gauge className="w-5 h-5" />}
         />
         <KpiCard
           title="Average Confidence"
@@ -226,7 +226,7 @@ export const DashboardPage: React.FC = () => {
                 rightIcon={<ArrowRight className="w-3.5 h-3.5" />}
                 onClick={() => navigate('/evaluation')}
               >
-                Open Evaluation Suite
+                Open model evaluation
               </Button>
             )}
           </CardContent>
