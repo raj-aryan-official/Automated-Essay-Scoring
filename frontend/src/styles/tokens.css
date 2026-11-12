@@ -219,70 +219,7 @@
 }
 
 /* ==========================================================================
-   9. THEME SEMANTICS — DARK MODE
-   ========================================================================== */
-.dark,
-[data-theme="dark"] {
-  --bg-canvas:           #0a0908;
-  --bg-surface:          #171513;
-  --bg-surface-level:    #1c1a18;
-  --bg-surface-elevated: #201d1a;
-  --bg-surface-sunken:   #0f0e0c;
-
-  --text-heading:        #f5f5f2;
-  --text-body:           #e7e4df;
-  --text-primary:        var(--text-heading);
-  --text-secondary:      var(--text-body);
-  --text-muted:          #a8a19d;
-  --text-tertiary:       #77726e;
-  --text-inverse:        #0a0908;
-
-  --border-faint:        #272422;
-  --border-base:         #3d3936;
-  --border-subtle:       var(--border-faint);
-  --border-default:      var(--border-base);
-  --border-strong:       #77726e;
-  --border-focus:        #8282ff;
-
-  --ring-focus-offset:   #171513;
-
-  /* Semantic banners — dark */
-  --banner-success-bg:   rgba(5, 150, 105, 0.12);
-  --banner-success-border: rgba(5, 150, 105, 0.25);
-  --banner-success-text:   #6ee7b7;
-
-  --banner-warning-bg:   rgba(217, 119, 6, 0.12);
-  --banner-warning-border: rgba(217, 119, 6, 0.25);
-  --banner-warning-text:   #fcd34d;
-
-  --banner-error-bg:     rgba(220, 38, 38, 0.12);
-  --banner-error-border:   rgba(220, 38, 38, 0.25);
-  --banner-error-text:     #fca5a5;
-
-  --banner-info-bg:      rgba(2, 132, 199, 0.12);
-  --banner-info-border:    rgba(2, 132, 199, 0.25);
-  --banner-info-text:      #7dd3fc;
-
-  /* Role badges — dark */
-  --role-admin-bg:       rgba(220, 38, 38, 0.15);
-  --role-admin-text:     #fca5a5;
-  --role-admin-border:   rgba(220, 38, 38, 0.3);
-
-  --role-teacher-bg:     rgba(79, 70, 229, 0.15);
-  --role-teacher-text:   #a5a4ff;
-  --role-teacher-border: rgba(79, 70, 229, 0.3);
-
-  --role-ml-bg:          rgba(2, 132, 199, 0.15);
-  --role-ml-text:        #7dd3fc;
-  --role-ml-border:      rgba(2, 132, 199, 0.3);
-
-  --role-viewer-bg:      rgba(119, 114, 110, 0.15);
-  --role-viewer-text:    #a8a19d;
-  --role-viewer-border:  rgba(119, 114, 110, 0.3);
-}
-
-/* ==========================================================================
-   10. GLOBAL BASE STYLES
+   9. GLOBAL BASE STYLES
    ========================================================================== */
 html {
   font-family: var(--font-sans);

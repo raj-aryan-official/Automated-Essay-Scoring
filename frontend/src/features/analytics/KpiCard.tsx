@@ -6,14 +6,12 @@ export interface KpiCardProps {
   title: string;
   value: React.ReactNode;
   subtitle?: string;
-  icon?: React.ReactNode;
   trend?: {
     value: string;
     direction: 'up' | 'down' | 'neutral';
     label?: string;
     isPositive?: boolean; // If true, up is green. If false (e.g. queue backlog), down is green.
   };
-  variant?: 'primary' | 'emerald' | 'sky' | 'amber' | 'rose';
   className?: string;
 }
 
@@ -21,20 +19,9 @@ const KpiCardComponent: React.FC<KpiCardProps> = ({
   title,
   value,
   subtitle,
-  icon,
   trend,
-  variant = 'primary',
   className = '',
 }) => {
-  // Variant icon container styles
-  const iconVariantStyles = {
-    primary: 'bg-primary-50 dark:bg-primary-500/10 border-primary-200 dark:border-primary-500/30 text-primary-600 dark:text-primary-400',
-    emerald: 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
-    sky: 'bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/30 text-sky-600 dark:text-sky-400',
-    amber: 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 text-amber-600 dark:text-amber-400',
-    rose: 'bg-rose-50 dark:bg-rose-500/10 border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-400',
-  }[variant];
-
   // Trend color determination
   const getTrendColor = () => {
     if (!trend) return '';
@@ -48,8 +35,8 @@ const KpiCardComponent: React.FC<KpiCardProps> = ({
 
   return (
     <Card className={`relative overflow-hidden ${className}`}>
-      <CardContent className="p-5 flex items-start justify-between gap-3">
-        <div className="space-y-1.5 flex-1 min-w-0">
+      <CardContent className="p-5">
+        <div className="space-y-1.5">
           <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block truncate">
             {title}
           </span>
@@ -74,14 +61,6 @@ const KpiCardComponent: React.FC<KpiCardProps> = ({
             )}
           </div>
         </div>
-
-        {icon && (
-          <div
-            className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 shadow-sm ${iconVariantStyles}`}
-          >
-            {icon}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

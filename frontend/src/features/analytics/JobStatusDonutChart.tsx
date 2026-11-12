@@ -319,24 +319,6 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
             </table>
           </div>
         )}
-
-        <div className="flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-200 dark:border-slate-800/60">
-          <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-              <span>Completed ({dataCounts.completed})</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-sky-500 inline-block" />
-              <span>Processing ({dataCounts.processing})</span>
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-              <span>Queued ({dataCounts.queued})</span>
-            </span>
-          </div>
-          <span>{dataCounts.total} total jobs</span>
-        </div>
       </CardContent>
     </Card>
   );

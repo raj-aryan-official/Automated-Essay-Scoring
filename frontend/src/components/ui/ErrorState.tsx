@@ -215,7 +215,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
     iconWrapperClass = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
   } else if (category === 'not-found') {
     IconComponent = SearchX;
-    iconWrapperClass = 'bg-slate-800 border-slate-700 text-slate-400';
+    iconWrapperClass = 'bg-slate-100 border-slate-200 text-slate-500';
   } else if (category === 'payload') {
     IconComponent = HardDriveUpload;
     iconWrapperClass = 'bg-amber-500/10 border-amber-500/30 text-amber-400';
@@ -230,7 +230,7 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
   return (
     <div
       role="alert"
-      className={`flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-slate-800 bg-slate-900/90 shadow-xl backdrop-blur max-w-xl mx-auto space-y-4 animate-fade-in ${className}`}
+      className={`flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-slate-200 bg-white shadow-sm max-w-xl mx-auto space-y-4 animate-fade-in ${className}`}
     >
       {/* Icon */}
       <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center shadow-lg ${iconWrapperClass}`}>
@@ -240,20 +240,20 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
       {/* Title & Status Badge */}
       <div className="space-y-1">
         {formatted?.statusCode && (
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 uppercase font-bold tracking-wider inline-block mb-1">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 uppercase font-bold tracking-wider inline-block mb-1">
             HTTP {formatted.statusCode}
           </span>
         )}
-        <h3 className="text-base font-bold text-white tracking-tight">{title}</h3>
+        <h3 className="text-base font-bold text-slate-900 tracking-tight">{title}</h3>
       </div>
 
       {/* Friendly Explanation */}
-      <p className="text-xs text-slate-300 leading-relaxed max-w-md">{message}</p>
+      <p className="text-xs text-slate-600 leading-relaxed max-w-md">{message}</p>
 
       {/* Suggestion Prompt */}
       {suggestion && (
-        <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 text-left w-full space-y-1">
-          <span className="font-semibold text-slate-300 block">Recommended Action:</span>
+        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 text-left w-full space-y-1">
+          <span className="font-semibold text-slate-700 block">Recommended Action:</span>
           <p>{suggestion}</p>
         </div>
       )}
@@ -297,18 +297,18 @@ export const ErrorState: React.FC<ErrorStateProps> = ({
 
       {/* Collapsible Technical Details (for ML engineers/developers) */}
       {details && (
-        <div className="w-full pt-2 border-t border-slate-800/60">
+        <div className="w-full pt-2 border-t border-slate-200">
           <button
             type="button"
             onClick={() => setShowDetails(!showDetails)}
-            className="text-[10px] text-slate-500 hover:text-slate-400 font-mono transition flex items-center justify-center gap-1 mx-auto"
+            className="text-[10px] text-slate-500 hover:text-slate-700 font-mono transition flex items-center justify-center gap-1 mx-auto"
           >
             <span>{showDetails ? 'Hide' : 'Show'} technical diagnostic details</span>
             {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
 
           {showDetails && (
-            <div className="mt-2.5 p-3 rounded-lg bg-slate-950 border border-slate-800/80 text-left overflow-x-auto text-[10px] font-mono text-rose-300/90 whitespace-pre-wrap">
+            <div className="mt-2.5 p-3 rounded-lg bg-slate-50 border border-slate-200 text-left overflow-x-auto text-[10px] font-mono text-rose-700 whitespace-pre-wrap">
               {details}
             </div>
           )}

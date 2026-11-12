@@ -325,7 +325,7 @@ export const EssayManagerPage: React.FC = () => {
           <div className="relative flex-1 max-w-md">
             <Input
               id="essay-search-input"
-              placeholder="Search by ID, prompt, submitter, status or text…"
+              placeholder="Search essays…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               leftIcon={<Search className="w-4 h-4 text-tertiary" />}
@@ -347,7 +347,7 @@ export const EssayManagerPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+          <div className="flex flex-wrap items-center gap-1.5">
             {STATUS_OPTIONS.map((status) => (
               <button
                 key={status}
@@ -365,12 +365,12 @@ export const EssayManagerPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-faint pt-3 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-semibold text-tertiary uppercase tracking-wider">Prompt</span>
+          <div className="flex w-full sm:w-auto items-center gap-2 min-w-0">
+            <span className="text-[11px] font-semibold text-tertiary uppercase tracking-wider shrink-0">Prompt</span>
             <select
               value={promptFilter}
               onChange={(e) => updateParams({ prompt: e.target.value, page: '1' })}
-              className="bg-surface border border-base rounded-lg px-2.5 py-2 text-xs text-body focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full min-w-0 sm:w-auto sm:max-w-xs bg-surface border border-base rounded-lg px-2.5 py-2 text-xs text-body truncate focus:outline-none focus:ring-1 focus:ring-primary"
             >
               <option value="ALL">All prompts</option>
               {prompts.map((prompt) => (

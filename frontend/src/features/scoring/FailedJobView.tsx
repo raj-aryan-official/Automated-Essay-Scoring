@@ -95,24 +95,24 @@ export const FailedJobView: React.FC<FailedJobViewProps> = ({
     <div
       role="alert"
       id="failed-job-view"
-      className={`p-6 md:p-8 rounded-2xl bg-slate-900/95 border border-rose-500/40 shadow-2xl backdrop-blur space-y-6 max-w-3xl mx-auto text-left animate-fade-in ${className}`}
+      className={`p-6 md:p-8 rounded-2xl bg-white border border-rose-200 shadow-sm space-y-6 max-w-3xl mx-auto text-left animate-fade-in ${className}`}
     >
       {/* Header with Alert Icon & Status Badge */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0 shadow-md">
+          <div className="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-600 shrink-0">
             <AlertOctagon className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-base md:text-lg font-bold text-white tracking-tight">
+              <h2 className="text-base md:text-lg font-bold text-slate-900 tracking-tight">
                 {errorNarrative.headline}
               </h2>
               <Badge variant="danger" size="sm">
                 {status}
               </Badge>
             </div>
-            <p className="text-xs text-slate-400 font-mono mt-0.5">
+            <p className="text-xs text-slate-500 font-mono mt-0.5">
               Essay #{essayId.slice(0, 8)}... {jobId ? `• Job #${jobId.slice(0, 8)}...` : ''}
             </p>
           </div>
@@ -121,13 +121,13 @@ export const FailedJobView: React.FC<FailedJobViewProps> = ({
 
       {/* Plain Language Explanation */}
       <div className="space-y-3">
-        <p className="text-xs md:text-sm text-slate-200 leading-relaxed font-sans">
+        <p className="text-xs md:text-sm text-slate-700 leading-relaxed font-sans">
           {errorNarrative.explanation}
         </p>
 
-        <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 text-xs text-slate-300 space-y-1">
-          <span className="font-semibold text-primary-300 block">Recommended Action:</span>
-          <p className="text-slate-400 font-sans">{errorNarrative.recommendation}</p>
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-100 text-xs text-slate-700 space-y-1">
+          <span className="font-semibold text-primary-700 block">Recommended Action:</span>
+          <p className="text-slate-600 font-sans">{errorNarrative.recommendation}</p>
         </div>
       </div>
 
@@ -139,7 +139,7 @@ export const FailedJobView: React.FC<FailedJobViewProps> = ({
           leftIcon={<RefreshCw className={`w-4 h-4 ${isRetrying ? 'animate-spin' : ''}`} />}
           onClick={handleRetry}
           disabled={isRetrying}
-          className="bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-950/40"
+          className="bg-rose-600 hover:bg-rose-500 "
         >
           {isRetrying ? 'Dispatching New Job...' : 'Retry AI Scoring Now'}
         </Button>
@@ -158,11 +158,11 @@ export const FailedJobView: React.FC<FailedJobViewProps> = ({
 
       {/* Technical Details Accordion for ML Engineers */}
       {errorMessage && (
-        <div className="pt-3 border-t border-slate-800/80">
+        <div className="pt-3 border-t border-slate-200">
           <button
             type="button"
             onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-            className="text-[11px] text-slate-500 hover:text-slate-400 font-mono flex items-center gap-1.5 transition"
+            className="text-[11px] text-slate-500 hover:text-slate-700 font-mono flex items-center gap-1.5 transition"
           >
             <span>{showTechnicalDetails ? 'Hide' : 'Inspect'} raw worker diagnostics</span>
             {showTechnicalDetails ? (
@@ -173,7 +173,7 @@ export const FailedJobView: React.FC<FailedJobViewProps> = ({
           </button>
 
           {showTechnicalDetails && (
-            <div className="mt-3 p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-rose-300/90 whitespace-pre-wrap overflow-x-auto">
+            <div className="mt-3 p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono text-rose-700 whitespace-pre-wrap overflow-x-auto">
               <span className="text-slate-500 block mb-1">Raw Error Output:</span>
               {errorMessage}
             </div>

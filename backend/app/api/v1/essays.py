@@ -454,6 +454,12 @@ def get_essay_by_id(
         detail_res.rubric_max = essay.prompt.rubric_max
     if essay.submitter:
         detail_res.submitter_email = essay.submitter.email
+    if essay.scores:
+        latest_score = max(essay.scores, key=lambda s: s.created_at or datetime.min)
+        detail_res.holistic_score = latest_score.holistic_score
+        detail_res.rubric_band = latest_score.rubric_band
+        detail_res.confidence = latest_score.confidence
+        detail_res.reviewer_override_score = latest_score.reviewer_override_score
     return detail_res
 
 

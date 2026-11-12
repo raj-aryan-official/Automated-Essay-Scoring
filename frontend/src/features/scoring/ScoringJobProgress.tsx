@@ -126,19 +126,19 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
       id="job-processing-panel"
       role="region"
       aria-label="Asynchronous scoring job progress"
-      className={`rounded-2xl bg-slate-900/95 border border-primary-500/30 p-5 md:p-6 shadow-2xl backdrop-blur space-y-5 transition-all ${className}`}
+      className={`rounded-2xl bg-white border border-primary-200 p-5 md:p-6 shadow-sm space-y-5 transition-all ${className}`}
     >
       {/* ===================================================================
           TOP ROW: Status Badge, Job ID, and Live Elapsed Time
           =================================================================== */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-primary-500/10 border border-primary-500/30 text-primary-400">
+          <div className="p-2 rounded-xl bg-primary-50 border border-primary-200 text-primary-600">
             <Activity className="w-4 h-4 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white tracking-wide">
+              <h3 className="text-sm font-bold text-slate-900 tracking-wide">
                 Asynchronous Scoring Job
               </h3>
               <Badge variant="info" size="sm" withDot>
@@ -146,7 +146,7 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
               </Badge>
             </div>
             {jobId && (
-              <p className="text-[11px] font-mono text-slate-400 mt-0.5">
+              <p className="text-[11px] font-mono text-slate-500 mt-0.5">
                 Job ID: #{jobId.substring(0, 8)}... (Attempt {attempts} of {maxAttempts})
               </p>
             )}
@@ -155,10 +155,10 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
 
         {/* Live Elapsed Time Ticker */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-950/80 border border-slate-800 text-xs font-mono">
-            <Clock className="w-3.5 h-3.5 text-primary-400" />
-            <span className="text-slate-400">Elapsed:</span>
-            <span className="text-white font-bold">{formattedElapsed}</span>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-xs font-mono">
+            <Clock className="w-3.5 h-3.5 text-primary-600" />
+            <span className="text-slate-500">Elapsed:</span>
+            <span className="text-slate-900 font-bold">{formattedElapsed}</span>
           </div>
 
           {onRefresh && (
@@ -203,7 +203,7 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
                 {idx < STEPS.length - 1 && (
                   <div
                     className={`absolute top-4 left-1/2 w-full h-0.5 z-0 transition-colors duration-500 ${
-                      idx < currentStepIndex ? 'bg-emerald-500' : 'bg-slate-800'
+                      idx < currentStepIndex ? 'bg-emerald-500' : 'bg-slate-200'
                     }`}
                   />
                 )}
@@ -215,7 +215,7 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
                       ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
                       : isCurrent
                       ? 'bg-primary-600 text-white ring-4 ring-primary-500/30 animate-pulse'
-                      : 'bg-slate-800 border border-slate-700 text-slate-500'
+                      : 'bg-slate-100 border border-slate-200 text-slate-400'
                   }`}
                 >
                   {isCompleted ? (
@@ -232,9 +232,9 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
                   <div
                     className={`text-[11px] font-bold tracking-tight transition-colors ${
                       isCompleted
-                        ? 'text-emerald-400'
+                        ? 'text-emerald-600'
                         : isCurrent
-                        ? 'text-white'
+                        ? 'text-slate-900'
                         : 'text-slate-500'
                     }`}
                   >
@@ -253,15 +253,15 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
       {/* ===================================================================
           FRIENDLY NARRATIVE MESSAGE FOR ACTIVE STEP
           =================================================================== */}
-      <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-3 text-xs leading-relaxed">
-        <div className="p-1.5 rounded-lg bg-primary-500/10 border border-primary-500/30 text-primary-400 shrink-0 mt-0.5">
+      <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start gap-3 text-xs leading-relaxed">
+        <div className="p-1.5 rounded-lg bg-primary-50 border border-primary-200 text-primary-600 shrink-0 mt-0.5">
           <Layers className="w-3.5 h-3.5" />
         </div>
         <div className="flex-1 space-y-0.5">
-          <span className="font-bold text-slate-300">
+          <span className="font-bold text-slate-700">
             Step {activeStep.stepNumber} of {STEPS.length}: {activeStep.title}
           </span>
-          <p className="text-slate-400 font-sans">{activeStep.friendlyMessage}</p>
+          <p className="text-slate-600 font-sans">{activeStep.friendlyMessage}</p>
         </div>
       </div>
 
@@ -269,12 +269,12 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
           "STILL WORKING…" BANNER (When job exceeds 10s threshold)
           =================================================================== */}
       {isLongRunning && (
-        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in text-xs">
+        <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fade-in text-xs">
           <div className="flex items-start gap-2.5">
-            <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <span className="font-bold text-white">Still working…</span>
-              <p className="text-[11px] text-amber-200/90 leading-relaxed mt-0.5">
+              <span className="font-bold text-slate-900">Still working…</span>
+              <p className="text-[11px] text-amber-700 leading-relaxed mt-0.5">
                 Complex essays with extended vocabulary or worker cold-starts can take slightly longer. Your job is still actively running.
               </p>
             </div>

@@ -25,12 +25,9 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
-  Clock,
   FileText,
-  Gauge,
   PenTool,
   RefreshCw,
-  TrendingUp,
 } from 'lucide-react';
 
 const SCORED_STATUSES = ['SCORED', 'FEEDBACK_READY', 'UNDER_REVIEW', 'FINALIZED'];
@@ -160,33 +157,25 @@ export const DashboardPage: React.FC = () => {
           title="Essays Scored"
           value={(summary?.scored_essays ?? 0).toLocaleString()}
           subtitle={`of ${(summary?.total_essays ?? 0).toLocaleString()} total submissions`}
-          variant="emerald"
-          icon={<FileText className="w-5 h-5" />}
         />
         <KpiCard
           title="Average Score"
           value={averageScore}
           subtitle="holistic score across scored essays"
-          variant="primary"
-          icon={<Gauge className="w-5 h-5" />}
         />
         <KpiCard
           title="Average Confidence"
           value={averageConfidence}
           subtitle="model self-reported confidence"
-          variant="sky"
-          icon={<TrendingUp className="w-5 h-5" />}
         />
         <KpiCard
           title="Active Queue"
           value={activeQueue.toLocaleString()}
           subtitle={`${summary?.pending_essays ?? 0} essays awaiting a score`}
-          variant="amber"
-          icon={<Clock className="w-5 h-5" />}
         />
       </section>
 
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <section className="grid grid-cols-1 lg:grid-cols-2 items-start gap-6">
         <JobStatusDonutChart
           counts={jobCounts ?? undefined}
           onRefresh={refreshJobCounts}
@@ -240,7 +229,7 @@ export const DashboardPage: React.FC = () => {
               <h2 className="text-base font-semibold text-heading">Recent Submissions</h2>
               <p className="text-xs text-muted">The five most recent essays in this workspace.</p>
             </div>
-            <Link to="/essays" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1">
+            <Link to="/essays" className="text-xs font-semibold text-primary hover:underline flex items-center gap-1 whitespace-nowrap shrink-0">
               View all essays
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -270,12 +259,12 @@ export const DashboardPage: React.FC = () => {
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="bg-surface-level border-b border-base text-muted uppercase text-[10px] tracking-wider font-semibold">
-                        <th className="py-3 px-4">Essay</th>
-                        <th className="py-3 px-4">Prompt</th>
-                        <th className="py-3 px-4">Status</th>
-                        <th className="py-3 px-4">Score</th>
-                        <th className="py-3 px-4">Submitted</th>
-                        <th className="py-3 px-4 text-right">Action</th>
+                        <th className="py-3 px-2 sm:px-4">Essay</th>
+                        <th className="py-3 px-2 sm:px-4 hidden sm:table-cell">Prompt</th>
+                        <th className="py-3 px-2 sm:px-4">Status</th>
+                        <th className="py-3 px-2 sm:px-4">Score</th>
+                        <th className="py-3 px-2 sm:px-4 hidden md:table-cell">Submitted</th>
+                        <th className="py-3 px-2 sm:px-4 text-right hidden sm:table-cell">Action</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-faint">
@@ -287,26 +276,26 @@ export const DashboardPage: React.FC = () => {
                             className="hover:bg-surface-level transition-colors cursor-pointer group"
                             onClick={() => navigate(`/essays/${essay.id}`)}
                           >
-                            <td className="py-3 px-4 font-mono font-semibold text-heading group-hover:text-primary transition-colors">
+                            <td className="py-3 px-2 sm:px-4 font-mono font-semibold text-heading group-hover:text-primary transition-colors">
                               #{essay.id.slice(0, 8)}
                             </td>
-                            <td className="py-3 px-4 text-body">
+                            <td className="py-3 px-2 sm:px-4 text-body hidden sm:table-cell">
                               {essay.prompt_title ?? `Prompt ${essay.asap_set_id ?? essay.prompt_id}`}
                             </td>
-                            <td className="py-3 px-4">
+                            <td className="py-3 px-2 sm:px-4">
                               <Badge variant={statusVariant(essay.status)} size="sm" withDot>
-                                {essay.status.replace('_', ' ')}
+                                {essay.status.replace(/_/g, ' ')}
                               </Badge>
                             </td>
-                            <td className="py-3 px-4 font-mono text-body">
+                            <td className="py-3 px-2 sm:px-4 font-mono text-body whitespace-nowrap">
                               {score !== null && score !== undefined
                                 ? `${score.toFixed(1)}${essay.rubric_max ? ` / ${essay.rubric_max}` : ''}`
                                 : '—'}
                             </td>
-                            <td className="py-3 px-4 text-muted text-[11px]">
+                            <td className="py-3 px-2 sm:px-4 text-muted text-[11px] hidden md:table-cell whitespace-nowrap">
                               {new Date(essay.created_at).toLocaleDateString()}
                             </td>
-                            <td className="py-3 px-4 text-right">
+                            <td className="py-3 px-2 sm:px-4 text-right hidden sm:table-cell">
                               <span className="inline-flex items-center gap-1 text-primary font-semibold">
                                 Inspect
                                 <ArrowUpRight className="w-3.5 h-3.5" />

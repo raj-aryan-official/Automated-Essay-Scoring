@@ -338,7 +338,7 @@ const DimensionCardComponent: React.FC<DimensionCardProps> = ({
         >
           <div className="overflow-hidden">
             <div className="p-4 pt-3 border-t border-slate-200 dark:border-slate-800/70 bg-slate-50/50 dark:bg-slate-950/50 space-y-3">
-              <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pb-1 border-b border-slate-200 dark:border-slate-800/50">
+              <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-slate-400 pb-1 border-b border-slate-200 dark:border-slate-800/50">
                 <span className="font-semibold uppercase tracking-wider text-[10px]">
                   Diagnostic Observations ({feedbackItems.length})
                 </span>

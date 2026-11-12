@@ -244,10 +244,10 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
       const spanElem = document.getElementById(`text-span-${matchingSpan.id}`);
       if (spanElem) {
         spanElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        spanElem.classList.add('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900');
+        spanElem.classList.add('ring-2', 'ring-primary-500', 'ring-offset-2', 'ring-offset-white');
         setTimeout(
           () =>
-            spanElem.classList.remove('ring-2', 'ring-white', 'ring-offset-2', 'ring-offset-slate-900'),
+            spanElem.classList.remove('ring-2', 'ring-primary-500', 'ring-offset-2', 'ring-offset-white'),
           1600
         );
       }
@@ -279,7 +279,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
   }, [essay.raw_text]);
 
   return (
-    <div id="score-workspace" className="space-y-6">
+    <div id="score-workspace" className={`space-y-6 ${screenMode === 'mobile' ? 'pb-24' : ''}`}>
       {/* 1. STICKY SCORE SUMMARY HEADER: holistic score, rubric band, confidence badge */}
       <ScoreCard
         scoreData={scoreData}
@@ -306,20 +306,20 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
 
           {/* Collapsible Tablet Reviewer Override Accordion */}
           {canReview && (
-          <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-md">
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
             <button
               type="button"
               onClick={() => setIsTabletOverrideOpen((prev) => !prev)}
-              className="w-full px-5 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white transition"
+              className="w-full px-5 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-slate-900 transition"
             >
               <span>Teacher Reviewer Override Panel</span>
-              <span className="flex items-center gap-1 text-primary-400">
+              <span className="flex items-center gap-1 text-primary-600">
                 {isTabletOverrideOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 <span>{isTabletOverrideOpen ? 'Collapse' : 'Expand'}</span>
               </span>
             </button>
             {isTabletOverrideOpen && (
-              <div className="p-4 border-t border-slate-800">
+              <div className="p-4 border-t border-slate-200">
                 <ReviewerOverridePanel
                   essayId={essay.id}
                   scoreData={scoreData}
@@ -373,41 +373,41 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
             =================================================================== */}
         <section
           id="essay-text-panel"
-          className="flex-1 min-w-0 bg-slate-900/90 border border-slate-800 rounded-xl p-6 shadow-xl backdrop-blur flex flex-col"
+          className="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl p-6 shadow-sm flex flex-col"
         >
           {/* Header */}
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4 mb-6">
             <div>
               <div className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-primary-400" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-200">
+                <BookOpen className="w-4 h-4 text-primary-600" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900">
                   Essay Text
                 </h2>
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-slate-400 font-mono">
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-mono">
                   {paragraphs.length} {paragraphs.length === 1 ? 'paragraph' : 'paragraphs'}
                 </span>
               </div>
               {essay.prompt_title && (
-                <p className="text-xs text-primary-400 font-medium mt-1 truncate max-w-lg">
+                <p className="text-xs text-primary-700 font-medium mt-1 truncate max-w-lg">
                   {essay.prompt_title}
                 </p>
               )}
             </div>
 
-            <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
+            <div className="flex items-center gap-4 text-xs font-mono text-slate-500">
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-500">Words:</span>
-                <span className="text-white font-semibold">{wordCount}</span>
+                <span className="text-slate-900 font-semibold">{wordCount}</span>
               </div>
-              <span className="text-slate-700">|</span>
+              <span className="text-slate-300">|</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-500">Chars:</span>
-                <span className="text-white font-semibold">{charCount.toLocaleString()}</span>
+                <span className="text-slate-900 font-semibold">{charCount.toLocaleString()}</span>
               </div>
-              <span className="text-slate-700">|</span>
+              <span className="text-slate-300">|</span>
               <div className="flex items-center gap-1.5">
                 <span className="text-slate-500">Read:</span>
-                <span className="text-white font-semibold">
+                <span className="text-slate-900 font-semibold">
                   ~{Math.max(1, Math.ceil(wordCount / 200))} min
                 </span>
               </div>
@@ -427,13 +427,13 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
 
           {/* Footer with Document Download if applicable */}
           {essay.download_url && (
-            <div className="pt-4 mt-6 border-t border-slate-800 flex justify-between items-center text-xs">
-              <span className="text-slate-400">Uploaded Document Submission</span>
+            <div className="pt-4 mt-6 border-t border-slate-200 flex justify-between items-center text-xs">
+              <span className="text-slate-500">Uploaded Document Submission</span>
               <a
                 href={essay.download_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-400 hover:text-primary-300 font-medium underline transition flex items-center gap-1"
+                className="text-primary-600 hover:text-primary-700 font-medium underline transition flex items-center gap-1"
               >
                 <span>Download Original Document</span>
                 <span>&darr;</span>
@@ -446,11 +446,11 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               Essay on top, Score summary pinned, Dimensions in tabs
               =================================================================== */}
           {screenMode === 'mobile' && (
-            <div id="mobile-dimensions-tabs" className="mt-8 pt-6 border-t border-slate-800 space-y-4">
+            <div id="mobile-dimensions-tabs" className="mt-8 pt-6 border-t border-slate-200 space-y-4">
               <div className="flex items-center justify-between pb-1">
                 <div className="flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-primary-400" />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                  <Layers className="w-4 h-4 text-primary-600" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900">
                     Dimensional Analysis
                   </h3>
                 </div>
@@ -460,7 +460,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               <div
                 role="tablist"
                 aria-label="Pedagogical dimension feedback tabs"
-                className="grid grid-cols-4 gap-1.5 p-1 bg-slate-950 rounded-xl border border-slate-800"
+                className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-slate-100 rounded-xl border border-slate-200"
               >
                 {[
                   {
@@ -500,8 +500,8 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
                       onClick={() => setMobileDimensionTab(tab.key)}
                       className={`min-h-[44px] px-2 py-2 rounded-lg flex flex-col items-center justify-center gap-1 transition-all text-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
                         isSelected
-                          ? 'bg-primary-600 text-white font-bold shadow-md shadow-primary-900/40'
-                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 font-medium'
+                          ? 'bg-primary-600 text-white font-bold shadow-md shadow-primary-900/20'
+                          : 'text-slate-600 hover:text-slate-900 hover:bg-white font-medium'
                       }`}
                     >
                       <div className="flex items-center gap-1">
@@ -530,12 +530,12 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
                 className="space-y-4 pt-1"
               >
                 {mobileDimensionTab === 'radar' ? (
-                  <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-4 shadow-inner">
-                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-4 shadow-inner">
+                    <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
                         3-Axis Holistic Radar Geometry
                       </span>
-                      <span className="text-[10px] font-mono text-primary-400">
+                      <span className="text-[10px] font-mono text-primary-600">
                         Scale [{rubricMin.toFixed(0)} - {rubricMax.toFixed(0)}]
                       </span>
                     </div>
@@ -562,20 +562,20 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
 
               {/* Collapsible Mobile Reviewer Override Accordion */}
               {canReview && (
-              <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-md mt-6">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shadow-md mt-6">
                 <button
                   type="button"
                   onClick={() => setIsTabletOverrideOpen((prev) => !prev)}
-                  className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white transition"
+                  className="w-full min-h-[44px] px-4 py-3 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-700 hover:text-slate-900 transition"
                 >
                   <span>Teacher Reviewer Override</span>
-                  <span className="flex items-center gap-1 text-primary-400">
+                  <span className="flex items-center gap-1 text-primary-600">
                     {isTabletOverrideOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                     <span>{isTabletOverrideOpen ? 'Hide' : 'Adjust'}</span>
                   </span>
                 </button>
                 {isTabletOverrideOpen && (
-                  <div className="p-4 border-t border-slate-800">
+                  <div className="p-4 border-t border-slate-200">
                     <ReviewerOverridePanel
                       essayId={essay.id}
                       scoreData={scoreData}
@@ -598,7 +598,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
           <aside
             id="inspection-drawer-container"
             style={{ width: `${drawerWidth}px` }}
-            className="shrink-0 sticky top-36 relative transition-[width] duration-75 flex flex-col h-[720px]"
+            className="shrink-0 sticky top-36 relative transition-[width] duration-75 flex flex-col"
           >
             {/* Left Drag-to-Resize Handle */}
             <div
@@ -613,7 +613,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               className="absolute -left-2 top-0 bottom-0 w-4 cursor-col-resize group z-20 flex items-center justify-center select-none"
               title="Drag to resize Inspection Drawer (Double-click to reset)"
             >
-              <div className="w-1.5 h-16 rounded-full bg-slate-700 group-hover:bg-primary-500 transition-colors shadow-sm" />
+              <div className="w-1.5 h-16 rounded-full bg-slate-300 group-hover:bg-primary-500 transition-colors shadow-sm" />
             </div>
 
             {/* Inspection Drawer Content */}
@@ -635,10 +635,10 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="w-10 shrink-0 sticky top-36 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-3 flex flex-col items-center gap-3 text-slate-400 hover:text-white transition shadow-lg group"
+            className="w-10 shrink-0 sticky top-36 bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-3 flex flex-col items-center gap-3 text-slate-500 hover:text-slate-900 transition shadow-sm group"
             title="Expand Inspection Drawer"
           >
-            <div className="w-2 h-2 rounded-full bg-primary-400 group-hover:scale-125 transition-transform" />
+            <div className="w-2 h-2 rounded-full bg-primary-500 group-hover:scale-125 transition-transform" />
             <span className="[writing-mode:vertical-lr] rotate-180 text-xs font-bold tracking-wider uppercase">
               Inspect Feedback ({scoreData.dimensions?.length || 3})
             </span>
@@ -673,10 +673,10 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
       {screenMode === 'mobile' && (
         <>
           {/* Sticky Mobile Floating Dock */}
-          <div className="fixed bottom-0 inset-x-0 z-40 bg-slate-900/95 border-t border-slate-800 px-4 py-3 flex items-center justify-between shadow-2xl backdrop-blur">
+          <div className="fixed bottom-0 inset-x-0 z-40 bg-white/95 border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-2xl backdrop-blur">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-300">Controls:</span>
-              <span className="text-xs font-mono font-semibold text-primary-400">
+              <span className="text-xs font-bold text-slate-600">Controls:</span>
+              <span className="text-xs font-mono font-semibold text-primary-700">
                 {(confidenceThreshold * 100).toFixed(0)}% Min
               </span>
             </div>
@@ -685,7 +685,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               <button
                 type="button"
                 onClick={() => setIsDrawerOpen(true)}
-                className="px-3.5 py-2 min-h-[44px] rounded-lg border border-slate-700 bg-slate-800 text-xs font-semibold text-slate-200 active:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                className="px-3.5 py-2 min-h-[44px] rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
               >
                 Feedback ({scoreData.dimensions?.length || 3})
               </button>
@@ -724,7 +724,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
                 }}
                 onResetFilters={resetFilters}
               >
-                <div className="pt-4 border-t border-slate-800">
+                <div className="pt-4 border-t border-slate-200">
                   {canReview ? (
                     <ReviewerOverridePanel
                       essayId={essay.id}
@@ -735,7 +735,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
                       }}
                     />
                   ) : (
-                    <p className="text-xs text-slate-400">
+                    <p className="text-xs text-slate-500">
                       Only teachers and administrators can file score overrides.
                     </p>
                   )}

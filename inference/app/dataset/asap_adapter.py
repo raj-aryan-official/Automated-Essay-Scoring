@@ -100,14 +100,14 @@ class SimpleDataFrame:
             vals = [r.get(key) for r in self._records]
             return SimpleSeries(vals)
         if isinstance(key, (list, tuple, SimpleSeries)):
-            filtered = [r for r, mask in zip(self._records, key, strict=False) if mask]
+            filtered = [r for r, mask in zip(self._records, key) if mask]
             return SimpleDataFrame(filtered)
         raise KeyError(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         if hasattr(value, "__len__") and not isinstance(value, (str, bytes)):
             vals = list(value)
-            for r, v in zip(self._records, vals, strict=False):
+            for r, v in zip(self._records, vals):
                 r[key] = v
         else:
             for r in self._records:

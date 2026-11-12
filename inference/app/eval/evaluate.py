@@ -367,7 +367,7 @@ def evaluate_prompt(
     pred_integers: list[int] = []
     samples: list[dict[str, Any]] = []
 
-    for rec, norm_pred in zip(test_records, norm_preds, strict=False):
+    for rec, norm_pred in zip(test_records, norm_preds):
         raw_true = float(rec["domain1_score"])
         true_scores.append(raw_true)
 

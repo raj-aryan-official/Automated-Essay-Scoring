@@ -55,7 +55,7 @@ def build_confusion_matrix(
     N = max_score - min_score + 1
     matrix = [[0.0] * N for _ in range(N)]
 
-    for t, p in zip(y_true, y_pred, strict=False):
+    for t, p in zip(y_true, y_pred):
         # Round to nearest integer category and clamp within rubric bounds
         ti = round(float(t)) - min_score
         pi = round(float(p)) - min_score
@@ -168,7 +168,7 @@ def quadratic_weighted_kappa(
     if max_score == min_score:
         all_match = all(
             round(t) == round(p)
-            for t, p in zip(true_list, pred_list, strict=False)
+            for t, p in zip(true_list, pred_list)
         )
         return 1.0 if all_match else 0.0
 

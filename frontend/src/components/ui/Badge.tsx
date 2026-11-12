@@ -95,7 +95,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`inline-flex items-center font-medium border leading-none tracking-wide select-none ${currentVariant.badge} ${SIZE_STYLES[size]} ${className}`}
+      className={`inline-flex items-center whitespace-nowrap font-medium border leading-none tracking-wide select-none ${currentVariant.badge} ${SIZE_STYLES[size]} ${className}`}
       {...props}
     >
       {resolvedIcon ? (

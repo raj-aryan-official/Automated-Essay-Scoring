@@ -1,10 +1,9 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme } from '../../context/ThemeContext';
 import { Breadcrumbs } from './Breadcrumbs';
 import { Button, Badge, Tooltip } from '../ui';
-import { Menu, Sun, Moon, Laptop, LogOut, ChevronDown } from 'lucide-react';
+import { Menu, LogOut, ChevronDown } from 'lucide-react';
 
 export interface TopBarProps {
   onOpenMobileMenu: () => void;
@@ -21,7 +20,6 @@ const PAGE_TITLES: Record<string, string> = {
 
 export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { theme, resolvedTheme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState<boolean>(false);
@@ -92,78 +90,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
         </div>
       </div>
 
-      {/* Right: Theme Toggle & User Menu */}
+      {/* Right: User Menu */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* 3-State Theme Toggle (Light / Dark / System) */}
-        <div
-          role="radiogroup"
-          aria-label="Color theme selection"
-          className="flex items-center bg-slate-100 dark:bg-slate-800/90 p-0.5 rounded-xl border border-slate-300 dark:border-slate-700/80 shadow-inner"
-        >
-          {/* Light Mode Button */}
-          <Tooltip content="Light theme" position="bottom">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={theme === 'light'}
-              onClick={() => setTheme('light')}
-              id="theme-btn-light"
-              aria-label="Set light theme"
-              className={`min-h-[44px] min-w-[36px] sm:min-w-0 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
-                theme === 'light'
-                  ? 'bg-white text-primary-700 shadow-sm border border-slate-200/80 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Sun className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-              <span className="hidden md:inline">Light</span>
-            </button>
-          </Tooltip>
-
-          {/* Dark Mode Button */}
-          <Tooltip content="Dark theme" position="bottom">
-            <button
-              type="button"
-              role="radio"
-              aria-checked={theme === 'dark'}
-              onClick={() => setTheme('dark')}
-              id="theme-btn-dark"
-              aria-label="Set dark theme"
-              className={`min-h-[44px] min-w-[36px] sm:min-w-0 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
-                theme === 'dark'
-                  ? 'bg-slate-900 text-white shadow-sm border border-slate-700 font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Moon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-              <span className="hidden md:inline">Dark</span>
-            </button>
-          </Tooltip>
-
-          {/* System Mode Button */}
-          <Tooltip
-            content={`System theme (currently ${resolvedTheme === 'dark' ? 'Dark' : 'Light'})`}
-            position="bottom"
-          >
-            <button
-              type="button"
-              role="radio"
-              aria-checked={theme === 'system'}
-              onClick={() => setTheme('system')}
-              id="theme-btn-system"
-              aria-label={`Set system auto theme (currently ${resolvedTheme})`}
-              className={`min-h-[44px] min-w-[36px] sm:min-w-0 px-2 sm:px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
-                theme === 'system'
-                  ? 'bg-primary-600 text-white shadow-sm font-bold'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Laptop className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden md:inline">Auto</span>
-            </button>
-          </Tooltip>
-        </div>
-
         {/* User Session Info & Interactive Dropdown Menu */}
         {isAuthenticated && user ? (
           <div ref={userMenuRef} className="relative flex items-center pl-2 border-l border-slate-200 dark:border-slate-800">

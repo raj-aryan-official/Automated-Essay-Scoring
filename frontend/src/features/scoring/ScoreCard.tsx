@@ -1,9 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { EssayScoreResponse, EssayDetailResponse } from '../../api';
-import { Tooltip, ContextHelp } from '../../components/ui';
+import { ContextHelp } from '../../components/ui';
 import { useCountUp } from '../../hooks';
 import {
-  HelpCircle,
   AlertTriangle,
   AlertCircle,
   Award,
@@ -181,7 +180,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
                 {animatedScore.toFixed(2)}
               </span>
               <div className="flex flex-col">
-                <span className="text-sm sm:text-base md:text-lg font-bold text-slate-500 dark:text-slate-400 font-sans">
+                <span className="text-sm sm:text-base md:text-lg font-bold text-slate-500 dark:text-slate-400 font-sans whitespace-nowrap">
                   out of {rubricMax.toFixed(1)}
                 </span>
                 <span className="text-[10px] sm:text-[11px] text-slate-400 dark:text-slate-500 font-medium">
@@ -232,52 +231,13 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
           </div>
         )}
 
-        {/* Confidence Meter with Tooltip */}
+        {/* Confidence Meter */}
         <div className="flex flex-col sm:items-end justify-center gap-2">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                Model confidence
-              </span>
-              <ContextHelp topic="confidence" position="bottom" />
-            </div>
-
-            {/* Plain-Words Tooltip */}
-            <Tooltip
-              content={
-                <div className="max-w-xs p-1 space-y-1 text-left">
-                  <p className="font-bold text-slate-900 dark:text-white text-xs">What does Confidence mean?</p>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Confidence reflects the model&apos;s statistical certainty that the essay matches
-                    the scoring criteria of the ASAP benchmark.
-                  </p>
-                  <div className="pt-1 border-t border-slate-200 dark:border-slate-700/80 space-y-0.5 text-[10px]">
-                    <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-                      <span>• &ge;85%:</span>
-                      <span className="text-slate-600 dark:text-slate-300">Strong consensus with human rubrics</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
-                      <span>• 70%–84%:</span>
-                      <span className="text-slate-600 dark:text-slate-300">Moderate feature agreement</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 font-medium">
-                      <span>• &lt;70%:</span>
-                      <span className="text-slate-600 dark:text-slate-300">Atypical syntax — human review advised</span>
-                    </div>
-                  </div>
-                </div>
-              }
-              position="left"
-              className="z-50 p-3 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-2xl rounded-xl text-slate-800 dark:text-slate-200"
-            >
-              <button
-                type="button"
-                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-0.5 rounded transition focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500"
-                aria-label="Explain confidence metric"
-              >
-                <HelpCircle className="w-3.5 h-3.5" />
-              </button>
-            </Tooltip>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              Model confidence
+            </span>
+            <ContextHelp topic="confidence" position="bottom" />
           </div>
 
           <div className="flex items-center gap-3">
@@ -292,7 +252,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
             {/* Confidence Badge */}
             <div
               id="confidence-badge"
-              className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${confidenceColor}`}
+              className={`inline-flex items-center space-x-1.5 px-3 py-1 rounded-full text-xs font-semibold border whitespace-nowrap ${confidenceColor}`}
             >
               <span className={`w-2 h-2 rounded-full ${dotColor}`} />
               <span className="font-mono font-bold">{(confidence * 100).toFixed(1)}%</span>
@@ -329,7 +289,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
 
         {/* 4-Segment Grid */}
         {isScaleOpenMobile && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
             {bands.map((band, idx) => {
               const isCurrent = idx === activeBandIndex;
               return (
@@ -366,11 +326,11 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] sm:text-[11px] pt-0.5">
-                    <span className="font-mono text-slate-500 dark:text-slate-400">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-[10px] sm:text-[11px] pt-0.5">
+                    <span className="font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                       {band.min.toFixed(1)} – {band.max.toFixed(1)} pts
                     </span>
-                    <span className={`text-[10px] font-semibold ${isCurrent ? 'text-slate-700 dark:text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
+                    <span className={`text-[10px] font-semibold whitespace-nowrap ${isCurrent ? 'text-slate-700 dark:text-white/80' : 'text-slate-500 dark:text-slate-400'}`}>
                       {band.descriptor}
                     </span>
                   </div>
@@ -439,8 +399,8 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
       )}
 
       {/* Optional Topbar Drawer Toggle & Model Footer Row */}
-      <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-800/60">
-        <div className="flex items-center gap-2 font-mono text-[11px]">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-800/60">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] min-w-0">
           <span>Model:</span>
           <span className="text-slate-700 dark:text-slate-300">BERT + regression head</span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
@@ -451,7 +411,7 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
           <button
             type="button"
             onClick={onToggleDrawer}
-            className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition flex items-center gap-1"
+            className="text-xs text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-semibold transition flex items-center gap-1 whitespace-nowrap shrink-0"
           >
             <span>{isDrawerOpen ? 'Hide feedback' : 'Show feedback'}</span>
             <ArrowRight className="w-3.5 h-3.5" />

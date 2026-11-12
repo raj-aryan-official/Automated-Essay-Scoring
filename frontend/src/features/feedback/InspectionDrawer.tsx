@@ -113,16 +113,16 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
   return (
     <div
       id="inspection-drawer"
-      className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-2xl backdrop-blur flex flex-col h-full space-y-4"
+      className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-lg backdrop-blur flex flex-col space-y-4"
     >
       {/* Header */}
       <div className="flex items-start justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider whitespace-nowrap">
               Dimension Inspector
             </h2>
-            <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-700 dark:text-slate-300">
+            <span className="text-[10px] font-mono font-medium px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-full text-slate-700 dark:text-slate-300 whitespace-nowrap">
               {activeCount} of 3 Active
             </span>
           </div>
@@ -175,7 +175,7 @@ export const InspectionDrawer: React.FC<InspectionDrawerProps> = ({
       </div>
 
       {/* 3. Dimension Feedback Cards List */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-300 [&::-webkit-scrollbar-track]:bg-transparent">
         {activeCount === 0 ? (
           <div className="p-8 text-center text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-slate-800/80 space-y-2">
             <p className="font-semibold text-slate-800 dark:text-slate-300">All Dimensions Filtered Out</p>

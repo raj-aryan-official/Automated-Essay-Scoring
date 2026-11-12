@@ -20,7 +20,7 @@ A full-stack application that scores student essays on the eight ASAP prompts.
 
 - **Scoring:** a `bert-base-uncased` encoder with a LoRA adapter (`r=8`) and a sigmoid-bounded regression head per prompt. Scores are mapped onto that prompt's rubric range (2-12, 1-6, 0-3, 0-4, 0-30, 0-60).
 - **Feedback:** a rule-based pass over the essay text produces grammar, coherence, and argumentation notes, each tagged high priority, moderate, or proficient.
-- **Human review:** teachers can override a model score with a written justification. The essay moves from `UNDER_REVIEW` to `FINALIZED` and both values are kept.
+- **Human review:** teachers can override a model score with a written justification. The essay moves from `FEEDBACK_READY` to `FINALIZED` and both values are kept.
 - **Queue:** scoring jobs live in the database. The worker claims one with `FOR UPDATE SKIP LOCKED`, so multiple workers never pick the same job, and a crashed job is requeued until its attempt limit.
 - **Evaluation view:** the model evaluation page reads QWK results from `inference/runs/week7_evaluation.json` and loss curves from `inference/runs/prompt_<n>/scalars.jsonl`. If those files are missing it reports zero results; it does not display placeholder metrics.
 
@@ -144,9 +144,11 @@ npm run build      # type-check and production bundle
 ## 6. Essay lifecycle
 
 ```
-DRAFT -> SUBMITTED -> QUEUED -> PROCESSING -> SCORED -> FEEDBACK_READY -> UNDER_REVIEW -> FINALIZED
+DRAFT -> SUBMITTED -> QUEUED -> PROCESSING -> SCORED -> FEEDBACK_READY -> FINALIZED
                                  -> PROCESSING_FAILED (retried, then terminal)
 ```
+
+`UNDER_REVIEW` is defined in the status enum and filters but is not emitted by the current review endpoint: a teacher override finalizes the essay in one step.
 
 - Submission accepts pasted text up to 8,000 characters, or a document upload, and stores the row as `SUBMITTED`.
 - `POST /api/v1/essays/{id}/score` enqueues a job and returns `202` with the job id.

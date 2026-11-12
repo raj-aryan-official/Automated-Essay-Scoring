@@ -25,7 +25,7 @@ import {
   LossCurvesChart,
   PerPromptQwkChart,
 } from '../features/analytics';
-import { BarChart3, Clock, FileCheck2, RefreshCw, Target } from 'lucide-react';
+import { BarChart3, RefreshCw } from 'lucide-react';
 
 export const ModelEvaluationPage: React.FC = () => {
   const navigate = useNavigate();
@@ -176,29 +176,21 @@ export const ModelEvaluationPage: React.FC = () => {
           title="Average QWK"
           value={qwk_summary.average_qwk.toFixed(4)}
           subtitle={`target ≥ ${qwk_summary.target_qwk.toFixed(2)}`}
-          variant="primary"
-          icon={<Target className="w-5 h-5" />}
         />
         <KpiCard
           title="Prompts Evaluated"
           value={qwk_summary.evaluated_prompts_count.toLocaleString()}
           subtitle={`${qwk_summary.passed_prompts_count} passed · ${qwk_summary.failed_prompts_count} failed`}
-          variant="emerald"
-          icon={<FileCheck2 className="w-5 h-5" />}
         />
         <KpiCard
           title="Active Queue"
           value={activeQueue.toLocaleString()}
           subtitle="jobs queued or processing"
-          variant="amber"
-          icon={<Clock className="w-5 h-5" />}
         />
         <KpiCard
           title="Jobs Completed"
           value={(jobCounts?.completed ?? 0).toLocaleString()}
           subtitle={`${(jobCounts?.failed ?? 0).toLocaleString()} failed`}
-          variant="sky"
-          icon={<BarChart3 className="w-5 h-5" />}
         />
       </section>
 

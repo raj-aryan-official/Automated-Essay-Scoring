@@ -224,7 +224,9 @@ def get_dashboard_summary(
         or 0
     )
 
-    average_score = db.query(func.avg(Score.holistic_score)).scalar()
+    average_score = db.query(
+        func.avg(func.coalesce(Score.reviewer_override_score, Score.holistic_score))
+    ).scalar()
     average_confidence = db.query(func.avg(Score.confidence)).scalar()
 
     active_model = (
