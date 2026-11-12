@@ -1,526 +1,300 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { getEssays, dispatchScoring, EssayListItem } from '../api';
+import { dispatchScoring, getEssays, getPrompts, EssayListItem, Prompt } from '../api';
+import { useAuth } from '../context/AuthContext';
 import { useDebounce } from '../hooks';
-import { ASAP_PROMPTS } from './SubmissionPage';
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  Input,
-  Button,
   Badge,
+  Button,
   Card,
   CardContent,
-  EssayTableSkeleton,
   EmptyState,
   ErrorState,
-  useToast,
+  EssayTableSkeleton,
+  Input,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
   formatApiError,
+  useToast,
 } from '../components/ui';
 import {
-  Search,
-  FileText,
   ArrowRight,
-  RefreshCw,
-  PenTool,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  Sparkles,
-  Copy,
-  Download,
-  Filter,
-  X,
-  CheckSquare,
-  Square,
-  MinusSquare,
-  User,
   Calendar,
+  Download,
+  FileText,
+  PenTool,
+  RefreshCw,
+  Search,
+  Sparkles,
+  Square,
+  CheckSquare,
+  User,
+  X,
 } from 'lucide-react';
 
-type SortField = 'created_at' | 'prompt' | 'score' | 'band' | 'status' | 'submitter';
-type SortOrder = 'asc' | 'desc';
+const PAGE_SIZES = [10, 25, 50];
+
+const STATUS_OPTIONS = [
+  'ALL',
+  'SUBMITTED',
+  'QUEUED',
+  'PROCESSING',
+  'SCORED',
+  'UNDER_REVIEW',
+  'FINALIZED',
+  'PROCESSING_FAILED',
+];
+
+const statusBadge = (status: string) => {
+  switch (status) {
+    case 'SCORED':
+      return <Badge variant="success" size="sm" withDot>SCORED</Badge>;
+    case 'FINALIZED':
+      return <Badge variant="primary" size="sm" withDot>FINALIZED</Badge>;
+    case 'UNDER_REVIEW':
+      return <Badge variant="warning" size="sm" withDot>UNDER REVIEW</Badge>;
+    case 'PROCESSING':
+      return <Badge variant="info" size="sm" withDot>PROCESSING</Badge>;
+    case 'QUEUED':
+      return <Badge variant="warning" size="sm" withDot>QUEUED</Badge>;
+    case 'PROCESSING_FAILED':
+      return <Badge variant="danger" size="sm" withDot>FAILED</Badge>;
+    default:
+      return <Badge variant="default" size="sm" withDot>{status.replace('_', ' ')}</Badge>;
+  }
+};
+
+const bandBadge = (band?: string | null) => {
+  if (!band) return <span className="text-tertiary font-mono text-xs">—</span>;
+  const upper = band.toUpperCase();
+  if (upper.includes('HIGH')) return <Badge variant="score-high" size="sm">High</Badge>;
+  if (upper.includes('MID')) return <Badge variant="score-mid" size="sm">Mid</Badge>;
+  if (upper.includes('LOW')) return <Badge variant="score-low" size="sm">Low</Badge>;
+  return <Badge variant="outline" size="sm">{band}</Badge>;
+};
 
 export const EssayManagerPage: React.FC = () => {
   const navigate = useNavigate();
   const toast = useToast();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // URL-driven filter, search, sort, and pagination state
-  const searchQuery = searchParams.get('q') || '';
-  const statusFilter = searchParams.get('status') || 'ALL';
-  const promptFilter = searchParams.get('prompt') || 'ALL';
-  const bandFilter = searchParams.get('band') || 'ALL';
-  const dateRange = searchParams.get('date') || 'ALL';
-  const sortField = (searchParams.get('sort') || 'created_at') as SortField;
-  const sortOrder = (searchParams.get('order') || 'desc') as SortOrder;
-  const currentPage = parseInt(searchParams.get('page') || '1', 10);
-  const pageSize = parseInt(searchParams.get('pageSize') || '10', 10);
+  const canScore = user?.role === 'TEACHER' || user?.role === 'ADMIN';
+  const canSubmit = canScore;
 
-  // Local state
+  const searchQuery = searchParams.get('q') ?? '';
+  const statusFilter = searchParams.get('status') ?? 'ALL';
+  const promptFilter = searchParams.get('prompt') ?? 'ALL';
+  const currentPage = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
+  const pageSize = PAGE_SIZES.includes(parseInt(searchParams.get('pageSize') ?? '10', 10))
+    ? parseInt(searchParams.get('pageSize') ?? '10', 10)
+    : 10;
+
   const [essays, setEssays] = useState<EssayListItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<unknown | null>(null);
+  const [total, setTotal] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [isBatchScoring, setIsBatchScoring] = useState<boolean>(false);
+  const [isBatchScoring, setIsBatchScoring] = useState(false);
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
 
-  // Helper to update search params and keep URL clean
+  const [searchInput, setSearchInput] = useState(searchQuery);
+  const debouncedSearch = useDebounce(searchInput, 300);
+
   const updateParams = useCallback(
     (updates: Record<string, string | null>) => {
       const next = new URLSearchParams(searchParams);
-      Object.entries(updates).forEach(([key, val]) => {
-        if (
-          val === null ||
-          val === '' ||
-          val === 'ALL' ||
-          (key === 'page' && val === '1') ||
-          (key === 'pageSize' && val === '10') ||
-          (key === 'sort' && val === 'created_at' && (updates.order || sortOrder) === 'desc')
-        ) {
-          next.delete(key);
-        } else {
-          next.set(key, val);
-        }
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value === null || value === '' || value === 'ALL') next.delete(key);
+        else next.set(key, value);
       });
       setSearchParams(next, { replace: true });
     },
-    [searchParams, setSearchParams, sortOrder]
+    [searchParams, setSearchParams]
   );
 
-  // Debounced search input state for buttery smooth typing
-  const [searchInput, setSearchInput] = useState<string>(searchQuery);
-  const debouncedSearch = useDebounce(searchInput, 250);
-
-  // Sync debounced search query to URL params
   useEffect(() => {
     if (debouncedSearch !== searchQuery) {
       updateParams({ q: debouncedSearch || null, page: '1' });
     }
   }, [debouncedSearch, searchQuery, updateParams]);
 
-  // Keep searchInput in sync if URL params change externally
   useEffect(() => {
     setSearchInput(searchQuery);
   }, [searchQuery]);
 
-  // Fetch essays from backend
+  useEffect(() => {
+    getPrompts()
+      .then(setPrompts)
+      .catch(() => setPrompts([]));
+  }, []);
+
   const fetchEssays = useCallback(
-    async (showSuccessToast = false) => {
+    async (announce = false) => {
       setIsLoading(true);
       setError(null);
       try {
-        const data = await getEssays({ limit: 200 });
-        setEssays(data || []);
-        if (showSuccessToast) {
-          toast.success('Essay Records Refreshed', `Loaded ${(data || []).length} essay entries.`);
+        const data = await getEssays({
+          page: currentPage,
+          page_size: pageSize,
+          q: searchQuery || undefined,
+          status: statusFilter !== 'ALL' ? statusFilter : undefined,
+          prompt_id: promptFilter !== 'ALL' ? promptFilter : undefined,
+        });
+        setEssays(data.items);
+        setTotal(data.total);
+        if (announce) {
+          toast.success('Essay list refreshed', `Loaded ${data.items.length} of ${data.total} essays.`);
         }
-      } catch (err: unknown) {
-        console.warn('Failed to fetch essays:', err);
+      } catch (err) {
         setError(err);
         setEssays([]);
-        if (showSuccessToast) {
-          const fmt = formatApiError(err);
-          toast.error(`${fmt.title}: ${fmt.message}`);
-        }
+        setTotal(0);
       } finally {
         setIsLoading(false);
       }
     },
-    [toast]
+    [currentPage, pageSize, searchQuery, statusFilter, promptFilter, toast]
   );
 
   useEffect(() => {
     fetchEssays(false);
   }, [fetchEssays]);
 
-  // Prompt lookup map
-  const promptMap = useMemo(() => {
-    const map = new Map<number, (typeof ASAP_PROMPTS)[0]>();
-    ASAP_PROMPTS.forEach((p) => map.set(p.set, p));
-    return map;
-  }, []);
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [currentPage, pageSize, searchQuery, statusFilter, promptFilter]);
 
-  // Filter pipeline
-  const filteredEssays = useMemo(() => {
-    return essays.filter((essay) => {
-      // 1. Search Query Filter
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const idMatch = essay.id.toLowerCase().includes(query);
-        const promptTitleMatch = (essay.prompt_title || '').toLowerCase().includes(query);
-        const submitterMatch = (essay.submitter_email || essay.submitted_by || '').toLowerCase().includes(query);
-        const statusMatch = essay.status.toLowerCase().includes(query);
-        const textMatch = (essay.raw_text || '').toLowerCase().includes(query);
-        if (!idMatch && !promptTitleMatch && !submitterMatch && !statusMatch && !textMatch) {
-          return false;
-        }
-      }
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const startIndex = total === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(currentPage * pageSize, total);
 
-      // 2. Status Filter
-      if (statusFilter !== 'ALL') {
-        if (statusFilter === 'FAILED') {
-          if (essay.status !== 'FAILED' && essay.status !== 'PROCESSING_FAILED') return false;
-        } else if (essay.status !== statusFilter) {
-          return false;
-        }
-      }
-
-      // 3. Prompt Filter
-      if (promptFilter !== 'ALL') {
-        const promptSetNum = parseInt(promptFilter, 10);
-        if (essay.asap_set_id !== promptSetNum) {
-          // Fallback check against prompt UUID
-          const promptObj = promptMap.get(promptSetNum);
-          if (promptObj && essay.prompt_id !== promptObj.id) {
-            return false;
-          }
-        }
-      }
-
-      // 4. Rubric Band Filter
-      if (bandFilter !== 'ALL') {
-        const bandUpper = (essay.rubric_band || '').toUpperCase();
-        if (bandFilter === 'HIGH' && !bandUpper.includes('HIGH')) return false;
-        if (bandFilter === 'MID' && !bandUpper.includes('MID')) return false;
-        if (bandFilter === 'LOW' && !bandUpper.includes('LOW')) return false;
-      }
-
-      // 5. Date Range Filter
-      if (dateRange !== 'ALL') {
-        const createdAtTime = new Date(essay.created_at).getTime();
-        const now = Date.now();
-        const oneDay = 24 * 60 * 60 * 1000;
-        if (dateRange === 'TODAY' && now - createdAtTime > oneDay) return false;
-        if (dateRange === '7D' && now - createdAtTime > 7 * oneDay) return false;
-        if (dateRange === '30D' && now - createdAtTime > 30 * oneDay) return false;
-      }
-
-      return true;
-    });
-  }, [essays, searchQuery, statusFilter, promptFilter, bandFilter, dateRange, promptMap]);
-
-  // Sort pipeline
-  const sortedEssays = useMemo(() => {
-    return [...filteredEssays].sort((a, b) => {
-      let comparison = 0;
-
-      switch (sortField) {
-        case 'prompt': {
-          const aSet = a.asap_set_id ?? 0;
-          const bSet = b.asap_set_id ?? 0;
-          comparison = aSet - bSet;
-          break;
-        }
-        case 'score': {
-          const aScore = a.reviewer_override_score ?? a.holistic_score ?? -1;
-          const bScore = b.reviewer_override_score ?? b.holistic_score ?? -1;
-          comparison = aScore - bScore;
-          break;
-        }
-        case 'band': {
-          const aBand = (a.rubric_band || '').toLowerCase();
-          const bBand = (b.rubric_band || '').toLowerCase();
-          comparison = aBand.localeCompare(bBand);
-          break;
-        }
-        case 'status': {
-          comparison = a.status.localeCompare(b.status);
-          break;
-        }
-        case 'submitter': {
-          const aSub = (a.submitter_email || a.submitted_by || '').toLowerCase();
-          const bSub = (b.submitter_email || b.submitted_by || '').toLowerCase();
-          comparison = aSub.localeCompare(bSub);
-          break;
-        }
-        case 'created_at':
-        default: {
-          const aTime = new Date(a.created_at).getTime();
-          const bTime = new Date(b.created_at).getTime();
-          comparison = aTime - bTime;
-          break;
-        }
-      }
-
-      return sortOrder === 'asc' ? comparison : -comparison;
-    });
-  }, [filteredEssays, sortField, sortOrder]);
-
-  // Pagination pipeline
-  const totalItems = sortedEssays.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const startIndex = (safeCurrentPage - 1) * pageSize;
-  const endIndex = Math.min(startIndex + pageSize, totalItems);
-  const paginatedEssays = sortedEssays.slice(startIndex, endIndex);
-
-  // Sort header click handler
-  const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      updateParams({ order: sortOrder === 'asc' ? 'desc' : 'asc', page: '1' });
-    } else {
-      updateParams({ sort: field, order: 'desc', page: '1' });
-    }
-  };
-
-  // Bulk selection logic
-  const isAllCurrentPageSelected =
-    paginatedEssays.length > 0 && paginatedEssays.every((e) => selectedIds.includes(e.id));
-  const isSomeCurrentPageSelected =
-    paginatedEssays.some((e) => selectedIds.includes(e.id)) && !isAllCurrentPageSelected;
+  const isAllSelected = essays.length > 0 && essays.every((e) => selectedIds.includes(e.id));
+  const isSomeSelected = essays.some((e) => selectedIds.includes(e.id)) && !isAllSelected;
 
   const toggleSelectAll = () => {
-    if (isAllCurrentPageSelected) {
-      const pageIds = new Set(paginatedEssays.map((e) => e.id));
-      setSelectedIds((prev) => prev.filter((id) => !pageIds.has(id)));
-    } else {
-      const pageIds = paginatedEssays.map((e) => e.id);
-      setSelectedIds((prev) => Array.from(new Set([...prev, ...pageIds])));
-    }
+    setSelectedIds(isAllSelected ? [] : essays.map((e) => e.id));
   };
 
   const toggleSelectOne = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
-    );
+    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   };
 
-  // Quick action: Copy ID
-  const handleCopyId = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(id);
-    toast.success('Essay ID Copied', `#${id.substring(0, 8)}... copied to clipboard.`);
-  };
+  const canDispatch = (essay: EssayListItem) =>
+    essay.status === 'SUBMITTED' || essay.status === 'PROCESSING_FAILED';
 
-  // Quick action: Score individual essay
   const handleQuickScore = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
       await dispatchScoring(id);
-      toast.success('Inference Dispatched', `Job dispatched for essay #${id.substring(0, 8)}`);
+      toast.success('Scoring queued', `Job dispatched for essay #${id.slice(0, 8)}.`);
       fetchEssays(false);
-    } catch (err: unknown) {
+    } catch (err) {
       const fmt = formatApiError(err);
-      toast.error(`${fmt.title}: ${fmt.message}`);
+      toast.error(fmt.title, fmt.message);
     }
   };
 
-  // Bulk action: Batch Scoring
   const handleBatchScore = async () => {
     if (selectedIds.length === 0) return;
     setIsBatchScoring(true);
-    let successCount = 0;
-    let failCount = 0;
-
+    let succeeded = 0;
+    const failures: string[] = [];
     for (const id of selectedIds) {
       try {
         await dispatchScoring(id);
-        successCount++;
-      } catch {
-        failCount++;
+        succeeded += 1;
+      } catch (err) {
+        failures.push(`#${id.slice(0, 8)}: ${formatApiError(err).message}`);
       }
     }
-
     setIsBatchScoring(false);
-    if (successCount > 0) {
+    if (succeeded > 0) {
       toast.success(
-        'Batch Scoring Dispatched',
-        `Dispatched scoring jobs for ${successCount} essay(s).${failCount > 0 ? ` (${failCount} failed)` : ''}`
+        'Batch scoring dispatched',
+        `${succeeded} job(s) queued${failures.length ? `, ${failures.length} skipped` : ''}.`
       );
       setSelectedIds([]);
       fetchEssays(false);
     } else {
-      toast.error('Batch Scoring Failed', 'Unable to dispatch scoring jobs for selected essays.');
+      toast.error('Batch scoring failed', failures[0] ?? 'No essays could be scored.');
     }
   };
 
-  // Bulk action: Export CSV
   const handleExportData = (format: 'csv' | 'json') => {
-    const targetEssays =
-      selectedIds.length > 0
-        ? essays.filter((e) => selectedIds.includes(e.id))
-        : sortedEssays;
-
-    if (targetEssays.length === 0) {
-      toast.info('No Data to Export', 'Select at least one essay or adjust your filters.');
+    const target = selectedIds.length > 0 ? essays.filter((e) => selectedIds.includes(e.id)) : essays;
+    if (target.length === 0) {
+      toast.info('Nothing to export', 'Load at least one essay first.');
       return;
     }
 
+    const filename = `aes-essays-${new Date().toISOString().slice(0, 10)}`;
+    let blob: Blob;
     if (format === 'json') {
-      const jsonStr = JSON.stringify(targetEssays, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `aes-essays-export-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('JSON Exported', `Exported ${targetEssays.length} essays as JSON.`);
+      blob = new Blob([JSON.stringify(target, null, 2)], { type: 'application/json' });
     } else {
-      const headers = ['Essay ID', 'Prompt', 'Status', 'Score', 'Rubric Band', 'Submitter', 'Submitted Date'];
-      const rows = targetEssays.map((e) => [
+      const headers = ['Essay ID', 'Prompt', 'Status', 'Score', 'Rubric Band', 'Submitter', 'Submitted'];
+      const rows = target.map((e) => [
         e.id,
-        `Prompt ${e.asap_set_id || e.prompt_id}`,
+        e.prompt_title ?? `Prompt ${e.asap_set_id ?? e.prompt_id}`,
         e.status,
         e.reviewer_override_score ?? e.holistic_score ?? 'Pending',
-        e.rubric_band || 'N/A',
-        e.submitter_email || e.submitted_by || 'Unknown',
+        e.rubric_band ?? '',
+        e.submitter_email ?? '',
         new Date(e.created_at).toISOString(),
       ]);
-
-      const csvContent = [headers.join(','), ...rows.map((r) => r.map((c) => `"${c}"`).join(','))].join('\n');
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `aes-essays-export-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success('CSV Exported', `Exported ${targetEssays.length} essays as CSV.`);
+      const csv = [headers, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+      blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.${format}`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${target.length} essay(s)`, `${format.toUpperCase()} file downloaded.`);
   };
 
-  // Active filters count
   const activeFiltersCount = useMemo(() => {
     let count = 0;
-    if (searchQuery.trim()) count++;
-    if (statusFilter !== 'ALL') count++;
-    if (promptFilter !== 'ALL') count++;
-    if (bandFilter !== 'ALL') count++;
-    if (dateRange !== 'ALL') count++;
+    if (searchQuery.trim()) count += 1;
+    if (statusFilter !== 'ALL') count += 1;
+    if (promptFilter !== 'ALL') count += 1;
     return count;
-  }, [searchQuery, statusFilter, promptFilter, bandFilter, dateRange]);
+  }, [searchQuery, statusFilter, promptFilter]);
 
   const resetFilters = () => {
+    setSearchInput('');
     setSearchParams(new URLSearchParams(), { replace: true });
-    toast.info('Filters Reset', 'All search parameters and filters cleared.');
   };
 
-  // Render Status Badge
-  const renderStatusBadge = (status: string) => {
-    switch (status) {
-      case 'SCORED':
-        return (
-          <Badge variant="success" size="sm" withDot>
-            SCORED
-          </Badge>
-        );
-      case 'FINALIZED':
-        return (
-          <Badge variant="primary" size="sm" withDot>
-            FINALIZED
-          </Badge>
-        );
-      case 'UNDER_REVIEW':
-        return (
-          <Badge variant="warning" size="sm" withDot>
-            UNDER REVIEW
-          </Badge>
-        );
-      case 'PROCESSING':
-        return (
-          <Badge variant="info" size="sm" withDot>
-            PROCESSING
-          </Badge>
-        );
-      case 'QUEUED':
-        return (
-          <Badge variant="warning" size="sm" withDot>
-            QUEUED
-          </Badge>
-        );
-      case 'FAILED':
-      case 'PROCESSING_FAILED':
-        return (
-          <Badge variant="danger" size="sm" withDot>
-            FAILED
-          </Badge>
-        );
-      case 'SUBMITTED':
-      default:
-        return (
-          <Badge variant="default" size="sm" withDot>
-            {status}
-          </Badge>
-        );
+  const pageNumbers = useMemo(() => {
+    const pages: Array<number | 'ellipsis'> = [];
+    for (let p = 1; p <= totalPages; p += 1) {
+      if (p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1) pages.push(p);
+      else if (pages[pages.length - 1] !== 'ellipsis') pages.push('ellipsis');
     }
-  };
-
-  // Render Rubric Band Badge
-  const renderBandBadge = (band: string | null | undefined) => {
-    if (!band) return <span className="text-slate-500 font-mono text-xs">—</span>;
-    const upper = band.toUpperCase();
-    if (upper.includes('HIGH')) {
-      return (
-        <Badge variant="score-high" size="sm" withDot>
-          High Band
-        </Badge>
-      );
-    }
-    if (upper.includes('MID')) {
-      return (
-        <Badge variant="score-mid" size="sm" withDot>
-          Mid Band
-        </Badge>
-      );
-    }
-    if (upper.includes('LOW')) {
-      return (
-        <Badge variant="score-low" size="sm" withDot>
-          Low Band
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="outline" size="sm">
-        {band}
-      </Badge>
-    );
-  };
-
-  // Render Sort Header Indicator
-  const renderSortHeader = (label: string, field: SortField) => {
-    const isSorted = sortField === field;
-    return (
-      <button
-        type="button"
-        onClick={() => handleSort(field)}
-        className="inline-flex items-center gap-1.5 hover:text-slate-900 dark:hover:text-white transition-colors uppercase font-bold text-[11px] tracking-wider select-none group"
-      >
-        <span>{label}</span>
-        {isSorted ? (
-          sortOrder === 'asc' ? (
-            <ArrowUp className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
-          ) : (
-            <ArrowDown className="w-3.5 h-3.5 text-primary-500 dark:text-primary-400" />
-          )
-        ) : (
-          <ArrowUpDown className="w-3 h-3 text-slate-400 dark:text-slate-500 opacity-60 group-hover:opacity-100 transition-opacity" />
-        )}
-      </button>
-    );
-  };
+    return pages;
+  }, [currentPage, totalPages]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6 animate-fade-in pb-28">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 space-y-6 pb-28">
+      <header className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-base pb-5">
         <div>
           <div className="flex items-center gap-2.5">
-            <h1 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Essay Manager
-            </h1>
-            <Badge variant="outline" size="sm" className="font-mono">
-              {filteredEssays.length} {filteredEssays.length === 1 ? 'essay' : 'essays'}
-            </Badge>
+            <h1 className="font-serif text-2xl font-semibold text-heading tracking-tight">Essay Manager</h1>
+            <Badge variant="outline" size="sm" className="font-mono">{total}</Badge>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Browse submissions, monitor rubric progression, inspect automated evaluations, and trigger batch actions.
+          <p className="text-sm text-muted mt-1">
+            Browse submissions, filter by status or prompt, and open an essay's score workspace.
           </p>
         </div>
 
@@ -533,38 +307,26 @@ export const EssayManagerPage: React.FC = () => {
           >
             Refresh
           </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            leftIcon={<Download className="w-3.5 h-3.5" />}
-            onClick={() => handleExportData('csv')}
-          >
-            Export CSV
+          <Button variant="outline" size="sm" leftIcon={<Download className="w-3.5 h-3.5" />} onClick={() => handleExportData('csv')}>
+            Export
           </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            leftIcon={<PenTool className="w-3.5 h-3.5" />}
-            onClick={() => navigate('/submit')}
-          >
-            Submit Essay
-          </Button>
+          {canSubmit && (
+            <Button variant="primary" size="sm" leftIcon={<PenTool className="w-3.5 h-3.5" />} onClick={() => navigate('/submit')}>
+              Submit Essay
+            </Button>
+          )}
         </div>
-      </div>
+      </header>
 
-      {/* Filter & Search Toolbar */}
-      <div className="space-y-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm">
-        {/* Search Input & Quick Status Pills */}
+      <div className="space-y-3 rounded-xl border border-base bg-surface-level p-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
             <Input
               id="essay-search-input"
-              placeholder="Search by ID, prompt, email, status, or text..."
+              placeholder="Search by ID, prompt, submitter, status or text…"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              leftIcon={<Search className="w-4 h-4 text-slate-400 dark:text-slate-500" />}
+              leftIcon={<Search className="w-4 h-4 text-tertiary" />}
               rightIcon={
                 searchInput ? (
                   <button
@@ -573,7 +335,8 @@ export const EssayManagerPage: React.FC = () => {
                       setSearchInput('');
                       updateParams({ q: null, page: '1' });
                     }}
-                    className="text-slate-400 hover:text-slate-700 dark:hover:text-white"
+                    className="text-tertiary hover:text-heading"
+                    aria-label="Clear search"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -582,311 +345,163 @@ export const EssayManagerPage: React.FC = () => {
             />
           </div>
 
-          {/* Quick Status Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none py-1">
-            {['ALL', 'SUBMITTED', 'SCORED', 'UNDER_REVIEW', 'FINALIZED', 'FAILED'].map((st) => (
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            {STATUS_OPTIONS.map((status) => (
               <button
-                key={st}
+                key={status}
                 type="button"
-                onClick={() => updateParams({ status: st, page: '1' })}
-                className={`px-3 py-1.5 min-h-[44px] inline-flex items-center rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
-                  statusFilter === st
-                    ? 'bg-primary-600 text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700/60'
-                }`}
+                onClick={() => updateParams({ status, page: '1' })}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors border
+                  ${statusFilter === status
+                    ? 'bg-primary text-white border-primary'
+                    : 'bg-surface text-muted border-base hover:text-heading'}`}
               >
-                {st.replace('_', ' ')}
+                {status.replace('_', ' ')}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Secondary Filter Controls Row */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800/80 text-xs">
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Prompt Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Prompt:
-              </span>
-              <select
-                value={promptFilter}
-                onChange={(e) => updateParams({ prompt: e.target.value, page: '1' })}
-                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="ALL">All ASAP Prompts</option>
-                {ASAP_PROMPTS.map((p) => (
-                  <option key={p.set} value={String(p.set)}>
-                    P{p.set}: {p.title.split(':')[1]?.trim() || p.title} ({p.rubric})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Rubric Band Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Band:
-              </span>
-              <select
-                value={bandFilter}
-                onChange={(e) => updateParams({ band: e.target.value, page: '1' })}
-                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="ALL">All Rubric Bands</option>
-                <option value="HIGH">High Band</option>
-                <option value="MID">Mid Band</option>
-                <option value="LOW">Low Band</option>
-              </select>
-            </div>
-
-            {/* Date Range Selector */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Date:
-              </span>
-              <select
-                value={dateRange}
-                onChange={(e) => updateParams({ date: e.target.value, page: '1' })}
-                className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-2 min-h-[44px] text-xs text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
-              >
-                <option value="ALL">All Time</option>
-                <option value="TODAY">Last 24 Hours</option>
-                <option value="7D">Past 7 Days</option>
-                <option value="30D">Past 30 Days</option>
-              </select>
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-faint pt-3 text-xs">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-semibold text-tertiary uppercase tracking-wider">Prompt</span>
+            <select
+              value={promptFilter}
+              onChange={(e) => updateParams({ prompt: e.target.value, page: '1' })}
+              className="bg-surface border border-base rounded-lg px-2.5 py-2 text-xs text-body focus:outline-none focus:ring-1 focus:ring-primary"
+            >
+              <option value="ALL">All prompts</option>
+              {prompts.map((prompt) => (
+                <option key={prompt.id} value={prompt.id}>
+                  P{prompt.asap_set_id}: {prompt.title}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Active Filter Indicators & Reset Action */}
           {activeFiltersCount > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-500/10 px-2.5 py-1 rounded-md border border-primary-200 dark:border-primary-500/20">
-                <Filter className="w-3 h-3" />
-                <span>{activeFiltersCount} active {activeFiltersCount === 1 ? 'filter' : 'filters'}</span>
-              </span>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="text-xs text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 transition-colors font-medium underline underline-offset-2"
-              >
-                Reset all
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-xs font-medium text-muted hover:text-danger-600 underline underline-offset-2"
+            >
+              Reset {activeFiltersCount} filter{activeFiltersCount === 1 ? '' : 's'}
+            </button>
           )}
         </div>
       </div>
 
-      {/* Main Content: Table / Skeletons / Empty / Error */}
       {isLoading ? (
         <EssayTableSkeleton />
-      ) : error && essays.length === 0 ? (
-        <ErrorState
-          error={error}
-          onRetry={() => fetchEssays(true)}
-          onHome={() => navigate('/')}
-          homeLabel="Dashboard"
-        />
-      ) : essays.length === 0 ? (
+      ) : error ? (
+        <ErrorState error={error} onRetry={() => fetchEssays(true)} onHome={() => navigate('/dashboard')} />
+      ) : total === 0 && activeFiltersCount > 0 ? (
         <EmptyState
-          icon={<FileText className="w-8 h-8 text-primary-400" />}
-          title="No essays yet — submit your first"
-          description="Submit a student essay to evaluate automated holistic scores, rubric progression, and multi-dimensional diagnostics."
-          action={{
-            label: "Submit Your First Essay",
-            onClick: () => navigate('/submit'),
-          }}
+          icon={<Search className="w-8 h-8 text-tertiary" />}
+          title="No matching essays"
+          description="No essays match the current search and filters."
+          action={{ label: 'Clear filters', onClick: resetFilters }}
         />
-      ) : sortedEssays.length === 0 ? (
+      ) : total === 0 ? (
         <EmptyState
-          icon={<Search className="w-8 h-8 text-slate-400" />}
-          title="No matching essays found"
+          icon={<FileText className="w-8 h-8 text-tertiary" />}
+          title="No essays yet"
           description={
-            searchQuery
-              ? `No essay records match "${searchQuery}". Try adjusting your keywords or clearing active filters.`
-              : 'There are currently no essays matching your selected status, prompt, band, or date filters.'
+            canSubmit
+              ? 'Submit an essay to see automated scores and feedback here.'
+              : 'Essays will appear here once a teacher submits them.'
           }
-          action={{
-            label: "Clear All Filters",
-            onClick: resetFilters,
-          }}
+          action={canSubmit ? { label: 'Submit an essay', onClick: () => navigate('/submit') } : undefined}
         />
       ) : (
         <>
-          {/* DESKTOP TABLE VIEW (hidden on small mobile screens) */}
           <div className="hidden md:block">
             <Table striped>
               <TableHeader>
                 <TableRow hoverable={false}>
-                  {/* Select All Checkbox */}
                   <TableHead className="w-10 text-center">
                     <button
                       type="button"
                       onClick={toggleSelectAll}
-                      className="text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
-                      title={isAllCurrentPageSelected ? 'Deselect all' : 'Select all on page'}
+                      className="text-tertiary hover:text-heading"
+                      aria-label={isAllSelected ? 'Deselect all' : 'Select all on page'}
                     >
-                      {isAllCurrentPageSelected ? (
-                        <CheckSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                      ) : isSomeCurrentPageSelected ? (
-                        <MinusSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                      ) : (
-                        <Square className="w-4 h-4" />
-                      )}
+                      {isAllSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : isSomeSelected ? <CheckSquare className="w-4 h-4 text-primary opacity-60" /> : <Square className="w-4 h-4" />}
                     </button>
                   </TableHead>
-
-                  <TableHead>{renderSortHeader('Prompt', 'prompt')}</TableHead>
-                  <TableHead>{renderSortHeader('Status', 'status')}</TableHead>
-                  <TableHead>{renderSortHeader('Score', 'score')}</TableHead>
-                  <TableHead>{renderSortHeader('Band', 'band')}</TableHead>
-                  <TableHead>{renderSortHeader('Submitted Date', 'created_at')}</TableHead>
-                  <TableHead>{renderSortHeader('Submitter', 'submitter')}</TableHead>
+                  <TableHead>Essay</TableHead>
+                  <TableHead>Prompt</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Score</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Submitter</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
-
               <TableBody>
-                {paginatedEssays.map((essay) => {
+                {essays.map((essay) => {
                   const isSelected = selectedIds.includes(essay.id);
-                  const promptInfo =
-                    (essay.asap_set_id && promptMap.get(essay.asap_set_id)) || null;
-
                   return (
                     <TableRow
                       key={essay.id}
                       onClick={() => navigate(`/essays/${essay.id}`)}
-                      className={`cursor-pointer group ${
-                        isSelected ? 'bg-primary-50/50 dark:bg-primary-950/20 border-l-2 border-primary-500' : ''
-                      }`}
+                      className={`cursor-pointer ${isSelected ? 'bg-primary-50/60' : ''}`}
                     >
-                      {/* Checkbox */}
-                      <TableCell
-                        className="text-center"
-                        onClick={(e) => toggleSelectOne(essay.id, e)}
-                      >
-                        <button
-                          type="button"
-                          className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
+                      <TableCell className="text-center" onClick={(e) => toggleSelectOne(essay.id, e)}>
+                        <button type="button" className="text-tertiary hover:text-heading" aria-label="Select essay">
+                          {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
                         </button>
                       </TableCell>
-
-                      {/* Prompt */}
+                      <TableCell className="font-mono text-xs font-semibold text-heading">#{essay.id.slice(0, 8)}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-xs text-primary-600 dark:text-primary-400 shrink-0">
-                            P{essay.asap_set_id || '?'}
+                        <div className="flex flex-col min-w-0 max-w-xs">
+                          <span className="text-xs font-semibold text-heading truncate">
+                            {essay.prompt_title ?? `Prompt ${essay.prompt_id.slice(0, 8)}`}
                           </span>
-                          <div className="flex flex-col min-w-0 max-w-xs">
-                            <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
-                              {essay.prompt_title || promptInfo?.title || `Prompt ${essay.prompt_id.substring(0, 8)}`}
-                            </span>
-                            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                              Rubric: {promptInfo?.rubric || `[${essay.rubric_min ?? 0} – ${essay.rubric_max ?? 12}]`}
-                            </span>
-                          </div>
+                          <span className="text-[11px] text-muted font-mono">
+                            {essay.asap_set_id ? `P${essay.asap_set_id}` : '—'}
+                            {essay.rubric_min != null && essay.rubric_max != null
+                              ? ` · ${essay.rubric_min}–${essay.rubric_max}`
+                              : ''}
+                          </span>
                         </div>
                       </TableCell>
-
-                      {/* Status Chip */}
-                      <TableCell>{renderStatusBadge(essay.status)}</TableCell>
-
-                      {/* Score */}
+                      <TableCell>{statusBadge(essay.status)}</TableCell>
                       <TableCell>
                         {essay.reviewer_override_score != null ? (
                           <div className="flex flex-col">
-                            <span className="font-mono font-bold text-sm text-purple-600 dark:text-purple-400">
-                              {essay.reviewer_override_score.toFixed(2)}
-                            </span>
-                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono">
-                              (AI: {essay.holistic_score?.toFixed(2) ?? '—'})
-                            </span>
+                            <span className="font-mono font-bold text-sm text-heading">{essay.reviewer_override_score.toFixed(2)}</span>
+                            <span className="text-[10px] text-muted font-mono">AI: {essay.holistic_score?.toFixed(2) ?? '—'}</span>
                           </div>
                         ) : essay.holistic_score != null ? (
                           <div className="flex flex-col">
-                            <span className="font-mono font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                              {essay.holistic_score.toFixed(2)}
-                            </span>
+                            <span className="font-mono font-bold text-sm text-heading">{essay.holistic_score.toFixed(2)}</span>
                             {essay.confidence != null && (
-                              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                                {(essay.confidence * 100).toFixed(0)}% conf
-                              </span>
+                              <span className="text-[10px] text-muted font-mono">{(essay.confidence * 100).toFixed(0)}% conf</span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 dark:text-slate-500 font-mono">Pending</span>
+                          <span className="text-xs text-tertiary font-mono">Pending</span>
                         )}
                       </TableCell>
-
-                      {/* Rubric Band */}
-                      <TableCell>{renderBandBadge(essay.rubric_band)}</TableCell>
-
-                      {/* Submitted Date */}
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-slate-800 dark:text-slate-200">
-                            {new Date(essay.created_at).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            {new Date(essay.created_at).toLocaleTimeString(undefined, {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
+                      <TableCell className="text-xs text-body">
+                        {new Date(essay.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                       </TableCell>
-
-                      {/* Submitter */}
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                            {(essay.submitter_email?.[0] || 'S').toUpperCase()}
-                          </div>
-                          <span className="text-xs text-slate-700 dark:text-slate-300 truncate max-w-[130px]">
-                            {essay.submitter_email || 'student@aes.local'}
-                          </span>
-                        </div>
+                      <TableCell className="text-xs text-body truncate max-w-[160px]">
+                        {essay.submitter_email ?? '—'}
                       </TableCell>
-
-                      {/* Row Hover Actions */}
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                          {/* Copy ID */}
-                          <button
-                            type="button"
-                            onClick={(e) => handleCopyId(essay.id, e)}
-                            className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition"
-                            title="Copy Essay ID"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-
-                          {/* Quick Score if submitted/failed */}
-                          {(essay.status === 'SUBMITTED' ||
-                            essay.status === 'FAILED' ||
-                            essay.status === 'PROCESSING_FAILED') && (
+                        <div className="flex items-center justify-end gap-2">
+                          {canScore && canDispatch(essay) && (
                             <Button
                               size="xs"
                               variant="primary"
-                              leftIcon={<Sparkles className="w-3 h-3 text-amber-300" />}
+                              leftIcon={<Sparkles className="w-3 h-3" />}
                               onClick={(e) => handleQuickScore(essay.id, e)}
-                              className="text-[11px] py-1 px-2"
                             >
                               Score
                             </Button>
                           )}
-
-                          {/* Inspect Score Workspace */}
                           <Button
                             size="xs"
                             variant="secondary"
@@ -895,7 +510,6 @@ export const EssayManagerPage: React.FC = () => {
                               e.stopPropagation();
                               navigate(`/essays/${essay.id}`);
                             }}
-                            className="text-[11px] py-1 px-2.5"
                           >
                             Inspect
                           </Button>
@@ -908,108 +522,75 @@ export const EssayManagerPage: React.FC = () => {
             </Table>
           </div>
 
-          {/* MOBILE CARDS VIEW (visible only on small screens) */}
           <div className="block md:hidden space-y-3.5">
-            {paginatedEssays.map((essay) => {
+            {essays.map((essay) => {
               const isSelected = selectedIds.includes(essay.id);
-              const promptInfo =
-                (essay.asap_set_id && promptMap.get(essay.asap_set_id)) || null;
-
               return (
                 <Card
                   key={essay.id}
                   onClick={() => navigate(`/essays/${essay.id}`)}
-                  className={`cursor-pointer transition-all ${
-                    isSelected ? 'ring-2 ring-primary-500 bg-primary-50/50 dark:bg-primary-950/20' : ''
-                  }`}
+                  className={`cursor-pointer ${isSelected ? 'ring-2 ring-primary' : ''}`}
                 >
                   <CardContent className="p-4 space-y-3">
-                    {/* Top Header Row: Checkbox, ID, Status */}
-                    <div className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2.5">
+                    <div className="flex items-center justify-between gap-2 border-b border-faint pb-2.5">
                       <div className="flex items-center gap-2.5">
                         <button
                           type="button"
                           onClick={(e) => toggleSelectOne(essay.id, e)}
-                          aria-label={`Select essay ${essay.id.substring(0, 8)}`}
-                          className="text-slate-400 hover:text-slate-700 dark:hover:text-white min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                          aria-label="Select essay"
+                          className="text-tertiary hover:text-heading min-w-[44px] min-h-[44px] flex items-center justify-center -ml-2"
                         >
-                          {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-primary-600 dark:text-primary-400" />
-                          ) : (
-                            <Square className="w-4 h-4" />
-                          )}
+                          {isSelected ? <CheckSquare className="w-4 h-4 text-primary" /> : <Square className="w-4 h-4" />}
                         </button>
-                        <span className="font-mono text-xs font-semibold text-primary-600 dark:text-primary-400">
-                          #{essay.id.substring(0, 8)}...
-                        </span>
+                        <span className="font-mono text-xs font-semibold text-primary">#{essay.id.slice(0, 8)}</span>
                       </div>
-                      <div>{renderStatusBadge(essay.status)}</div>
+                      {statusBadge(essay.status)}
                     </div>
 
-                    {/* Prompt Title */}
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[10px] font-mono font-bold text-primary-600 dark:text-primary-400">
-                          P{essay.asap_set_id || '?'}
+                        <span className="px-1.5 py-0.5 rounded bg-surface-level border border-base text-[10px] font-mono font-bold text-muted">
+                          P{essay.asap_set_id ?? '?'}
                         </span>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-white leading-tight">
-                          {essay.prompt_title || promptInfo?.title || `Prompt ${essay.prompt_id.substring(0, 8)}`}
+                        <h3 className="text-xs font-bold text-heading leading-tight truncate">
+                          {essay.prompt_title ?? `Prompt ${essay.prompt_id.slice(0, 8)}`}
                         </h3>
                       </div>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        Rubric Scale: {promptInfo?.rubric || `[${essay.rubric_min ?? 0} – ${essay.rubric_max ?? 12}]`}
-                      </p>
+                      {essay.rubric_min != null && essay.rubric_max != null && (
+                        <p className="text-[11px] text-muted font-mono">Rubric scale: {essay.rubric_min}–{essay.rubric_max}</p>
+                      )}
                     </div>
 
-                    {/* Score & Rubric Band */}
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-surface-level border border-faint">
                       <div className="space-y-0.5">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider">
-                          Holistic Score
-                        </span>
-                        <div className="font-mono font-black text-base text-slate-900 dark:text-white">
-                          {essay.reviewer_override_score != null ? (
-                            <span className="text-purple-600 dark:text-purple-400">
-                              {essay.reviewer_override_score.toFixed(2)}{' '}
-                              <span className="text-xs text-slate-400 dark:text-slate-500 font-normal">
-                                (AI: {essay.holistic_score?.toFixed(2)})
-                              </span>
-                            </span>
-                          ) : essay.holistic_score != null ? (
-                            <span className="text-emerald-600 dark:text-emerald-400">
-                              {essay.holistic_score.toFixed(2)}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-slate-400 dark:text-slate-500">Pending</span>
-                          )}
+                        <span className="text-[10px] uppercase font-bold text-tertiary tracking-wider">Holistic score</span>
+                        <div className="font-mono font-black text-base text-heading">
+                          {essay.reviewer_override_score != null
+                            ? essay.reviewer_override_score.toFixed(2)
+                            : essay.holistic_score != null
+                            ? essay.holistic_score.toFixed(2)
+                            : <span className="text-xs text-tertiary">Pending</span>}
                         </div>
                       </div>
-
                       <div className="space-y-0.5 text-right">
-                        <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 tracking-wider block">
-                          Rubric Band
-                        </span>
-                        <div>{renderBandBadge(essay.rubric_band)}</div>
+                        <span className="text-[10px] uppercase font-bold text-tertiary tracking-wider block">Band</span>
+                        {bandBadge(essay.rubric_band)}
                       </div>
                     </div>
 
-                    {/* Submitter & Date Footer */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+                    <div className="flex items-center justify-between text-[11px] text-muted pt-1">
                       <div className="flex items-center gap-1.5 truncate max-w-[60%]">
-                        <User className="w-3 h-3 text-slate-400 dark:text-slate-500 shrink-0" />
-                        <span className="truncate">{essay.submitter_email || 'student@aes.local'}</span>
+                        <User className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{essay.submitter_email ?? '—'}</span>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        <Calendar className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                        <Calendar className="w-3 h-3" />
                         <span>{new Date(essay.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
 
-                    {/* Action Buttons (min-h-[44px] touch target) */}
-                    <div className="flex items-center gap-2 pt-1 border-t border-slate-200 dark:border-slate-800">
-                      {(essay.status === 'SUBMITTED' ||
-                        essay.status === 'FAILED' ||
-                        essay.status === 'PROCESSING_FAILED') && (
+                    <div className="flex items-center gap-2 pt-1 border-t border-faint">
+                      {canScore && canDispatch(essay) && (
                         <Button
                           size="sm"
                           variant="primary"
@@ -1030,7 +611,7 @@ export const EssayManagerPage: React.FC = () => {
                         }}
                         className="flex-1 min-h-[44px]"
                       >
-                        Inspect Workspace
+                        Inspect
                       </Button>
                     </div>
                   </CardContent>
@@ -1039,79 +620,56 @@ export const EssayManagerPage: React.FC = () => {
             })}
           </div>
 
-          {/* Pagination Controls Footer */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
-            <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-base text-xs text-muted">
+            <div className="flex items-center gap-2 flex-wrap">
               <span>
-                Showing <strong className="text-slate-800 dark:text-slate-200">{totalItems === 0 ? 0 : startIndex + 1}</strong> to{' '}
-                <strong className="text-slate-800 dark:text-slate-200">{endIndex}</strong> of{' '}
-                <strong className="text-slate-800 dark:text-slate-200">{totalItems}</strong> essays
+                Showing <strong className="text-heading">{startIndex}</strong>–<strong className="text-heading">{endIndex}</strong> of{' '}
+                <strong className="text-heading">{total}</strong>
               </span>
-
-              <span className="text-slate-400 dark:text-slate-600">&bull;</span>
-
-              {/* Page Size Selector */}
-              <div className="flex items-center gap-1.5">
-                <span>Per page:</span>
+              <span className="text-tertiary">•</span>
+              <label className="flex items-center gap-1.5">
+                <span>Per page</span>
                 <select
                   value={pageSize}
                   onChange={(e) => updateParams({ pageSize: e.target.value, page: '1' })}
-                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-1.5 py-0.5 text-xs text-slate-800 dark:text-slate-200 focus:outline-none"
+                  className="bg-surface border border-base rounded px-1.5 py-0.5 text-xs text-body"
                 >
-                  <option value="10">10</option>
-                  <option value="25">25</option>
-                  <option value="50">50</option>
+                  {PAGE_SIZES.map((size) => (
+                    <option key={size} value={size}>{size}</option>
+                  ))}
                 </select>
-              </div>
+              </label>
             </div>
 
-            {/* Pagination Navigation */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
-                disabled={safeCurrentPage <= 1}
-                onClick={() => updateParams({ page: String(safeCurrentPage - 1) })}
-                className="min-h-[44px]"
+                disabled={currentPage <= 1}
+                onClick={() => updateParams({ page: String(currentPage - 1) })}
               >
                 Previous
               </Button>
-
-              {/* Page Number Pills */}
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter((p) => {
-                    // Show first, last, and current +/- 1
-                    return p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1;
-                  })
-                  .map((p, idx, arr) => {
-                    const prev = arr[idx - 1];
-                    const showEllipsis = prev && p - prev > 1;
-                    return (
-                      <React.Fragment key={p}>
-                        {showEllipsis && <span className="px-1 text-slate-400 dark:text-slate-600">...</span>}
-                        <button
-                          type="button"
-                          onClick={() => updateParams({ page: String(p) })}
-                          className={`min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg text-xs font-semibold transition ${
-                            safeCurrentPage === p
-                              ? 'bg-primary-600 text-white shadow-sm'
-                              : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-800'
-                          }`}
-                        >
-                          {p}
-                        </button>
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
-
+              {pageNumbers.map((p, idx) =>
+                p === 'ellipsis' ? (
+                  <span key={`e-${idx}`} className="px-1 text-tertiary">…</span>
+                ) : (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => updateParams({ page: String(p) })}
+                    className={`min-w-[36px] h-9 flex items-center justify-center rounded-lg text-xs font-semibold border
+                      ${currentPage === p ? 'bg-primary text-white border-primary' : 'bg-surface text-muted border-base hover:text-heading'}`}
+                  >
+                    {p}
+                  </button>
+                )
+              )}
               <Button
                 variant="outline"
                 size="sm"
-                disabled={safeCurrentPage >= totalPages}
-                onClick={() => updateParams({ page: String(safeCurrentPage + 1) })}
-                className="min-h-[44px]"
+                disabled={currentPage >= totalPages}
+                onClick={() => updateParams({ page: String(currentPage + 1) })}
               >
                 Next
               </Button>
@@ -1120,20 +678,16 @@ export const EssayManagerPage: React.FC = () => {
         </>
       )}
 
-      {/* Floating Bulk Actions Bar (Docked at bottom when 1+ selected) */}
-      {selectedIds.length > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white/95 dark:bg-slate-900/95 border border-primary-500/40 backdrop-blur-md px-5 py-3 rounded-2xl shadow-2xl flex flex-wrap items-center gap-4 animate-slide-up">
+      {selectedIds.length > 0 && canScore && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-surface border border-primary rounded-xl px-5 py-3 shadow-lg flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-primary-600 text-white flex items-center justify-center text-xs font-bold font-mono">
+            <span className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-xs font-bold font-mono">
               {selectedIds.length}
             </span>
-            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">
+            <span className="text-xs font-semibold text-heading">
               {selectedIds.length === 1 ? 'essay selected' : 'essays selected'}
             </span>
           </div>
-
-          <div className="h-4 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block" />
-
           <div className="flex items-center gap-2">
             <Button
               size="xs"
@@ -1142,25 +696,13 @@ export const EssayManagerPage: React.FC = () => {
               disabled={isBatchScoring}
               onClick={handleBatchScore}
             >
-              {isBatchScoring ? 'Scoring...' : 'Batch Score'}
+              {isBatchScoring ? 'Scoring…' : 'Batch Score'}
             </Button>
-
-            <Button
-              size="xs"
-              variant="secondary"
-              leftIcon={<Download className="w-3.5 h-3.5" />}
-              onClick={() => handleExportData('csv')}
-            >
-              Export CSV
+            <Button size="xs" variant="secondary" leftIcon={<Download className="w-3.5 h-3.5" />} onClick={() => handleExportData('csv')}>
+              Export
             </Button>
-
-            <Button
-              size="xs"
-              variant="ghost"
-              onClick={() => setSelectedIds([])}
-              className="text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-            >
-              Deselect All
+            <Button size="xs" variant="ghost" onClick={() => setSelectedIds([])}>
+              Clear
             </Button>
           </div>
         </div>
@@ -1168,3 +710,5 @@ export const EssayManagerPage: React.FC = () => {
     </div>
   );
 };
+
+export default EssayManagerPage;

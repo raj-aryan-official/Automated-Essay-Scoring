@@ -1,471 +1,329 @@
 /* ==========================================================================
    AES DESIGN SYSTEM — DESIGN TOKENS
-   Version: 1.0.0
-   Scope: Color Palette, Typography, Spacing, Radii, Shadows, Light & Dark Theme
+   Version: 2.0.0
+   Scope: Editorial Academic Palette, Typography, Spacing, Radii, Shadows
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,4..30,400;0,4..30,600;0,4..30,700;1,4..30,400&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   /* ==========================================================================
-     1. COLOR PALETTE — STATIC RAW COLOR PRIMITIVES
+     1. COLOR PALETTE — Editorial Academic
+     Deep ink primary, warm neutral surfaces, restrained semantic saturation
      ========================================================================== */
 
-  /* 1.1 Primary: Indigo / Blue Scale */
-  --color-primary-50:  #eef2ff;
-  --color-primary-100: #e0e7ff;
-  --color-primary-200: #c7d2fe;
-  --color-primary-300: #a5b4fc;
-  --color-primary-400: #818cf8;
-  --color-primary-500: #6366f1; /* Main Primary */
-  --color-primary-600: #4f46e5;
-  --color-primary-700: #4338ca;
-  --color-primary-800: #3730a3;
-  --color-primary-900: #312e81;
-  --color-primary-950: #1e1b4b;
+  /* 1.1 Primary: Deep Ink — actions only, never backgrounds */
+  --color-ink-50:   #f4f6ff;
+  --color-ink-100:  #e8ecff;
+  --color-ink-200:  #c9cbff;
+  --color-ink-300:  #a7aaff;
+  --color-ink-400:  #8282ff;
+  --color-ink-500:  #4f46e5;
+  --color-ink-600:  #4338ca;
+  --color-ink-700:  #3730a3;
+  --color-ink-800:  #2e2b8a;
+  --color-ink-900:  #231f63;
+  --color-ink-950:  #1a1544;
 
-  /* 1.2 Neutral Slate Scale */
-  --color-slate-50:  #f8fafc;
-  --color-slate-100: #f1f5f9;
-  --color-slate-200: #e2e8f0;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-500: #64748b;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1e293b;
-  --color-slate-900: #0f172a;
-  --color-slate-950: #020617;
+  /* 1.2 Neutral: Warm Stone — less clinical, more paper-like */
+  --color-stone-50:   #fafaf8;
+  --color-stone-100:  #f5f5f2;
+  --color-stone-200:  #e7e4df;
+  --color-stone-300:  #d4cfca;
+  --color-stone-400:  #a8a19d;
+  --color-stone-500:  #77726e;
+  --color-stone-600:  #57524e;
+  --color-stone-700:  #433f3b;
+  --color-stone-800:  #2a2725;
+  --color-stone-900:  #1c1917;
+  --color-stone-950:  #0c0b0a;
 
-  /* 1.3 Semantic Colors */
-  /* Success: Emerald */
-  --color-success-50:  #ecfdf5;
-  --color-success-100: #d1fae5;
-  --color-success-200: #a7f3d0;
-  --color-success-300: #6ee7b7;
-  --color-success-400: #34d399;
-  --color-success-500: #10b981;
-  --color-success-600: #059669;
-  --color-success-700: #047857;
-  --color-success-800: #065f46;
-  --color-success-900: #064e3b;
+  /* 1.3 Surfaces — depth via tone shifts, not shadows */
+  --color-surface-raised:   #ffffff;
+  --color-surface-level:    #f6f5f2;
+  --color-surface-sunken:   #e9e6e1;
 
-  /* Warning: Amber */
-  --color-warning-50:  #fffbeb;
-  --color-warning-100: #fef3c7;
-  --color-warning-200: #fde68a;
-  --color-warning-300: #fcd34d;
-  --color-warning-400: #fbbf24;
-  --color-warning-500: #f59e0b;
-  --color-warning-600: #d97706;
-  --color-warning-700: #b45309;
-  --color-warning-800: #92400e;
-  --color-warning-900: #78350f;
-
-  /* Danger / Error: Rose / Red */
-  --color-danger-50:  #fff1f2;
-  --color-danger-100: #ffe4e6;
-  --color-danger-200: #fecdd3;
-  --color-danger-300: #fda4af;
-  --color-danger-400: #fb7185;
-  --color-danger-500: #f43f5e;
-  --color-danger-600: #e11d48;
-  --color-danger-700: #be123c;
-  --color-danger-800: #9f1239;
-  --color-danger-900: #881337;
-
-  /* Info: Sky Blue */
-  --color-info-50:  #f0f9ff;
-  --color-info-100: #e0f2fe;
-  --color-info-200: #bae6fd;
-  --color-info-300: #7dd3fc;
-  --color-info-400: #38bdf8;
-  --color-info-500: #0ea5e9;
-  --color-info-600: #0284c7;
-  --color-info-700: #0369a1;
-  --color-info-800: #075985;
-  --color-info-900: #0c4a6e;
+  /* 1.4 Semantic — restrained saturation */
+  --color-emerald-500: #059669;
+  --color-emerald-600: #047857;
+  --color-amber-500:   #d97706;
+  --color-amber-600:   #b45309;
+  --color-rose-500:    #dc2626;
+  --color-rose-600:    #b91c1c;
+  --color-sky-500:     #0284c7;
+  --color-sky-600:     #0369a1;
 
   /* ==========================================================================
-     2. SCORE-BAND TOKENS (Strict: Low = Red, Mid = Amber, High = Green)
+     2. SCORE-BAND TOKENS
      ========================================================================== */
-  --score-low-base:   #ef4444; /* Red */
-  --score-low-bg:     #fef2f2;
+  --score-low-bg:     rgba(220, 38, 38, 0.08);
+  --score-low-base:   #dc2626;
   --score-low-text:   #b91c1c;
-  --score-low-border: #fca5a5;
+  --score-low-border: rgba(220, 38, 38, 0.2);
 
-  --score-mid-base:   #f59e0b; /* Amber */
-  --score-mid-bg:     #fffbeb;
+  --score-mid-bg:     rgba(217, 119, 6, 0.08);
+  --score-mid-base:   #d97706;
   --score-mid-text:   #b45309;
-  --score-mid-border: #fcd34d;
+  --score-mid-border: rgba(217, 119, 6, 0.2);
 
-  --score-high-base:   #10b981; /* Green */
-  --score-high-bg:     #ecfdf5;
-  --score-high-text:   #047857;
-  --score-high-border: #6ee7b7;
+  --score-high-bg:    rgba(5, 150, 105, 0.08);
+  --score-high-base:  #059669;
+  --score-high-text:  #047857;
+  --score-high-border: rgba(5, 150, 105, 0.2);
 
   /* ==========================================================================
-     3. TYPOGRAPHY SCALE (Single Font Family: Inter, Monospace: JetBrains Mono)
+     3. TYPOGRAPHY — Editorial hierarchy
+     Serif for headings (Source Serif 4), Sans for UI (Inter)
      ========================================================================== */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-serif:  'Source Serif 4', 'Iowan Old Style', 'Apple Garamond', serif;
+  --font-sans:   'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:   'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  /* 6 Standard Type Sizes with Line Heights & Tracking */
-  --text-xs-size:      0.75rem;    /* 12px */
-  --text-xs-line:      1.0rem;     /* 16px */
-  --text-xs-letter:    0.01em;
+  --text-xs-size:    0.75rem;
+  --text-xs-line:    1rem;
+  --text-xs-letter:  0.02em;
 
-  --text-sm-size:      0.875rem;   /* 14px */
-  --text-sm-line:      1.25rem;    /* 20px */
-  --text-sm-letter:    0.005em;
+  --text-sm-size:    0.875rem;
+  --text-sm-line:    1.25rem;
+  --text-sm-letter:  0.01em;
 
-  --text-base-size:    1.0rem;     /* 16px */
-  --text-base-line:    1.5rem;     /* 24px */
-  --text-base-letter:  0em;
+  --text-base-size:  1rem;
+  --text-base-line:  1.6;
+  --text-base-letter: 0em;
 
-  --text-lg-size:      1.125rem;   /* 18px */
-  --text-lg-line:      1.75rem;    /* 28px */
-  --text-lg-letter:    -0.01em;
+  --text-lg-size:    1.125rem;
+  --text-lg-line:    1.6;
+  --text-lg-letter:  -0.01em;
 
-  --text-xl-size:      1.25rem;    /* 20px */
-  --text-xl-line:      1.75rem;    /* 28px */
-  --text-xl-letter:    -0.015em;
+  --text-xl-size:    1.25rem;
+  --text-xl-line:    1.5;
+  --text-xl-letter:  -0.015em;
 
-  --text-2xl-size:     1.5rem;     /* 24px */
-  --text-2xl-line:     2.0rem;     /* 32px */
-  --text-2xl-letter:   -0.02em;
+  --text-2xl-size:   1.5rem;
+  --text-2xl-line:   1.45;
+  --text-2xl-letter: -0.02em;
 
-  /* Display Size for Score Value */
-  --text-display-size: 3.0rem;     /* 48px */
-  --text-display-line: 1.0;
+  --text-3xl-size:   1.875rem;
+  --text-3xl-line:   1.4;
+  --text-3xl-letter: -0.02em;
+
+  --text-4xl-size:   2.25rem;
+  --text-4xl-line:   1.3;
+  --text-4xl-letter: -0.025em;
+
+  --text-display-size: 4rem;
+  --text-display-line: 1.05;
   --text-display-letter: -0.03em;
 
   /* ==========================================================================
-     4. SPACING SCALE (4px Base Grid)
+     4. SPACING — 4px base grid, generous breathing room
      ========================================================================== */
-  --space-0-5: 0.125rem; /* 2px */
-  --space-1:   0.25rem;  /* 4px */
-  --space-1-5: 0.375rem; /* 6px */
-  --space-2:   0.5rem;   /* 8px */
-  --space-2-5: 0.625rem; /* 10px */
-  --space-3:   0.75rem;  /* 12px */
-  --space-4:   1.0rem;   /* 16px */
-  --space-5:   1.25rem;  /* 20px */
-  --space-6:   1.5rem;   /* 24px */
-  --space-8:   2.0rem;   /* 32px */
-  --space-10:  2.5rem;   /* 40px */
-  --space-12:  3.0rem;   /* 48px */
-  --space-16:  4.0rem;   /* 64px */
+  --space-1:   0.25rem;
+  --space-2:   0.5rem;
+  --space-3:   0.75rem;
+  --space-4:   1rem;
+  --space-5:   1.25rem;
+  --space-6:   1.5rem;
+  --space-8:   2rem;
+  --space-10:  2.5rem;
+  --space-12:  3rem;
+  --space-16:  4rem;
+  --space-20:  5rem;
 
   /* ==========================================================================
-     5. RADIUS SCALE
+     5. RADIUS — Intentional, not universal
      ========================================================================== */
-  --radius-none: 0px;
-  --radius-sm:   0.25rem;  /* 4px - Badges, small chips */
-  --radius-md:   0.375rem; /* 6px - Form controls, dropdown items */
-  --radius-lg:   0.5rem;   /* 8px - Buttons, standard inputs */
-  --radius-xl:   0.75rem;  /* 12px - Cards, panels */
-  --radius-2xl:  1.0rem;   /* 16px - Modals, top banners */
-  --radius-full: 9999px;   /* Pills, status dots, avatars */
+  --radius-sm:   0.25rem;
+  --radius-md:   0.375rem;
+  --radius-lg:   0.5rem;
+  --radius-xl:   0.75rem;
+  --radius-2xl:  1rem;
+  --radius-full: 9999px;
 
   /* ==========================================================================
-     6. SHADOW SCALE
+     6. SHADOW — Minimal, subtle
      ========================================================================== */
-  --shadow-sm:    0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md:    0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg:    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl:    0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  --shadow-sm:   0 1px 2px 0 rgb(0 0 0 / 0.04);
+  --shadow-md:   0 4px 6px -1px rgb(0 0 0 / 0.06), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+  --shadow-lg:   0 10px 15px -3px rgb(0 0 0 / 0.05);
+  --shadow-xl:   0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+  --shadow-inner: inset 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --shadow-none: none;
 
   /* ==========================================================================
-     7. THEME SEMANTICS (LIGHT MODE DEFAULT)
+     7. THEME SEMANTICS — LIGHT MODE
      ========================================================================== */
-  --bg-canvas:           var(--color-slate-50);
-  --bg-surface:          #ffffff;
+  --bg-canvas:           var(--color-stone-50);
+  --bg-surface:          var(--color-surface-raised);
+  --bg-surface-level:    var(--color-surface-level);
   --bg-surface-elevated: #ffffff;
-  --bg-surface-sunken:   var(--color-slate-100);
+  --bg-surface-sunken:   var(--color-surface-sunken);
 
-  --text-primary:        var(--color-slate-900);
-  --text-secondary:      var(--color-slate-600);
-  --text-tertiary:       var(--color-slate-500);
-  --text-muted:          var(--color-slate-400);
+  --text-heading:        var(--color-stone-900);
+  --text-body:           var(--color-stone-800);
+  --text-primary:        var(--text-heading);
+  --text-secondary:      var(--text-body);
+  --text-muted:          var(--color-stone-500);
+  --text-tertiary:       var(--color-stone-400);
   --text-inverse:        #ffffff;
 
-  --border-subtle:       var(--color-slate-200);
-  --border-default:      var(--color-slate-300);
-  --border-strong:       var(--color-slate-400);
+  --border-faint:        var(--color-stone-200);
+  --border-base:         var(--color-stone-300);
+  --border-subtle:       var(--border-faint);
+  --border-default:      var(--border-base);
+  --border-strong:       var(--color-stone-500);
+  --border-focus:        var(--color-ink-500);
 
-  --ring-focus:          rgba(99, 102, 241, 0.5); /* Primary indigo ring */
   --ring-focus-offset:   #ffffff;
 
-  /* Semantic Feedback Banners (Light Mode) */
-  --feedback-success-bg:     var(--color-success-50);
-  --feedback-success-border: var(--color-success-200);
-  --feedback-success-text:   var(--color-success-800);
+  /* Semantic banners — light */
+  --banner-success-bg:   rgba(5, 150, 105, 0.06);
+  --banner-success-border: rgba(5, 150, 105, 0.18);
+  --banner-success-text:   #047857;
 
-  --feedback-warning-bg:     var(--color-warning-50);
-  --feedback-warning-border: var(--color-warning-200);
-  --feedback-warning-text:   var(--color-warning-800);
+  --banner-warning-bg:   rgba(217, 119, 6, 0.06);
+  --banner-warning-border: rgba(217, 119, 6, 0.18);
+  --banner-warning-text:   #b45309;
 
-  --feedback-danger-bg:      var(--color-danger-50);
-  --feedback-danger-border:  var(--color-danger-200);
-  --feedback-danger-text:    var(--color-danger-800);
+  --banner-error-bg:     rgba(220, 38, 38, 0.06);
+  --banner-error-border:   rgba(220, 38, 38, 0.18);
+  --banner-error-text:     #b91c1c;
 
-  --feedback-info-bg:        var(--color-info-50);
-  --feedback-info-border:    var(--color-info-200);
-  --feedback-info-text:      var(--color-info-800);
+  --banner-info-bg:      rgba(2, 132, 199, 0.06);
+  --banner-info-border:    rgba(2, 132, 199, 0.18);
+  --banner-info-text:      #0369a1;
 
-  /* Role Badges (Light Mode) */
-  --role-admin-bg:      rgba(244, 63, 94, 0.1);
-  --role-admin-text:    #be123c;
-  --role-admin-border:  rgba(244, 63, 94, 0.3);
+  /* Role badges — light */
+  --role-admin-bg:       rgba(220, 38, 38, 0.08);
+  --role-admin-text:     #b91c1c;
+  --role-admin-border:   rgba(220, 38, 38, 0.2);
 
-  --role-teacher-bg:    rgba(147, 51, 234, 0.1);
-  --role-teacher-text:  #7e22ce;
-  --role-teacher-border: rgba(147, 51, 234, 0.3);
+  --role-teacher-bg:     rgba(79, 70, 229, 0.08);
+  --role-teacher-text:   #4338ca;
+  --role-teacher-border: rgba(79, 70, 229, 0.2);
 
-  --role-ml-bg:         rgba(14, 165, 233, 0.1);
-  --role-ml-text:       #0369a1;
-  --role-ml-border:     rgba(14, 165, 233, 0.3);
+  --role-ml-bg:          rgba(2, 132, 199, 0.08);
+  --role-ml-text:        #0369a1;
+  --role-ml-border:      rgba(2, 132, 199, 0.2);
 
-  --role-viewer-bg:     rgba(100, 116, 139, 0.1);
-  --role-viewer-text:   #334155;
-  --role-viewer-border: rgba(100, 116, 139, 0.3);
+  --role-viewer-bg:      rgba(119, 114, 110, 0.08);
+  --role-viewer-text:    #57524e;
+  --role-viewer-border:  rgba(119, 114, 110, 0.2);
 
   /* ==========================================================================
-     9. MOTION & ANIMATION TOKENS (PROMPT 18)
-     Consistent 150-300ms durations with cubic ease-out deceleration
+     8. MOTION — Purposeful, restrained
      ========================================================================== */
-  --motion-duration-fast:     150ms; /* Button press, toggle switch, tooltip */
-  --motion-duration-normal:   200ms; /* Page enter, modal scale, toast slide */
-  --motion-duration-moderate: 250ms; /* Drawer slide-over, accordion expand */
-  --motion-duration-slow:     300ms; /* Score count-up, chart draw-in */
-
-  --motion-ease-out:    cubic-bezier(0.16, 1, 0.3, 1); /* Decelerate into view */
-  --motion-ease-in:     cubic-bezier(0.7, 0, 0.84, 0);  /* Accelerate away */
-  --motion-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);   /* Smooth morph */
-  --motion-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* Micro tactile pop */
+  --motion-fast:   120ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-normal: 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --motion-slow:   300ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /* ==========================================================================
-   8. THEME SEMANTICS (DARK MODE OVERRIDES)
-   Applied via class .dark or [data-theme="dark"] on <html> or <body>
+   9. THEME SEMANTICS — DARK MODE
    ========================================================================== */
 .dark,
 [data-theme="dark"] {
-  --bg-canvas:           #0b0f19; /* Deep Slate Void */
-  --bg-surface:          #111827; /* Rich Dark Gray */
-  --bg-surface-elevated: #1e293b; /* Slate 800 Card Base */
-  --bg-surface-sunken:   #06080e;
+  --bg-canvas:           #0a0908;
+  --bg-surface:          #171513;
+  --bg-surface-level:    #1c1a18;
+  --bg-surface-elevated: #201d1a;
+  --bg-surface-sunken:   #0f0e0c;
 
-  --text-primary:        var(--color-slate-50);
-  --text-secondary:      var(--color-slate-300);
-  --text-tertiary:       var(--color-slate-400);
-  --text-muted:          var(--color-slate-500);
-  --text-inverse:        var(--color-slate-900);
+  --text-heading:        #f5f5f2;
+  --text-body:           #e7e4df;
+  --text-primary:        var(--text-heading);
+  --text-secondary:      var(--text-body);
+  --text-muted:          #a8a19d;
+  --text-tertiary:       #77726e;
+  --text-inverse:        #0a0908;
 
-  --border-subtle:       #1e293b; /* Slate 800 */
-  --border-default:      #334155; /* Slate 700 */
-  --border-strong:       #475569; /* Slate 600 */
+  --border-faint:        #272422;
+  --border-base:         #3d3936;
+  --border-subtle:       var(--border-faint);
+  --border-default:      var(--border-base);
+  --border-strong:       #77726e;
+  --border-focus:        #8282ff;
 
-  --ring-focus:          rgba(129, 140, 248, 0.6); /* Indigo 400 */
-  --ring-focus-offset:   #0f172a;
+  --ring-focus-offset:   #171513;
 
-  /* Score-Band Overrides (Dark Mode High Contrast) */
-  --score-low-bg:     rgba(239, 68, 68, 0.15);
-  --score-low-text:   #fca5a5;
-  --score-low-border: rgba(239, 68, 68, 0.35);
+  /* Semantic banners — dark */
+  --banner-success-bg:   rgba(5, 150, 105, 0.12);
+  --banner-success-border: rgba(5, 150, 105, 0.25);
+  --banner-success-text:   #6ee7b7;
 
-  --score-mid-bg:     rgba(245, 158, 11, 0.15);
-  --score-mid-text:   #fcd34d;
-  --score-mid-border: rgba(245, 158, 11, 0.35);
+  --banner-warning-bg:   rgba(217, 119, 6, 0.12);
+  --banner-warning-border: rgba(217, 119, 6, 0.25);
+  --banner-warning-text:   #fcd34d;
 
-  --score-high-bg:     rgba(16, 185, 129, 0.15);
-  --score-high-text:   #6ee7b7;
-  --score-high-border: rgba(16, 185, 129, 0.35);
+  --banner-error-bg:     rgba(220, 38, 38, 0.12);
+  --banner-error-border:   rgba(220, 38, 38, 0.25);
+  --banner-error-text:     #fca5a5;
 
-  /* Semantic Feedback Banners (Dark Mode) */
-  --feedback-success-bg:     rgba(16, 185, 129, 0.12);
-  --feedback-success-border: rgba(16, 185, 129, 0.28);
-  --feedback-success-text:   #6ee7b7;
+  --banner-info-bg:      rgba(2, 132, 199, 0.12);
+  --banner-info-border:    rgba(2, 132, 199, 0.25);
+  --banner-info-text:      #7dd3fc;
 
-  --feedback-warning-bg:     rgba(245, 158, 11, 0.12);
-  --feedback-warning-border: rgba(245, 158, 11, 0.28);
-  --feedback-warning-text:   #fcd34d;
+  /* Role badges — dark */
+  --role-admin-bg:       rgba(220, 38, 38, 0.15);
+  --role-admin-text:     #fca5a5;
+  --role-admin-border:   rgba(220, 38, 38, 0.3);
 
-  --feedback-danger-bg:      rgba(244, 63, 94, 0.12);
-  --feedback-danger-border:  rgba(244, 63, 94, 0.28);
-  --feedback-danger-text:    #fda4af;
+  --role-teacher-bg:     rgba(79, 70, 229, 0.15);
+  --role-teacher-text:   #a5a4ff;
+  --role-teacher-border: rgba(79, 70, 229, 0.3);
 
-  --feedback-info-bg:        rgba(14, 165, 233, 0.12);
-  --feedback-info-border:    rgba(14, 165, 233, 0.28);
-  --feedback-info-text:      #7dd3fc;
+  --role-ml-bg:          rgba(2, 132, 199, 0.15);
+  --role-ml-text:        #7dd3fc;
+  --role-ml-border:      rgba(2, 132, 199, 0.3);
 
-  /* Role Badges (Dark Mode) */
-  --role-admin-bg:      rgba(244, 63, 94, 0.2);
-  --role-admin-text:    #fda4af;
-  --role-admin-border:  rgba(244, 63, 94, 0.4);
-
-  --role-teacher-bg:    rgba(168, 85, 247, 0.2);
-  --role-teacher-text:  #d8b4fe;
-  --role-teacher-border: rgba(168, 85, 247, 0.4);
-
-  --role-ml-bg:         rgba(14, 165, 233, 0.2);
-  --role-ml-text:       #7dd3fc;
-  --role-ml-border:     rgba(14, 165, 233, 0.4);
-
-  --role-viewer-bg:     rgba(100, 116, 139, 0.25);
-  --role-viewer-text:   #cbd5e1;
-  --role-viewer-border: rgba(100, 116, 139, 0.4);
-
-  /* Shadows (Dark Mode Deeper Glow) */
-  --shadow-sm:    0 1px 2px 0 rgb(0 0 0 / 0.35);
-  --shadow-md:    0 4px 6px -1px rgb(0 0 0 / 0.45), 0 2px 4px -2px rgb(0 0 0 / 0.4);
-  --shadow-lg:    0 10px 15px -3px rgb(0 0 0 / 0.55), 0 4px 6px -4px rgb(0 0 0 / 0.5);
-  --shadow-xl:    0 20px 25px -5px rgb(0 0 0 / 0.65), 0 8px 10px -6px rgb(0 0 0 / 0.6);
-  --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.45);
+  --role-viewer-bg:      rgba(119, 114, 110, 0.15);
+  --role-viewer-text:    #a8a19d;
+  --role-viewer-border:  rgba(119, 114, 110, 0.3);
 }
 
 /* ==========================================================================
-   10. KEYFRAME ANIMATIONS & PURPOSEFUL MOTION CLASSES (PROMPT 18)
-   Subtle, purposeful motion (150-300ms) with consistent easing
+   10. GLOBAL BASE STYLES
    ========================================================================== */
-
-@keyframes pageEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+html {
+  font-family: var(--font-sans);
+  font-size: var(--text-base-size);
+  line-height: var(--text-base-line);
+  color: var(--text-body);
+  background-color: var(--bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-@keyframes modalBackdropIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-@keyframes modalCardIn {
-  0% {
-    opacity: 0;
-    transform: scale(0.96) translateY(4px);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
-}
+/* Typography classes — editorial */
+.text-serif { font-family: var(--font-serif); }
+.text-sans  { font-family: var(--font-sans); }
 
-@keyframes drawerRightIn {
-  0% {
-    transform: translateX(100%);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
+.text-xs { font-size: var(--text-xs-size); line-height: var(--text-xs-line); letter-spacing: var(--text-xs-letter); }
+.text-sm { font-size: var(--text-sm-size); line-height: var(--text-sm-line); letter-spacing: var(--text-sm-letter); }
+.text-base { font-size: var(--text-base-size); line-height: var(--text-base-line); letter-spacing: var(--text-base-letter); }
+.text-lg { font-size: var(--text-lg-size); line-height: var(--text-lg-line); letter-spacing: var(--text-lg-letter); }
+.text-xl { font-size: var(--text-xl-size); line-height: var(--text-xl-line); letter-spacing: var(--text-xl-letter); }
+.text-2xl { font-size: var(--text-2xl-size); line-height: var(--text-2xl-line); letter-spacing: var(--text-2xl-letter); }
+.text-3xl { font-size: var(--text-3xl-size); line-height: var(--text-3xl-line); letter-spacing: var(--text-3xl-letter); }
+.text-4xl { font-size: var(--text-4xl-size); line-height: var(--text-4xl-line); letter-spacing: var(--text-4xl-letter); }
 
-@keyframes drawerLeftIn {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
+/* Utility: surface backgrounds */
+.bg-surface-raised { background-color: var(--color-surface-raised); }
+.bg-surface-level { background-color: var(--color-surface-level); }
+.bg-surface-sunken { background-color: var(--color-surface-sunken); }
 
-@keyframes drawerBottomIn {
-  0% {
-    transform: translateY(100%);
-  }
-  100% {
-    transform: translateY(0);
-  }
-}
+/* Utility: borders */
+.border-faint { border-color: var(--border-faint); }
+.border-base { border-color: var(--border-base); }
 
-@keyframes toastSlideIn {
-  0% {
-    opacity: 0;
-    transform: translateX(1rem) scale(0.96);
-  }
-  100% {
-    opacity: 1;
-    transform: translateX(0) scale(1);
-  }
+/* Focus ring — consistent, accessible */
+*:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
 }
-
-@keyframes skeletonShimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* Purposeful Motion Utilities */
-.animate-page-enter {
-  animation: pageEnter var(--motion-duration-normal) var(--motion-ease-out) both;
-}
-
-.animate-backdrop-in {
-  animation: modalBackdropIn var(--motion-duration-fast) var(--motion-ease-out) both;
-}
-
-.animate-modal-in {
-  animation: modalCardIn var(--motion-duration-normal) var(--motion-ease-out) both;
-}
-
-.animate-drawer-right-in {
-  animation: drawerRightIn var(--motion-duration-moderate) var(--motion-ease-out) both;
-}
-
-.animate-drawer-left-in {
-  animation: drawerLeftIn var(--motion-duration-moderate) var(--motion-ease-out) both;
-}
-
-.animate-drawer-bottom-in {
-  animation: drawerBottomIn var(--motion-duration-moderate) var(--motion-ease-out) both;
-}
-
-.animate-toast-slide-in {
-  animation: toastSlideIn var(--motion-duration-normal) var(--motion-ease-out) both;
-}
-
-.animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(226, 232, 240, 0.4) 0%,
-    rgba(241, 245, 249, 0.9) 50%,
-    rgba(226, 232, 240, 0.4) 100%
-  );
-  background-size: 200% 100%;
-  animation: skeletonShimmer 1.8s infinite linear;
-}
-
-.dark .animate-shimmer,
-[data-theme="dark"] .animate-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(30, 41, 59, 0.4) 0%,
-    rgba(51, 65, 85, 0.8) 50%,
-    rgba(30, 41, 59, 0.4) 100%
-  );
-  background-size: 200% 100%;
-  animation: skeletonShimmer 1.8s infinite linear;
-}
-
-/* Tactile button press */
-.btn-press {
-  transition: transform var(--motion-duration-fast) var(--motion-ease-out);
-}
-.btn-press:active {
-  transform: scale(0.98);
-}
-

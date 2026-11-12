@@ -14,9 +14,10 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, require_viewer
-from app.models.entities import Job, User
+from app.api.deps import get_db, require_ml_engineer, require_viewer
+from app.models.entities import Essay, Job, ModelEntity, Score, User
 from app.schemas.analytics import (
+    DashboardSummaryResponse,
     EvaluationDashboardResponse,
     JobStatusCounts,
     LossCurvePoint,
@@ -77,38 +78,17 @@ def _load_qwk_summary() -> QwkSummaryResponse:
         except Exception as e:
             logger.warning(f"Failed to parse {_EVALUATION_JSON_PATH}: {e}")
 
-    # Fallback if evaluation json is not yet written
-    fallback_prompts = [
-        PromptQwkResult(
-            prompt_id=i,
-            qwk=0.98 if i != 7 else 0.93,
-            target_qwk=0.70,
-            passed=True,
-            genre=(
-                "persuasive"
-                if i <= 2
-                else ("source-dependent" if i <= 6 else "narrative")
-            ),
-            rubric_min=2.0 if i == 1 else (1.0 if i == 2 else 0.0),
-            rubric_max=(
-                12.0
-                if i == 1
-                else (
-                    6.0 if i == 2 else (30.0 if i == 7 else (60.0 if i == 8 else 4.0))
-                )
-            ),
-            n_test_samples=4,
-        )
-        for i in range(1, 9)
-    ]
+    # WHY: Absent a generated evaluation report, report "not evaluated" rather than inventing benchmark numbers
+    logger.info("No evaluation report found at %s", _EVALUATION_JSON_PATH)
     return QwkSummaryResponse(
-        average_qwk=0.97,
+        average_qwk=0.0,
         target_qwk=0.70,
-        all_passed=True,
-        evaluated_prompts_count=8,
-        passed_prompts_count=8,
+        all_passed=False,
+        evaluated_prompts_count=0,
+        passed_prompts_count=0,
         failed_prompts_count=0,
-        prompts=fallback_prompts,
+        timestamp=None,
+        prompts=[],
     )
 
 
@@ -162,16 +142,7 @@ def _load_loss_curves() -> dict[str, list[LossCurvePoint]]:
                     )
                 )
             loss_curves[pid_str] = points
-        else:
-            # Synthetic fallback curve if scalars not present
-            loss_curves[pid_str] = [
-                LossCurvePoint(
-                    step=1, train_loss=0.06563, val_loss=0.07399, learning_rate=1e-5
-                ),
-                LossCurvePoint(
-                    step=2, train_loss=0.04795, val_loss=0.05454, learning_rate=1e-5
-                ),
-            ]
+        # WHY: Skip prompts without logged scalars instead of plotting a synthetic two-point curve
 
     return loss_curves
 
@@ -205,7 +176,7 @@ def _get_live_job_counts(db: Session) -> JobStatusCounts:
 )
 def get_evaluation_dashboard(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_viewer),
+    current_user: User = Depends(require_ml_engineer),
 ) -> EvaluationDashboardResponse:
     """Return aggregated QWK evaluation report, per-prompt loss curves, and live job counts."""
     qwk_summary = _load_qwk_summary()
@@ -216,6 +187,61 @@ def get_evaluation_dashboard(
         qwk_summary=qwk_summary,
         loss_curves=loss_curves,
         job_counts=job_counts,
+    )
+
+
+# WHY: Dashboard KPIs are computed from the database so the overview never shows invented volumes or accuracy
+@router.get(
+    "/summary",
+    response_model=DashboardSummaryResponse,
+    summary="Get live essay and quality KPIs for the dashboard",
+)
+def get_dashboard_summary(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer),
+) -> DashboardSummaryResponse:
+    """Return essay counts, average score/confidence, active model, and queue state."""
+    scored_statuses = ("SCORED", "FEEDBACK_READY", "UNDER_REVIEW", "FINALIZED")
+    pending_statuses = ("SUBMITTED", "QUEUED", "PROCESSING")
+
+    total_essays = db.query(func.count(Essay.id)).scalar() or 0
+    scored_essays = (
+        db.query(func.count(Essay.id))
+        .filter(Essay.status.in_(scored_statuses))
+        .scalar()
+        or 0
+    )
+    pending_essays = (
+        db.query(func.count(Essay.id))
+        .filter(Essay.status.in_(pending_statuses))
+        .scalar()
+        or 0
+    )
+    failed_essays = (
+        db.query(func.count(Essay.id))
+        .filter(Essay.status == "PROCESSING_FAILED")
+        .scalar()
+        or 0
+    )
+
+    average_score = db.query(func.avg(Score.holistic_score)).scalar()
+    average_confidence = db.query(func.avg(Score.confidence)).scalar()
+
+    active_model = (
+        db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
+    )
+
+    return DashboardSummaryResponse(
+        total_essays=int(total_essays),
+        scored_essays=int(scored_essays),
+        pending_essays=int(pending_essays),
+        failed_essays=int(failed_essays),
+        average_score=float(average_score) if average_score is not None else None,
+        average_confidence=(
+            float(average_confidence) if average_confidence is not None else None
+        ),
+        active_model=active_model.version if active_model else None,
+        queue=_get_live_job_counts(db),
     )
 
 

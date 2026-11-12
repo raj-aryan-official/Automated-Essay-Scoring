@@ -3,42 +3,41 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../api';
 
-// WHY: Predefined seed test accounts enabling 1-click role-based sign-in for viva demonstrations across TEACHER, ADMIN, ML_ENGINEER, and VIEWER roles.
-const DEMO_ACCOUNTS: { role: UserRole; label: string; email: string; pass: string; badgeColor: string }[] = [
+const DEMO_ACCOUNTS: { role: UserRole; label: string; email: string; pass: string; color: string }[] = [
   {
     role: 'TEACHER',
-    label: 'Teacher (Submit & Review)',
+    label: 'Teacher — Submit & Review',
     email: 'teacher@aes.local',
     pass: 'Teacher123!',
-    badgeColor: 'bg-purple-500/10 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-500/30 hover:bg-purple-500/20 dark:hover:bg-purple-500/30',
+    color: 'bg-ink-50 border-ink-300/50 text-ink-900 hover:bg-ink-100',
   },
   {
     role: 'ADMIN',
-    label: 'Administrator (Full Access)',
+    label: 'Administrator — Full Access',
     email: 'admin@aes.local',
     pass: 'Admin123!',
-    badgeColor: 'bg-rose-500/10 dark:bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-500/30 hover:bg-rose-500/20 dark:hover:bg-rose-500/30',
+    color: 'bg-rose-50 border-rose-300/50 text-rose-900 hover:bg-rose-100',
   },
   {
     role: 'ML_ENGINEER',
-    label: 'ML Engineer (Model Registry)',
+    label: 'ML Engineer — Model Registry',
     email: 'ml_engineer@aes.local',
     pass: 'Engineer123!',
-    badgeColor: 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-500/30 hover:bg-blue-500/20 dark:hover:bg-blue-500/30',
+    color: 'bg-sky-50 border-sky-300/50 text-sky-900 hover:bg-sky-100',
   },
   {
     role: 'VIEWER',
-    label: 'Viewer (Read-Only)',
+    label: 'Viewer — Read-Only',
     email: 'viewer@aes.local',
     pass: 'Viewer123!',
-    badgeColor: 'bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600/50 hover:bg-slate-200 dark:hover:bg-slate-700',
+    color: 'bg-stone-100 border-stone-300 text-stone-800 hover:bg-stone-200',
   },
 ];
 
-// WHY: Authentication page providing standard credential submission and convenient 1-click demo logins with JWT session creation.
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -46,9 +45,8 @@ export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const from = (location.state as any)?.from?.pathname || '/';
+  const from = (location.state as any)?.from?.pathname || '/dashboard';
 
-  // WHY: Dispatches user credentials to the OAuth2 token endpoint, stores JWT in browser storage, and returns user to target route.
   const handleLogin = async (e?: React.FormEvent, customEmail?: string, customPass?: string) => {
     if (e) e.preventDefault();
     setError(null);
@@ -84,36 +82,67 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <main className="max-w-md mx-auto my-10 px-4 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-brand-500 dark:text-brand-400 mb-1">
-          <span className="text-2xl font-black">A</span>
+    <main className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-canvas px-4 text-sans">
+      {/* Editorial Left Panel — Brand & Purpose */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center p-8 border-r border-faint">
+        <div className="inline-flex items-center gap-2 mb-6">
+          <div className="w-10 h-10 rounded-lg bg-ink-100 border border-ink-300/50 flex items-center justify-center">
+            <span className="text-xl font-black text-ink-700">A</span>
+          </div>
+          <span className="text-serif text-2xl font-bold text-heading tracking-tight">AES</span>
         </div>
-        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-          Sign In to AES Platform
+
+        <h1 className="text-serif text-4xl font-bold text-heading leading-tight mb-4">
+          Automated Essay Scoring
         </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-xs mx-auto">
-          Role-based access for automated essay evaluation, model diagnostics, and teacher overrides.
+        <p className="text-lg text-muted leading-relaxed max-w-lg mb-8">
+          A platform for automated essay evaluation, model diagnostics, and
+          teacher-led score overrides. Built for educators, researchers, and
+          institutions.
         </p>
+
+        <div className="space-y-3 text-sm text-muted font-serif">
+          <div className="flex items-start gap-3">
+            <span className="mt-1 text-xs font-medium text-ink-500">✓</span>
+            <span>Role-based access for teachers, admins, ML engineers, and viewers</span>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="mt-1 text-xs font-medium text-ink-500">✓</span>
+            <span>ASAP benchmark rubrics with multi-trait dimension feedback</span>
+          </div>
+          <div className="flex items-start gap-3">
+            <span className="mt-1 text-xs font-medium text-ink-500">✓</span>
+            <span>Human-in-the-loop reviewer overrides with audit trail</span>
+          </div>
+        </div>
       </div>
 
-      {/* Main Login Card */}
-      <div className="bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-xl dark:shadow-2xl backdrop-blur space-y-5">
+      {/* Right Panel — Sign In Form */}
+      <div className="w-full max-w-md mt-8 lg:mt-0 lg:w-1/2 p-8 flex flex-col justify-center">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-8 h-8 rounded-md bg-ink-100 border border-ink-300/50 flex items-center justify-center">
+            <span className="text-lg font-black text-ink-700">A</span>
+          </div>
+          <span className="text-serif text-xl font-bold text-heading">Sign In</span>
+        </div>
+        <p className="text-xs text-tertiary mb-8">
+          Sign in to continue to your dashboard
+        </p>
+
         {error && (
           <div
             id="login-error-banner"
-            className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-300 rounded-lg text-xs leading-relaxed"
+            className="p-3 mb-4 rounded-lg border border-error-border bg-error-bg text-error-text text-xs leading-relaxed"
           >
             {error}
           </div>
         )}
 
-        <form onSubmit={(e) => handleLogin(e)} className="space-y-4">
+        <form onSubmit={(e) => handleLogin(e)} className="space-y-5">
           <div>
             <label
               htmlFor="login-email-input"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+              className="block text-xs font-medium text-body mb-1.5"
             >
               Email Address
             </label>
@@ -122,59 +151,68 @@ export const LoginPage: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@aes.local"
+              placeholder="name@institution.edu"
               required
               disabled={isSubmitting}
-              className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 min-h-[44px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full bg-surface border border-base rounded-lg px-3 py-2.5 min-h-[44px] text-body placeholder:text-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
             />
           </div>
 
           <div>
             <label
               htmlFor="login-password-input"
-              className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1"
+              className="block text-xs font-medium text-body mb-1.5"
             >
               Password
             </label>
-            <input
-              id="login-password-input"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              disabled={isSubmitting}
-              className="w-full bg-slate-50 dark:bg-slate-900/90 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2.5 min-h-[44px] text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500"
-            />
+            <div className="relative">
+              <input
+                id="login-password-input"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                disabled={isSubmitting}
+                className="w-full bg-surface border border-base rounded-lg px-3 py-2.5 pr-10 min-h-[44px] text-body placeholder:text-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-tertiary hover:text-body focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-500 p-1 transition-colors"
+                disabled={isSubmitting}
+              >
+                {showPassword ? <span className="text-xs">🙈</span> : <span className="text-xs">👁️</span>}
+              </button>
+            </div>
           </div>
 
           <button
             id="btn-login"
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-2.5 min-h-[44px] bg-brand-600 hover:bg-brand-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white text-xs font-bold rounded-lg shadow-lg transition flex items-center justify-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+            className="w-full py-2.5 min-h-[44px] bg-ink-500 text-white hover:bg-ink-600 disabled:bg-stone-300 dark:disabled:bg-stone-800 text-xs font-bold rounded-lg transition-colors flex items-center justify-center space-x-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-500"
           >
             {isSubmitting ? (
               <>
-                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Signing In...</span>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Signing in</span>
               </>
             ) : (
-              <span>Sign In with Credentials</span>
+              <span>Sign in</span>
             )}
           </button>
         </form>
 
-        {/* Divider */}
-        <div className="relative flex items-center justify-center">
-          <div className="border-t border-slate-200 dark:border-slate-700 w-full" />
-          <span className="bg-white dark:bg-slate-800 px-3 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-            Or 1-Click Demo Sign In
-          </span>
-        </div>
+        {/* Demo Accounts */}
+        <div className="mt-10 border-t border-base pt-6 space-y-3">
+          <div className="flex items-center gap-1.5">
+            <span className="flex-1 border-t border-base"></span>
+            <span className="text-xs font-medium text-muted uppercase tracking-wider bg-surface px-2">Demo accounts</span>
+            <span className="flex-1 border-t border-base"></span>
+          </div>
 
-        {/* Demo Accounts List */}
-        <div className="space-y-2">
           {DEMO_ACCOUNTS.map((acc) => (
             <button
               key={acc.role}
@@ -182,13 +220,13 @@ export const LoginPage: React.FC = () => {
               id={`btn-demo-${acc.role.toLowerCase()}`}
               onClick={() => handleDemoLogin(acc.email, acc.pass)}
               disabled={isSubmitting}
-              className={`w-full p-2.5 min-h-[44px] rounded-lg border text-left flex items-center justify-between transition focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${acc.badgeColor}`}
+              className={`w-full p-2.5 min-h-[44px] rounded-lg border border-base text-left flex items-center justify-between transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ink-500 ${acc.color}`}
             >
               <div>
-                <div className="text-xs font-bold text-slate-900 dark:text-white">{acc.label}</div>
-                <div className="text-[11px] font-mono text-slate-600 dark:text-slate-300">{acc.email}</div>
+                <div className="text-xs font-semibold text-heading">{acc.label}</div>
+                <div className="text-[11px] font-mono text-tertiary">{acc.email}</div>
               </div>
-              <span className="text-xs font-semibold">&rarr;</span>
+              <span className="text-xs font-medium text-muted">→</span>
             </button>
           ))}
         </div>

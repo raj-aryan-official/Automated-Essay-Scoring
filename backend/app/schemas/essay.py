@@ -43,10 +43,6 @@ class EssayCreate(EssayBase):
         default=None,
         description="Raw essay text (required when source_type is PASTE)",
     )
-    submitted_by: UUID | None = Field(
-        default=None,
-        description="User UUID submitting the essay (optional, defaults to current/default student)",
-    )
     storage_bucket: str | None = Field(
         default=None,
         description="Target S3/MinIO bucket (for DOCUMENT submissions)",
@@ -191,6 +187,17 @@ class EssayScoreResponse(BaseModel):
     )
     modelVersion: str = Field(
         ..., description="Model version that produced the inference run"
+    )
+    promptId: UUID | None = Field(default=None, description="Prompt UUID")
+    promptTitle: str | None = Field(default=None, description="Prompt title")
+    rubricMin: float | None = Field(
+        default=None, description="Minimum score on this prompt's rubric"
+    )
+    rubricMax: float | None = Field(
+        default=None, description="Maximum score on this prompt's rubric"
+    )
+    essayStatus: str | None = Field(
+        default=None, description="Current essay lifecycle status"
     )
     reviewerOverrideScore: float | None = Field(
         default=None,

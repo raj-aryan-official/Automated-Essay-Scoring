@@ -2,12 +2,9 @@ import React, { useMemo, useEffect, useRef } from 'react';
 import {
   Clock,
   Cpu,
-  Sparkles,
-  PenTool,
   CheckCircle2,
   AlertTriangle,
   RefreshCw,
-  XCircle,
   Check,
   Activity,
   Layers,
@@ -15,7 +12,7 @@ import {
 import { Button, Badge } from '../../components/ui';
 import { useA11yAnnounce } from '../../context/A11yAnnouncerContext';
 
-export type ScoringStepKey = 'QUEUED' | 'PROCESSING' | 'SCORING' | 'FEEDBACK' | 'DONE';
+export type ScoringStepKey = 'QUEUED' | 'PROCESSING' | 'DONE';
 
 export interface ScoringJobProgressProps {
   jobId?: string;
@@ -24,7 +21,6 @@ export interface ScoringJobProgressProps {
   elapsedSeconds: number;
   attempts?: number;
   maxAttempts?: number;
-  onCancel?: () => void;
   onRefresh?: () => void;
   isRefreshing?: boolean;
   className?: string;
@@ -44,40 +40,24 @@ const STEPS: StepMeta[] = [
     key: 'QUEUED',
     stepNumber: 1,
     title: 'Queued',
-    shortDesc: 'Broker Queue',
-    friendlyMessage: 'Job dispatched to Celery worker queue. Awaiting worker assignment...',
+    shortDesc: 'Job Queue',
+    friendlyMessage: 'Job created in the scoring queue. Awaiting worker assignment...',
     icon: Clock,
   },
   {
     key: 'PROCESSING',
     stepNumber: 2,
     title: 'Processing',
-    shortDesc: 'Parsing Tokens',
-    friendlyMessage: 'Extracting essay prose, computing word counts, and validating tokens...',
+    shortDesc: 'BERT Scorer',
+    friendlyMessage: 'Running the BERT encoder and regression head to produce the holistic score and dimension feedback...',
     icon: Cpu,
   },
   {
-    key: 'SCORING',
-    stepNumber: 3,
-    title: 'Scoring',
-    shortDesc: 'DeBERTa Ensemble',
-    friendlyMessage: 'Running DeBERTa & LightGBM ensemble models to evaluate holistic rubric band...',
-    icon: Sparkles,
-  },
-  {
-    key: 'FEEDBACK',
-    stepNumber: 4,
-    title: 'Generating feedback',
-    shortDesc: 'Multi-Dimension Analysis',
-    friendlyMessage: 'Analyzing pedagogical dimensions: Grammar mechanics, Coherence, and Argumentation...',
-    icon: PenTool,
-  },
-  {
     key: 'DONE',
-    stepNumber: 5,
+    stepNumber: 3,
     title: 'Done',
     shortDesc: 'Assessment Ready',
-    friendlyMessage: 'Assessment complete! Holistic score, rubrics, and diagnostic feedback ready.',
+    friendlyMessage: 'Assessment complete. Holistic score, rubric band, and diagnostic feedback are ready.',
     icon: CheckCircle2,
   },
 ];
@@ -90,37 +70,28 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
   elapsedSeconds,
   attempts = 1,
   maxAttempts = 3,
-  onCancel,
   onRefresh,
   isRefreshing = false,
   className = '',
 }) => {
-  // Determine current active step index (0 to 4)
+  // Determine current active step index (0 to 2)
   const currentStepIndex = useMemo(() => {
-    // Done state
     if (
       jobStatus === 'COMPLETED' ||
       essayStatus === 'SCORED' ||
       essayStatus === 'FEEDBACK_READY' ||
+      essayStatus === 'UNDER_REVIEW' ||
       essayStatus === 'FINALIZED'
     ) {
-      return 4; // DONE
+      return 2; // DONE
     }
 
-    // Queued state
     if (jobStatus === 'QUEUED' || essayStatus === 'QUEUED' || essayStatus === 'SUBMITTED') {
       return 0; // QUEUED
     }
 
-    // Processing transitions based on worker progress & elapsed time
-    if (elapsedSeconds < 2.5) {
-      return 1; // PROCESSING
-    } else if (elapsedSeconds < 6.0) {
-      return 2; // SCORING
-    } else {
-      return 3; // FEEDBACK
-    }
-  }, [jobStatus, essayStatus, elapsedSeconds]);
+    return 1; // PROCESSING
+  }, [jobStatus, essayStatus]);
 
   const activeStep = STEPS[currentStepIndex];
   const { announce } = useA11yAnnounce();
@@ -132,14 +103,14 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
       lastAnnouncedStepRef.current = currentStepIndex;
       const step = STEPS[currentStepIndex];
       announce(
-        `Scoring job status: ${step.title}. Step ${step.stepNumber} of 5. ${step.friendlyMessage}`,
+        `Scoring job status: ${step.title}. Step ${step.stepNumber} of ${STEPS.length}. ${step.friendlyMessage}`,
         'polite'
       );
     }
   }, [currentStepIndex, announce]);
 
   // Slow job detection (>= 10s elapsed while not done)
-  const isLongRunning = elapsedSeconds >= 10 && currentStepIndex < 4;
+  const isLongRunning = elapsedSeconds >= 10 && currentStepIndex < 2;
 
   const formattedElapsed = useMemo(() => {
     const mins = Math.floor(elapsedSeconds / 60);
@@ -214,10 +185,10 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
         aria-label="Scoring progression pipeline"
         aria-valuenow={currentStepIndex + 1}
         aria-valuemin={1}
-        aria-valuemax={5}
-        aria-valuetext={`Step ${activeStep.stepNumber} of 5: ${activeStep.title}. ${activeStep.friendlyMessage}`}
+        aria-valuemax={STEPS.length}
+        aria-valuetext={`Step ${activeStep.stepNumber} of ${STEPS.length}: ${activeStep.title}. ${activeStep.friendlyMessage}`}
       >
-        <div className="grid grid-cols-5 relative">
+        <div className="grid grid-cols-3 relative">
           {STEPS.map((step, idx) => {
             const isCompleted = idx < currentStepIndex;
             const isCurrent = idx === currentStepIndex;
@@ -288,7 +259,7 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
         </div>
         <div className="flex-1 space-y-0.5">
           <span className="font-bold text-slate-300">
-            Step {activeStep.stepNumber} of 5: {activeStep.title}
+            Step {activeStep.stepNumber} of {STEPS.length}: {activeStep.title}
           </span>
           <p className="text-slate-400 font-sans">{activeStep.friendlyMessage}</p>
         </div>
@@ -319,17 +290,6 @@ export const ScoringJobProgress: React.FC<ScoringJobProgressProps> = ({
                 disabled={isRefreshing}
               >
                 Refresh
-              </Button>
-            )}
-
-            {onCancel && (
-              <Button
-                size="xs"
-                variant="danger"
-                leftIcon={<XCircle className="w-3 h-3" />}
-                onClick={onCancel}
-              >
-                Cancel Job
               </Button>
             )}
           </div>

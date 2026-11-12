@@ -98,3 +98,25 @@ class EvaluationDashboardResponse(BaseModel):
         ..., description="Training and validation loss curves keyed by prompt ID"
     )
     job_counts: JobStatusCounts = Field(..., description="Live job status counts")
+
+
+# WHY: Real database-backed KPIs for the Dashboard so no headline metric is fabricated client-side.
+class DashboardSummaryResponse(BaseModel):
+    """Live essay volume, score quality, and queue KPIs for the dashboard."""
+
+    total_essays: int = Field(default=0, description="All essays in the system")
+    scored_essays: int = Field(default=0, description="Essays with a model score")
+    pending_essays: int = Field(
+        default=0, description="Essays submitted, queued, or processing"
+    )
+    failed_essays: int = Field(default=0, description="Essays whose scoring failed")
+    average_score: float | None = Field(
+        default=None, description="Mean holistic score across scored essays"
+    )
+    average_confidence: float | None = Field(
+        default=None, description="Mean model confidence across scored essays"
+    )
+    active_model: str | None = Field(
+        default=None, description="Model version currently in PRODUCTION"
+    )
+    queue: JobStatusCounts = Field(..., description="Live job status counts")

@@ -199,7 +199,9 @@ def test_rbac_viewer_allowed_on_read_essays(client, test_users):
         headers={"Authorization": f"Bearer {token}"},
     )
     assert res.status_code == 200
-    assert isinstance(res.json(), list)
+    body = res.json()
+    assert isinstance(body["items"], list)
+    assert body["total"] >= 0
 
 
 def test_rbac_admin_full_access(client, test_users):

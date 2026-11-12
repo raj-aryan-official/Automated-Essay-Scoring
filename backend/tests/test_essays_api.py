@@ -8,11 +8,13 @@ Covers:
 """
 
 import base64
+import io
 import sys
 import uuid
 from collections.abc import Generator
 from pathlib import Path
 
+import docx
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
@@ -38,6 +40,17 @@ from app.models.entities import (
     User,
 )
 from app.services.storage import StorageService, get_storage_service
+
+DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+
+
+def _make_docx_bytes(text: str) -> bytes:
+    """Build a real DOCX document so server-side extraction is exercised."""
+    document = docx.Document()
+    document.add_paragraph(text)
+    buffer = io.BytesIO()
+    document.save(buffer)
+    return buffer.getvalue()
 
 
 @pytest.fixture
@@ -112,22 +125,26 @@ def test_create_essay_paste_success(
     assert essay_in_db.raw_text == payload["raw_text"]
 
 
-def test_create_essay_paste_with_explicit_user(
+def test_create_essay_ignores_spoofed_submitter(
     client: TestClient, seed_prompt: Prompt, db_session: Session
 ):
-    """Verify submitting with an explicit submitted_by UUID succeeds and links the user."""
-    custom_user_id = uuid.uuid4()
+    """Verify submitted_by in the payload cannot impersonate another user."""
+    spoofed_user_id = uuid.uuid4()
     payload = {
         "prompt_id": str(seed_prompt.id),
         "source_type": "PASTE",
         "raw_text": "Essay content by specific student user.",
-        "submitted_by": str(custom_user_id),
+        "submitted_by": str(spoofed_user_id),
     }
 
     response = client.post("/api/v1/essays", json=payload)
     assert response.status_code == 201
     data = response.json()
-    assert data["submitted_by"] == str(custom_user_id)
+    assert data["submitted_by"] != str(spoofed_user_id)
+
+    essay_in_db = db_session.query(Essay).filter(Essay.id == uuid.UUID(data["id"])).first()
+    assert essay_in_db is not None
+    assert str(essay_in_db.submitted_by) == data["submitted_by"]
 
 
 def test_create_essay_document_multipart_upload(
@@ -175,7 +192,7 @@ def test_create_essay_document_json_content(
 ):
     """Verify POST /api/v1/essays accepts base64 or string document content in JSON."""
     doc_text = "Persuasive essay document body uploaded in base64 format."
-    encoded = base64.b64encode(doc_text.encode("utf-8")).decode("utf-8")
+    encoded = base64.b64encode(_make_docx_bytes(doc_text)).decode("utf-8")
 
     payload = {
         "prompt_id": str(seed_prompt.id),
@@ -250,14 +267,15 @@ def test_get_essays_list_and_filters(
     # List all essays
     res_all = client.get("/api/v1/essays")
     assert res_all.status_code == 200
-    all_items = res_all.json()
-    assert isinstance(all_items, list)
-    assert len(all_items) >= 3
+    body_all = res_all.json()
+    assert isinstance(body_all["items"], list)
+    assert body_all["total"] >= 3
+    all_items = body_all["items"]
 
     # Filter by prompt_id
     res_p1 = client.get(f"/api/v1/essays?prompt_id={seed_prompt.id}")
     assert res_p1.status_code == 200
-    p1_items = res_p1.json()
+    p1_items = res_p1.json()["items"]
     assert len(p1_items) >= 2
     for item in p1_items:
         assert item["prompt_id"] == str(seed_prompt.id)
@@ -265,13 +283,18 @@ def test_get_essays_list_and_filters(
     # Filter by status
     res_status = client.get("/api/v1/essays?status=SUBMITTED")
     assert res_status.status_code == 200
-    for item in res_status.json():
+    for item in res_status.json()["items"]:
         assert item["status"] == "SUBMITTED"
 
-    # Pagination: limit & skip
-    res_page = client.get("/api/v1/essays?limit=2&skip=1")
+    # Search across prompt title
+    res_search = client.get("/api/v1/essays?q=Computers")
+    assert res_search.status_code == 200
+    assert res_search.json()["total"] >= 1
+
+    # Pagination: page & page_size
+    res_page = client.get("/api/v1/essays?page_size=2&page=2")
     assert res_page.status_code == 200
-    assert len(res_page.json()) <= 2
+    assert len(res_page.json()["items"]) <= 2
 
 
 def test_get_essay_by_id_success(client: TestClient, seed_prompt: Prompt):
@@ -311,9 +334,9 @@ def test_get_essay_by_id_document_download_url(client: TestClient, seed_prompt: 
             },
             files={
                 "file": (
-                    "sample_essay.pdf",
-                    b"%PDF-1.4 sample binary content",
-                    "application/pdf",
+                    "sample_essay.docx",
+                    _make_docx_bytes("Document essay submitted for download URL testing."),
+                    DOCX_MIME,
                 ),
             },
         )
@@ -325,7 +348,7 @@ def test_get_essay_by_id_document_download_url(client: TestClient, seed_prompt: 
         data = get_res.json()
         assert data["id"] == essay_id
         assert data["download_url"] is not None
-        assert "sample_essay.pdf" in data["download_url"]
+        assert "sample_essay.docx" in data["download_url"]
 
 
 def test_get_essay_by_id_not_found(client: TestClient):

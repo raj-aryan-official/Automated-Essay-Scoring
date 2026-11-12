@@ -444,9 +444,9 @@ const ScoreCardComponent: React.FC<ScoreCardProps> = ({
       <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-200 dark:border-slate-800/60">
         <div className="flex items-center gap-2 font-mono text-[11px]">
           <span>Neural Engine:</span>
-          <span className="text-slate-700 dark:text-slate-300">PyTorch BERT LoRA</span>
+          <span className="text-slate-700 dark:text-slate-300">BERT + regression head</span>
           <span className="text-slate-300 dark:text-slate-700">|</span>
-          <span>Checkpoint v{modelVersion}</span>
+          <span>Checkpoint {modelVersion ?? 'unregistered'}</span>
         </div>
 
         {onToggleDrawer && (

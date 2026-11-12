@@ -18,6 +18,7 @@ export default {
 
         // Primary: Design System Indigo / Blue Palette
         primary: {
+          DEFAULT: '#4f46e5',
           50:  '#eef2ff',
           100: '#e0e7ff',
           200: '#c7d2fe',
@@ -103,10 +104,49 @@ export default {
           },
         },
 
+        // Editorial Academic tokens (mirrors src/styles/tokens.css)
+        ink: {
+          50: 'var(--color-ink-50)',
+          100: 'var(--color-ink-100)',
+          200: 'var(--color-ink-200)',
+          300: 'var(--color-ink-300)',
+          400: 'var(--color-ink-400)',
+          500: 'var(--color-ink-500)',
+          600: 'var(--color-ink-600)',
+          700: 'var(--color-ink-700)',
+          800: 'var(--color-ink-800)',
+          900: 'var(--color-ink-900)',
+          950: 'var(--color-ink-950)',
+        },
+        stone: {
+          50: 'var(--color-stone-50)',
+          100: 'var(--color-stone-100)',
+          200: 'var(--color-stone-200)',
+          300: 'var(--color-stone-300)',
+          400: 'var(--color-stone-400)',
+          500: 'var(--color-stone-500)',
+          600: 'var(--color-stone-600)',
+          700: 'var(--color-stone-700)',
+          800: 'var(--color-stone-800)',
+          900: 'var(--color-stone-900)',
+          950: 'var(--color-stone-950)',
+        },
+        heading: 'var(--text-heading)',
+        body: 'var(--text-body)',
+        muted: 'var(--text-muted)',
+        tertiary: 'var(--text-tertiary)',
+        error: {
+          bg: 'var(--banner-error-bg)',
+          text: 'var(--banner-error-text)',
+          border: 'var(--banner-error-border)',
+        },
+
         // Semantic Theme-Adaptive Surface & Content Colors
         canvas: 'var(--bg-canvas)',
         surface: {
           DEFAULT: 'var(--bg-surface)',
+          raised: 'var(--color-surface-raised)',
+          level: 'var(--bg-surface-level)',
           elevated: 'var(--bg-surface-elevated)',
           sunken: 'var(--bg-surface-sunken)',
         },
@@ -124,7 +164,15 @@ export default {
         },
       },
 
+      borderColor: {
+        DEFAULT: 'var(--border-base)',
+        faint: 'var(--border-faint)',
+        base: 'var(--border-base)',
+        strong: 'var(--border-strong)',
+      },
+
       fontFamily: {
+        serif: ['Source Serif 4', 'Iowan Old Style', 'Apple Garamond', 'serif'],
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },

@@ -9,11 +9,13 @@ from app.api.v1.analytics import router as analytics_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.essays import router as essays_router
 from app.api.v1.jobs import router as jobs_router
+from app.api.v1.prompts import router as prompts_router
 from app.core.config import settings
 
 # WHY: Primary API v1 parent router grouping auth, essay, job, and analytics sub-routers under clean domain namespaces.
 api_router = APIRouter()
 api_router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
+api_router.include_router(prompts_router, prefix="/prompts", tags=["Prompts"])
 api_router.include_router(essays_router, prefix="/essays", tags=["Essays"])
 api_router.include_router(jobs_router, prefix="/jobs", tags=["Jobs"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])

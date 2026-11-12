@@ -32,9 +32,6 @@ ALLOWED_MIME_TYPES: set[str] = {
     "text/plain",
     "application/pdf",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/msword",
-    "application/rtf",
-    "text/rtf",
     "text/markdown",
     "text/x-markdown",
 }
@@ -44,8 +41,6 @@ ALLOWED_EXTENSIONS: set[str] = {
     ".txt",
     ".pdf",
     ".docx",
-    ".doc",
-    ".rtf",
     ".md",
 }
 
@@ -131,14 +126,14 @@ def validate_document(
     normalized_mime = (content_type or "").lower().split(";")[0].strip()
     ext = Path(filename).suffix.lower() if filename else ""
 
-    # WHY: Whitelist validation guarantees only parseable document formats (.pdf, .docx, .txt, .md, .rtf) reach storage
+    # WHY: Whitelist validation guarantees only parseable document formats (.pdf, .docx, .txt, .md) reach storage
     if normalized_mime and normalized_mime not in ALLOWED_MIME_TYPES:
         if normalized_mime != "application/octet-stream":
             raise HTTPException(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail=(
                     f"Disallowed MIME type '{content_type}'. "
-                    f"Allowed types are: PDF, DOCX, DOC, TXT, RTF, MD."
+                    f"Allowed types are: PDF, DOCX, TXT, MD."
                 ),
             )
         # If generic application/octet-stream, verify file extension
@@ -147,7 +142,7 @@ def validate_document(
                 status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
                 detail=(
                     f"Disallowed MIME type '{content_type}' without a valid document extension. "
-                    f"Allowed extensions are: .txt, .pdf, .docx, .doc, .rtf, .md."
+                    f"Allowed extensions are: .txt, .pdf, .docx, .md."
                 ),
             )
 
@@ -157,7 +152,7 @@ def validate_document(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail=(
                 f"Disallowed file extension '{ext}'. "
-                f"Allowed extensions are: .txt, .pdf, .docx, .doc, .rtf, .md."
+                f"Allowed extensions are: .txt, .pdf, .docx, .md."
             ),
         )
 
@@ -165,5 +160,5 @@ def validate_document(
     if not normalized_mime and not ext:
         raise HTTPException(
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Unable to determine document type. Allowed types are: PDF, DOCX, DOC, TXT, RTF, MD.",
+            detail="Unable to determine document type. Allowed types are: PDF, DOCX, TXT, MD.",
         )

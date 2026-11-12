@@ -2,10 +2,9 @@ import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useTour } from '../../context/TourContext';
 import { Breadcrumbs } from './Breadcrumbs';
 import { Button, Badge, Tooltip } from '../ui';
-import { Menu, Sun, Moon, Laptop, LogOut, Sparkles, HelpCircle, ChevronDown } from 'lucide-react';
+import { Menu, Sun, Moon, Laptop, LogOut, ChevronDown } from 'lucide-react';
 
 export interface TopBarProps {
   onOpenMobileMenu: () => void;
@@ -18,14 +17,11 @@ const PAGE_TITLES: Record<string, string> = {
   '/essays': 'Essay Manager & Submissions',
   '/jobs': 'Inference Job Telemetry',
   '/evaluation': 'Model Evaluation & QWK Metrics',
-  '/help': 'Help & Frequently Asked Questions',
-  '/dev/components': 'UI Component Library & Style Guide',
 };
 
 export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, resolvedTheme, setTheme } = useTheme();
-  const { openTour } = useTour();
   const location = useLocation();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = React.useState<boolean>(false);
@@ -96,38 +92,8 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
         </div>
       </div>
 
-      {/* Right: Tour + Help + Theme Toggle & User Menu */}
+      {/* Right: Theme Toggle & User Menu */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Quick Tour Button for Teachers / Admins */}
-        {(user?.role === 'TEACHER' || user?.role === 'ADMIN') && (
-          <Tooltip content="Launch 4-Step Product Tour" position="bottom">
-            <button
-              type="button"
-              id="topbar-launch-tour-btn"
-              onClick={() => openTour(0)}
-              aria-label="Restart Teacher Product Tour"
-              className="min-h-[44px] px-2.5 py-1 rounded-xl text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-950/40 border border-primary-200 dark:border-primary-800/60 transition-colors flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 select-none"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-primary-500" />
-              <span className="hidden sm:inline text-xs font-bold">Tour</span>
-            </button>
-          </Tooltip>
-        )}
-
-        {/* Quick Access Help & FAQ Link */}
-        <Tooltip content="Help, FAQs & Documentation" position="bottom">
-          <button
-            type="button"
-            id="topbar-help-btn"
-            onClick={() => navigate('/help')}
-            aria-label="Open Help and FAQs"
-            className="min-h-[44px] min-w-[36px] px-2.5 py-1 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/80 transition-colors flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 select-none"
-          >
-            <HelpCircle className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-            <span className="hidden lg:inline text-xs font-semibold">Help</span>
-          </button>
-        </Tooltip>
-
         {/* 3-State Theme Toggle (Light / Dark / System) */}
         <div
           role="radiogroup"
@@ -234,37 +200,6 @@ export const TopBar: React.FC<TopBarProps> = ({ onOpenMobileMenu }) => {
                 <div className="px-3.5 py-2 border-b border-slate-100 dark:border-slate-800">
                   <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.email}</p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Role: {user.role}</p>
-                </div>
-
-                <div className="py-1">
-                  {/* Restart Product Tour */}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    id="btn-restart-tour"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      openTour(0);
-                    }}
-                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors"
-                  >
-                    <Sparkles className="w-4 h-4 text-primary-500" />
-                    <span>Restart Product Tour</span>
-                  </button>
-
-                  {/* Help & FAQs */}
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setIsUserMenuOpen(false);
-                      navigate('/help');
-                    }}
-                    className="w-full px-3.5 py-2 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2.5 transition-colors"
-                  >
-                    <HelpCircle className="w-4 h-4 text-sky-500" />
-                    <span>Help &amp; FAQs</span>
-                  </button>
                 </div>
 
                 <div className="pt-1 border-t border-slate-100 dark:border-slate-800">

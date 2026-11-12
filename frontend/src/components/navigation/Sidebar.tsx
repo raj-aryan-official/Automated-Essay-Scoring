@@ -9,8 +9,6 @@ import {
   PenTool,
   Cpu,
   BarChart3,
-  Sparkles,
-  HelpCircle,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -47,27 +45,13 @@ const NAV_ITEMS: NavItemConfig[] = [
     label: 'Inference Jobs',
     path: '/jobs',
     icon: <Cpu className="w-4 h-4 shrink-0" />,
-    allowedRoles: ['ML_ENGINEER', 'TEACHER', 'ADMIN'],
+    allowedRoles: ['ML_ENGINEER', 'ADMIN'],
   },
   {
     label: 'Model Evaluation',
     path: '/evaluation',
     icon: <BarChart3 className="w-4 h-4 shrink-0" />,
-    allowedRoles: ['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN'],
-  },
-  {
-    label: 'Help & FAQ',
-    path: '/help',
-    icon: <HelpCircle className="w-4 h-4 shrink-0" />,
-    allowedRoles: ['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN'],
-  },
-  {
-    label: 'UI Library',
-    path: '/dev/components',
-    icon: <Sparkles className="w-4 h-4 shrink-0" />,
-    allowedRoles: ['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN'],
-    badgeText: 'Dev',
-    badgeVariant: 'primary',
+    allowedRoles: ['ML_ENGINEER', 'ADMIN'],
   },
 ];
 
@@ -112,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   Essay Scoring
                 </span>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono tracking-wider truncate">
-                  BERT + QWK v1.2
+                  BERT + Regression Head
                 </span>
               </div>
             )}

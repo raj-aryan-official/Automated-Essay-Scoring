@@ -23,51 +23,29 @@ export interface LossCurvesChartProps {
   className?: string;
 }
 
-// Generate realistic mock curve data if backend is still initializing or empty
-const generateFallbackCurves = (promptId: number): LossCurvePoint[] => {
-  const steps = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200];
-  const decayRate = 0.002 + promptId * 0.0001;
-  const valNoise = [0.02, 0.015, -0.01, 0.02, -0.005, 0.012, 0.008, 0.015, 0.005, 0.01, 0.018, 0.022];
-
-  return steps.map((step, idx) => {
-    const progress = idx / (steps.length - 1);
-    const train = Number((0.95 * Math.exp(-decayRate * step) + 0.18 + (8 - promptId) * 0.01).toFixed(4));
-    const val = Number((train + 0.05 + valNoise[idx] + progress * 0.02).toFixed(4));
-    const lr = Number((2e-5 * (1 - progress * 0.8)).toExponential(2));
-
-    return {
-      step,
-      train_loss: train,
-      val_loss: val,
-      learning_rate: lr,
-    };
-  });
-};
-
-const DEFAULT_LOSS_CURVES: Record<string, LossCurvePoint[]> = {
-  '1': generateFallbackCurves(1),
-  '2': generateFallbackCurves(2),
-  '3': generateFallbackCurves(3),
-  '4': generateFallbackCurves(4),
-  '5': generateFallbackCurves(5),
-  '6': generateFallbackCurves(6),
-  '7': generateFallbackCurves(7),
-  '8': generateFallbackCurves(8),
-};
-
 const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
   lossCurves,
-  initialPromptId = 1,
+  initialPromptId,
   onPromptSelect,
   className = '',
 }) => {
   const { isDark } = useTheme();
   const prefersReducedMotion = useReducedMotion();
-  const [selectedPrompt, setSelectedPrompt] = useState<number>(initialPromptId);
+  const curvesData = lossCurves ?? {};
+  const promptIds = React.useMemo(
+    () => Object.keys(curvesData).map(Number).filter((n) => Number.isFinite(n)).sort((a, b) => a - b),
+    [curvesData]
+  );
+  const [selectedPrompt, setSelectedPrompt] = useState<number>(
+    initialPromptId ?? promptIds[0] ?? 1
+  );
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
 
-  const curvesData = lossCurves || DEFAULT_LOSS_CURVES;
-  const currentPoints = curvesData[String(selectedPrompt)] || curvesData['1'] || generateFallbackCurves(selectedPrompt);
+  React.useEffect(() => {
+    if (initialPromptId !== undefined) setSelectedPrompt(initialPromptId);
+  }, [initialPromptId]);
+
+  const currentPoints: LossCurvePoint[] = curvesData[String(selectedPrompt)] ?? [];
 
   const handleSelectPrompt = (pid: number) => {
     setSelectedPrompt(pid);
@@ -75,9 +53,9 @@ const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
   };
 
   // Find minimum val_loss (best checkpoint)
-  let bestPoint = currentPoints[0];
+  let bestPoint: LossCurvePoint | undefined = currentPoints.find((p) => p.val_loss !== undefined);
   currentPoints.forEach((p) => {
-    if (p.val_loss !== undefined && (!bestPoint.val_loss || p.val_loss < bestPoint.val_loss)) {
+    if (p.val_loss !== undefined && bestPoint?.val_loss !== undefined && p.val_loss < bestPoint.val_loss) {
       bestPoint = p;
     }
   });
@@ -150,7 +128,7 @@ const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
             <span>Loss Curves & Generalization Convergence — Prompt {selectedPrompt}</span>
           </CardTitle>
           <CardDescription>
-            DeBERTa-v3 cross-entropy / MSE loss per step with early-stopping checkpoint indicator for Prompt {selectedPrompt}.
+            BERT encoder with regression head — training and validation loss per step for Prompt {selectedPrompt}.
           </CardDescription>
         </div>
 
@@ -186,6 +164,12 @@ const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
       </CardHeader>
 
       <CardContent className="pt-4 space-y-4">
+        {currentPoints.length === 0 ? (
+          <div className="py-12 text-center text-sm text-slate-500 dark:text-slate-400">
+            No loss curve data has been recorded for this prompt yet.
+          </div>
+        ) : (
+        <>
         {/* Prompt Selector Bar */}
         <div className="flex items-center justify-between flex-wrap gap-2 pb-2">
           <div className="flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
@@ -193,7 +177,7 @@ const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((pid) => (
+            {promptIds.map((pid) => (
               <button
                 key={pid}
                 id={`tab-prompt-${pid}`}
@@ -389,8 +373,9 @@ const LossCurvesChartComponent: React.FC<LossCurvesChartProps> = ({
               <span>Validation Loss</span>
             </span>
           </div>
-          <span>Optimizer: AdamW (Weight Decay 0.01)</span>
         </div>
+        </>
+        )}
       </CardContent>
     </Card>
   );

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -9,6 +12,30 @@ from fastapi.responses import RedirectResponse
 from app.api.deps import get_async_db, get_db
 from app.api.v1 import api_router
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
+
+_startup_seeded = False
+
+
+# WHY: Guarantees the schema, prompts, and demo role accounts exist on a fresh non-production boot
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global _startup_seeded
+    if not _startup_seeded and settings.ENVIRONMENT != "production":
+        _startup_seeded = True
+        try:
+            from app.core.database import init_db
+            from app.scripts.seed_prompts import seed_prompts
+            from app.scripts.seed_users import seed_users
+
+            init_db()
+            seed_prompts()
+            seed_users()
+        except Exception as exc:
+            logger.warning("Startup seeding skipped: %s", exc)
+    yield
+
 
 # WHY: We use FastAPI as our ASGI framework for native async I/O, automatic Pydantic validation, and OpenAPI doc generation
 app = FastAPI(
@@ -18,6 +45,7 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 # WHY: We enable CORS middleware to permit secure cross-origin REST requests from our React/Vite frontend (ports 3000 & 5173)

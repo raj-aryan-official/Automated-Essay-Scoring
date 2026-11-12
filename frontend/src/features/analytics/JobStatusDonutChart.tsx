@@ -20,12 +20,12 @@ export interface JobStatusDonutChartProps {
   className?: string;
 }
 
-const DEFAULT_JOB_COUNTS: JobStatusCounts = {
-  queued: 8,
-  processing: 3,
-  completed: 1845,
-  failed: 4,
-  total: 1860,
+const EMPTY_JOB_COUNTS: JobStatusCounts = {
+  queued: 0,
+  processing: 0,
+  completed: 0,
+  failed: 0,
+  total: 0,
 };
 
 interface SliceData {
@@ -49,8 +49,9 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
   const [viewMode, setViewMode] = useState<'chart' | 'table'>('chart');
   const [hoveredSlice, setHoveredSlice] = useState<string | null>(null);
 
-  const dataCounts = counts || DEFAULT_JOB_COUNTS;
-  const total = dataCounts.total || (dataCounts.queued + dataCounts.processing + dataCounts.completed + dataCounts.failed) || 1;
+  const dataCounts = counts || EMPTY_JOB_COUNTS;
+  const total = dataCounts.total || dataCounts.queued + dataCounts.processing + dataCounts.completed + dataCounts.failed;
+  const denominator = total || 1;
 
   const slices: SliceData[] = [
     {
@@ -78,7 +79,7 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
       color: '#F59E0B', // amber
       badgeBg: 'bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/30',
       badgeText: 'text-amber-700 dark:text-amber-400',
-      description: 'Waiting for worker allocation in Redis',
+      description: 'Waiting for a worker to claim the job',
     },
     {
       name: 'Failed',
@@ -91,13 +92,14 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
     },
   ];
 
-  const successRate = ((dataCounts.completed / total) * 100).toFixed(1);
+  const settled = dataCounts.completed + dataCounts.failed;
+  const successRate = settled > 0 ? ((dataCounts.completed / settled) * 100).toFixed(1) : null;
 
   // Custom Glassmorphism Tooltip
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const item: SliceData = payload[0].payload;
-      const pct = ((item.value / total) * 100).toFixed(1);
+      const pct = ((item.value / denominator) * 100).toFixed(1);
 
       return (
         <div className="bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700/80 p-3.5 rounded-xl shadow-2xl backdrop-blur-md text-xs space-y-1.5 min-w-[190px]">
@@ -134,10 +136,10 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <Layers className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span>Async Worker Job Distribution</span>
+            <span>Job Distribution</span>
           </CardTitle>
           <CardDescription>
-            Live job executor throughput across queuing, inferencing, and settlement.
+            Scoring jobs grouped by their current queue status.
           </CardDescription>
         </div>
 
@@ -192,15 +194,20 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
           <div className="flex items-center gap-2">
             <Cpu className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="text-slate-700 dark:text-slate-300">
-              Worker Pool: <strong className="text-slate-900 dark:text-white">Active (4 Concurrency)</strong> &bull; Success Rate:{' '}
-              <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{successRate}%</strong>
+              Jobs settled: <strong className="text-slate-900 dark:text-white">{settled}</strong> of{' '}
+              <strong className="text-slate-900 dark:text-white">{total}</strong> &bull; Success Rate:{' '}
+              <strong className="text-emerald-600 dark:text-emerald-400 font-mono">
+                {successRate !== null ? `${successRate}%` : '—'}
+              </strong>
             </span>
           </div>
           <Badge
-            variant="default"
-            className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30"
+            variant={dataCounts.failed > 0 ? 'danger' : 'default'}
+            className={dataCounts.failed > 0
+              ? 'bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-500/30'
+              : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/30'}
           >
-            Healthy
+            {dataCounts.failed > 0 ? `${dataCounts.failed} failed` : 'No failures'}
           </Badge>
         </div>
 
@@ -278,7 +285,7 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 font-mono">
                 {slices.map((slice) => {
-                  const pct = ((slice.value / total) * 100).toFixed(1);
+                  const pct = ((slice.value / denominator) * 100).toFixed(1);
 
                   return (
                     <tr key={slice.name} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
@@ -328,7 +335,7 @@ const JobStatusDonutChartComponent: React.FC<JobStatusDonutChartProps> = ({
               <span>Queued ({dataCounts.queued})</span>
             </span>
           </div>
-          <span>Redis Broker Queue: 0 dropped</span>
+          <span>{dataCounts.total} total jobs</span>
         </div>
       </CardContent>
     </Card>

@@ -2,11 +2,9 @@ import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { TourProvider } from './context/TourContext';
 import { ToastProvider } from './components/ui';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppShell } from './components/navigation';
-import { ProductTour } from './components/guidance/ProductTour';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { A11yAnnouncerProvider } from './context/A11yAnnouncerContext';
 
@@ -18,8 +16,6 @@ const EssayManagerPage = React.lazy(() => import('./pages/EssayManagerPage').the
 const EssayDetailPage = React.lazy(() => import('./pages/EssayDetailPage').then(m => ({ default: m.EssayDetailPage })));
 const InferenceJobsPage = React.lazy(() => import('./pages/InferenceJobsPage').then(m => ({ default: m.InferenceJobsPage })));
 const ModelEvaluationPage = React.lazy(() => import('./pages/ModelEvaluationPage').then(m => ({ default: m.ModelEvaluationPage })));
-const HelpPage = React.lazy(() => import('./pages/HelpPage').then(m => ({ default: m.HelpPage })));
-const DevComponentsPage = React.lazy(() => import('./pages/DevComponentsPage').then(m => ({ default: m.DevComponentsPage })));
 
 /**
  * RouteLoadingFallback provides an accessible, non-jarring skeleton state
@@ -52,13 +48,11 @@ export const App: React.FC = () => {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <TourProvider>
-          <A11yAnnouncerProvider>
-            <ToastProvider>
-              <ErrorBoundary>
-                <BrowserRouter>
-                  <ProductTour />
-                  <Suspense fallback={<RouteLoadingFallback />}>
+        <A11yAnnouncerProvider>
+          <ToastProvider>
+            <ErrorBoundary>
+              <BrowserRouter>
+                <Suspense fallback={<RouteLoadingFallback />}>
                     <Routes>
                       {/* Public Authentication Route */}
                       <Route path="/login" element={<LoginPage />} />
@@ -70,15 +64,8 @@ export const App: React.FC = () => {
                           <AppShell>
                             <Suspense fallback={<RouteLoadingFallback />}>
                               <Routes>
-                                {/* Root Route: Essay Submission for TEACHER / ADMIN */}
-                                <Route
-                                  path="/"
-                                  element={
-                                    <ProtectedRoute allowedRoles={['TEACHER', 'ADMIN']}>
-                                      <SubmissionPage />
-                                    </ProtectedRoute>
-                                  }
-                                />
+                                {/* Role-aware landing: every authenticated role starts at the dashboard */}
+                                <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
                                 {/* Central Dashboard Hub */}
                                 <Route
@@ -120,41 +107,28 @@ export const App: React.FC = () => {
                                   }
                                 />
 
-                                {/* Inference Jobs Telemetry */}
+                                {/* Inference Jobs Telemetry — ML_ENGINEER / ADMIN only (PRD §4.1 worker logs) */}
                                 <Route
                                   path="/jobs"
                                   element={
-                                    <ProtectedRoute allowedRoles={['ML_ENGINEER', 'TEACHER', 'ADMIN']}>
+                                    <ProtectedRoute allowedRoles={['ML_ENGINEER', 'ADMIN']}>
                                       <InferenceJobsPage />
                                     </ProtectedRoute>
                                   }
                                 />
 
-                                {/* Model Evaluation & QWK Diagnostics */}
+                                {/* Model Evaluation & QWK Diagnostics — ML_ENGINEER / ADMIN only (PRD §11.1) */}
                                 <Route
                                   path="/evaluation"
                                   element={
-                                    <ProtectedRoute allowedRoles={['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN']}>
+                                    <ProtectedRoute allowedRoles={['ML_ENGINEER', 'ADMIN']}>
                                       <ModelEvaluationPage />
                                     </ProtectedRoute>
                                   }
                                 />
 
-                                {/* Help & FAQs */}
-                                <Route
-                                  path="/help"
-                                  element={
-                                    <ProtectedRoute allowedRoles={['VIEWER', 'TEACHER', 'ML_ENGINEER', 'ADMIN']}>
-                                      <HelpPage />
-                                    </ProtectedRoute>
-                                  }
-                                />
-
-                                {/* Developer UI Component Library */}
-                                <Route path="/dev/components" element={<DevComponentsPage />} />
-
                                 {/* Fallback */}
-                                <Route path="*" element={<Navigate to="/" replace />} />
+                                <Route path="*" element={<Navigate to="/dashboard" replace />} />
                               </Routes>
                             </Suspense>
                           </AppShell>
@@ -166,7 +140,6 @@ export const App: React.FC = () => {
               </ErrorBoundary>
             </ToastProvider>
           </A11yAnnouncerProvider>
-        </TourProvider>
       </AuthProvider>
     </ThemeProvider>
   );

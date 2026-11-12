@@ -3,16 +3,18 @@ import {
   EssayCreatePayload,
   EssayCreateResponse,
   EssayDetailResponse,
-  EssayListItem,
+  EssayListResponse,
   EssayScoreResponse,
   JobDispatchResponse,
   JobResponse,
+  Prompt,
   ReviewerOverridePayload,
   LoginPayload,
   AuthResponse,
   UserProfile,
   EvaluationDashboardData,
   JobStatusCounts,
+  DashboardSummary,
 } from './types';
 
 // Export all types from index for convenient importing
@@ -36,25 +38,21 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log(`[HTTP Request] ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`, config.data || '');
     return config;
   },
-  (error) => {
-    console.error('[HTTP Request Error]', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 apiClient.interceptors.response.use(
-  (response) => {
-    console.log(`[HTTP Response] ${response.status} ${response.config.url}`, response.data);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error(`[HTTP Response Error] ${error.response?.status || 'Network Error'} ${error.config?.url}:`, error.response?.data || error.message);
-    // If 401 Unauthorized received and not on login page, optionally clear token
+    // If 401 Unauthorized received, auto-logout and redirect to login
     if (error.response?.status === 401) {
-      console.warn('[HTTP Response Error] Unauthorized (401). Token may be expired.');
+      localStorage.removeItem('aes_token');
+      localStorage.removeItem('aes_user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -67,27 +65,33 @@ apiClient.interceptors.response.use(
 export const submitEssay = async (
   data: EssayCreatePayload | FormData
 ): Promise<EssayCreateResponse> => {
-  console.log('[API Call] submitEssay executing...');
   const isFormData = data instanceof FormData;
   const config = isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined;
   const response = await apiClient.post<EssayCreateResponse>('/essays', data, config);
-  console.log('[API Call] submitEssay success:', response.data);
   return response.data;
 };
 
 /**
- * Retrieve list of essays with optional filters and pagination.
+ * Retrieve the seeded ASAP prompts with rubric bounds.
+ * GET /api/v1/prompts
+ */
+export const getPrompts = async (): Promise<Prompt[]> => {
+  const response = await apiClient.get<Prompt[]>('/prompts');
+  return response.data;
+};
+
+/**
+ * Retrieve a page of essays with optional search, filters and pagination.
  * GET /api/v1/essays
  */
 export const getEssays = async (params?: {
-  skip?: number;
-  limit?: number;
+  page?: number;
+  page_size?: number;
+  q?: string;
   status?: string;
   prompt_id?: string;
-}): Promise<EssayListItem[]> => {
-  console.log('[API Call] getEssays executing with params:', params);
-  const response = await apiClient.get<EssayListItem[]>('/essays', { params });
-  console.log('[API Call] getEssays success:', response.data?.length, 'records');
+}): Promise<EssayListResponse> => {
+  const response = await apiClient.get<EssayListResponse>('/essays', { params });
   return response.data;
 };
 
@@ -96,9 +100,7 @@ export const getEssays = async (params?: {
  * GET /api/v1/essays/{id}
  */
 export const getEssay = async (id: string): Promise<EssayDetailResponse> => {
-  console.log(`[API Call] getEssay executing for id: ${id}...`);
   const response = await apiClient.get<EssayDetailResponse>(`/essays/${id}`);
-  console.log('[API Call] getEssay success:', response.data);
   return response.data;
 };
 
@@ -107,9 +109,7 @@ export const getEssay = async (id: string): Promise<EssayDetailResponse> => {
  * POST /api/v1/essays/{id}/score
  */
 export const dispatchScoring = async (essayId: string): Promise<JobDispatchResponse> => {
-  console.log(`[API Call] dispatchScoring executing for essayId: ${essayId}...`);
   const response = await apiClient.post<JobDispatchResponse>(`/essays/${essayId}/score`);
-  console.log('[API Call] dispatchScoring success:', response.data);
   return response.data;
 };
 
@@ -118,9 +118,16 @@ export const dispatchScoring = async (essayId: string): Promise<JobDispatchRespo
  * GET /api/v1/jobs/{job_id}
  */
 export const getJobStatus = async (jobId: string): Promise<JobResponse> => {
-  console.log(`[API Call] getJobStatus executing for jobId: ${jobId}...`);
   const response = await apiClient.get<JobResponse>(`/jobs/${jobId}`);
-  console.log('[API Call] getJobStatus success:', response.data);
+  return response.data;
+};
+
+/**
+ * Retrieve the most recent scoring job for an essay (used to resume polling).
+ * GET /api/v1/essays/{id}/jobs/latest
+ */
+export const getLatestEssayJob = async (essayId: string): Promise<JobResponse> => {
+  const response = await apiClient.get<JobResponse>(`/essays/${essayId}/jobs/latest`);
   return response.data;
 };
 
@@ -129,9 +136,7 @@ export const getJobStatus = async (jobId: string): Promise<JobResponse> => {
  * GET /api/v1/essays/{id}/score
  */
 export const getEssayScore = async (essayId: string): Promise<EssayScoreResponse> => {
-  console.log(`[API Call] getEssayScore executing for essayId: ${essayId}...`);
   const response = await apiClient.get<EssayScoreResponse>(`/essays/${essayId}/score`);
-  console.log('[API Call] getEssayScore success:', response.data);
   return response.data;
 };
 
@@ -143,9 +148,7 @@ export const submitReview = async (
   essayId: string,
   payload: ReviewerOverridePayload
 ): Promise<EssayScoreResponse> => {
-  console.log(`[API Call] submitReview executing for essayId: ${essayId}...`, payload);
   const response = await apiClient.post<EssayScoreResponse>(`/essays/${essayId}/review`, payload);
-  console.log('[API Call] submitReview success:', response.data);
   return response.data;
 };
 
@@ -154,9 +157,7 @@ export const submitReview = async (
  * POST /api/v1/auth/login
  */
 export const login = async (payload: LoginPayload): Promise<AuthResponse> => {
-  console.log('[API Call] login executing for:', payload.email);
   const response = await apiClient.post<AuthResponse>('/auth/login', payload);
-  console.log('[API Call] login success:', response.data.email, response.data.role);
   return response.data;
 };
 
@@ -165,27 +166,32 @@ export const login = async (payload: LoginPayload): Promise<AuthResponse> => {
  * GET /api/v1/auth/me
  */
 export const getCurrentUser = async (): Promise<UserProfile> => {
-  console.log('[API Call] getCurrentUser executing...');
   const response = await apiClient.get<UserProfile>('/auth/me');
-  console.log('[API Call] getCurrentUser success:', response.data);
   return response.data;
 };
 
 /**
-  * Retrieve complete Model Evaluation Dashboard data.
-  * GET /api/v1/analytics/evaluation
-  */
+ * Retrieve complete Model Evaluation Dashboard data.
+ * GET /api/v1/analytics/evaluation
+ */
 export const getEvaluationDashboard = async (): Promise<EvaluationDashboardData> => {
-  console.log('[API Call] getEvaluationDashboard executing...');
   const response = await apiClient.get<EvaluationDashboardData>('/analytics/evaluation');
-  console.log('[API Call] getEvaluationDashboard success:', response.data.qwk_summary.average_qwk);
   return response.data;
 };
 
 /**
-  * Poll live job queue status counts.
-  * GET /api/v1/analytics/jobs
-  */
+ * Retrieve live essay and score KPIs for the dashboard.
+ * GET /api/v1/analytics/summary
+ */
+export const getDashboardSummary = async (): Promise<DashboardSummary> => {
+  const response = await apiClient.get<DashboardSummary>('/analytics/summary');
+  return response.data;
+};
+
+/**
+ * Poll live job queue status counts.
+ * GET /api/v1/analytics/jobs
+ */
 export const getJobStatusCounts = async (): Promise<JobStatusCounts> => {
   const response = await apiClient.get<JobStatusCounts>('/analytics/jobs');
   return response.data;

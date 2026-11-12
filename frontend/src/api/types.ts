@@ -19,11 +19,20 @@ export interface EssayCreatePayload {
   prompt_id: string;
   source_type?: SourceType;
   raw_text?: string;
-  submitted_by?: string;
   storage_bucket?: string;
   storage_key?: string;
   file_content?: string;
   file_name?: string;
+}
+
+export interface Prompt {
+  id: string;
+  asap_set_id: number;
+  title: string;
+  genre: string;
+  rubric_min: number;
+  rubric_max: number;
+  created_at?: string | null;
 }
 
 export interface EssayCreateResponse {
@@ -39,18 +48,8 @@ export interface EssayCreateResponse {
   message?: string;
 }
 
-export interface EssayDetailResponse {
-  id: string;
-  prompt_id: string;
-  submitted_by: string;
-  raw_text: string;
-  source_type: SourceType | string;
-  storage_bucket?: string | null;
-  storage_key?: string | null;
-  status: EssayStatus | string;
-  created_at: string;
+export interface EssayDetailResponse extends EssayListItem {
   download_url?: string | null;
-  prompt_title?: string | null;
 }
 
 export interface EssayListItem {
@@ -72,6 +71,13 @@ export interface EssayListItem {
   rubric_band?: string | null;
   confidence?: number | null;
   reviewer_override_score?: number | null;
+}
+
+export interface EssayListResponse {
+  items: EssayListItem[];
+  total: number;
+  skip: number;
+  limit: number;
 }
 
 export interface JobDispatchResponse {
@@ -126,8 +132,11 @@ export interface EssayScoreResponse {
   reviewerOverrideScore?: number | null;
   reviewerOverrideReason?: string | null;
   reviewerOverrideAt?: string | null;
-  rubricMin?: number;
-  rubricMax?: number;
+  promptId?: string | null;
+  promptTitle?: string | null;
+  rubricMin?: number | null;
+  rubricMax?: number | null;
+  essayStatus?: EssayStatus | string | null;
   spans?: FeedbackSpan[];
 }
 
@@ -205,6 +214,17 @@ export interface EvaluationDashboardData {
   qwk_summary: QwkSummary;
   loss_curves: Record<string, LossCurvePoint[]>;
   job_counts: JobStatusCounts;
+}
+
+export interface DashboardSummary {
+  total_essays: number;
+  scored_essays: number;
+  pending_essays: number;
+  failed_essays: number;
+  average_score: number | null;
+  average_confidence: number | null;
+  active_model: string | null;
+  queue: JobStatusCounts;
 }
 
 

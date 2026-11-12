@@ -7,13 +7,13 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const VARIANT_STYLES: Record<NonNullable<CardProps['variant']>, string> = {
   default:
-    'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 shadow-sm text-slate-900 dark:text-slate-100',
+    'bg-surface border border-base text-stone-900 dark:text-stone-200 shadow-sm',
   elevated:
-    'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-md text-slate-900 dark:text-slate-100',
+    'bg-surface border border-base shadow-md text-stone-900 dark:text-stone-200',
   sunken:
-    'bg-slate-50 dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-inner text-slate-900 dark:text-slate-100',
+    'bg-surface-level border border-faint shadow-inner text-stone-900 dark:text-stone-200',
   bordered:
-    'bg-transparent border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100',
+    'bg-transparent border border-strong text-stone-900 dark:text-stone-200 shadow-none',
 };
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -21,11 +21,11 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     return (
       <div
         ref={ref}
-        className={`rounded-xl border backdrop-blur-sm transition-all duration-150
+        className={`rounded-xl transition-colors duration-200
           ${VARIANT_STYLES[variant]}
           ${
             interactive
-              ? 'hover:border-primary-500/50 hover:shadow-md hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer active:scale-[0.99]'
+              ? 'hover:border-ink-500/50 hover:shadow-md hover:bg-surface-level active:scale-[0.99] cursor-pointer'
               : ''
           }
           ${className}`}
@@ -36,6 +36,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     );
   }
 );
+
 Card.displayName = 'Card';
 
 export const CardHeader: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
@@ -55,7 +56,7 @@ export const CardTitle: React.FC<
 > = ({ as: Component = 'h3', className = '', children, ...props }) => {
   return (
     <Component
-      className={`text-base font-bold tracking-tight text-slate-900 dark:text-white ${className}`}
+      className={`text-serif text-base font-bold tracking-tight text-heading ${className}`}
       {...props}
     >
       {children}
@@ -69,7 +70,7 @@ export const CardDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement
   ...props
 }) => {
   return (
-    <p className={`text-xs text-slate-500 dark:text-slate-400 ${className}`} {...props}>
+    <p className={`text-xs text-muted ${className}`} {...props}>
       {children}
     </p>
   );
@@ -94,7 +95,7 @@ export const CardFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
 }) => {
   return (
     <div
-      className={`p-5 pt-3 border-t border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 ${className}`}
+      className={`p-5 pt-3 border-t border-faint flex items-center justify-between text-xs text-muted ${className}`}
       {...props}
     >
       {children}

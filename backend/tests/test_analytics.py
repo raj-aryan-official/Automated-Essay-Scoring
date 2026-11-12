@@ -81,6 +81,29 @@ def viewer_token(db_session: Session) -> str:
     )
 
 
+@pytest.fixture
+def ml_engineer_token(db_session: Session) -> str:
+    """Create a test ML_ENGINEER user and return access token."""
+    user = (
+        db_session.query(User).filter(User.email == "engineer_test@aes.local").first()
+    )
+    if not user:
+        user = User(
+            email="engineer_test@aes.local",
+            password_hash="hashed_dummy_password",
+            role="ML_ENGINEER",
+        )
+        db_session.add(user)
+        db_session.commit()
+        db_session.refresh(user)
+
+    return create_access_token(
+        subject=str(user.id),
+        role=str(user.role),
+        email=str(user.email) if user.email else None,
+    )
+
+
 def test_evaluation_unauthenticated_returns_401(client: TestClient):
     """Verify GET /api/v1/analytics/evaluation rejects unauthenticated requests."""
     res = client.get("/api/v1/analytics/evaluation")
@@ -94,10 +117,10 @@ def test_jobs_unauthenticated_returns_401(client: TestClient):
 
 
 def test_evaluation_endpoint_returns_200_and_valid_payload(
-    client: TestClient, viewer_token: str
+    client: TestClient, ml_engineer_token: str
 ):
-    """Verify GET /api/v1/analytics/evaluation returns complete QWK, loss curves, and job counts."""
-    headers = {"Authorization": f"Bearer {viewer_token}"}
+    """Verify GET /api/v1/analytics/evaluation returns a well-formed report for ML_ENGINEER."""
+    headers = {"Authorization": f"Bearer {ml_engineer_token}"}
     res = client.get("/api/v1/analytics/evaluation", headers=headers)
     assert res.status_code == 200
 
@@ -106,31 +129,18 @@ def test_evaluation_endpoint_returns_200_and_valid_payload(
     assert "loss_curves" in data
     assert "job_counts" in data
 
-    # Verify QWK summary
+    # No fabricated report: empty metrics until an evaluation run exists
     qwk = data["qwk_summary"]
     assert "average_qwk" in qwk
-    assert "target_qwk" in qwk
     assert qwk["target_qwk"] == 0.70
-    assert "prompts" in qwk
-    assert len(qwk["prompts"]) == 8
+    assert isinstance(qwk["prompts"], list)
+    assert qwk["evaluated_prompts_count"] == len(qwk["prompts"])
 
-    # Verify per-prompt QWK fields
-    for p in qwk["prompts"]:
-        assert "prompt_id" in p
-        assert 1 <= p["prompt_id"] <= 8
-        assert "qwk" in p
-        assert "target_qwk" in p
-        assert "passed" in p
-        assert "genre" in p
-        assert "rubric_min" in p
-        assert "rubric_max" in p
-
-    # Verify loss curves
+    # Verify loss curves only contain prompts with logged scalars
     loss_curves = data["loss_curves"]
-    assert len(loss_curves) >= 8
-    for pid_str in [str(i) for i in range(1, 9)]:
-        assert pid_str in loss_curves
-        points = loss_curves[pid_str]
+    assert isinstance(loss_curves, dict)
+    for pid_str, points in loss_curves.items():
+        assert pid_str in [str(i) for i in range(1, 9)]
         assert len(points) > 0
         for pt in points:
             assert "step" in pt
@@ -144,6 +154,13 @@ def test_evaluation_endpoint_returns_200_and_valid_payload(
     assert "failed" in jc
     assert "total" in jc
     assert jc["total"] >= 0
+
+
+def test_evaluation_forbidden_for_viewer(client: TestClient, viewer_token: str):
+    """Verify VIEWER cannot access the ML_ENGINEER-only evaluation report."""
+    headers = {"Authorization": f"Bearer {viewer_token}"}
+    res = client.get("/api/v1/analytics/evaluation", headers=headers)
+    assert res.status_code == 403
 
 
 def test_jobs_endpoint_returns_live_counts(

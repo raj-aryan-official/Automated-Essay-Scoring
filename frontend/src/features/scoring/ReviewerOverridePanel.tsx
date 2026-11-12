@@ -17,8 +17,6 @@ import {
   Edit3,
 } from 'lucide-react';
 
-export type UserRole = 'TEACHER' | 'STUDENT' | 'ADMIN' | 'ML_ENGINEER' | 'VIEWER';
-
 export interface AuditTrailItem {
   id: string;
   type: 'AI_INFERENCE' | 'TEACHER_OVERRIDE';
@@ -36,7 +34,6 @@ export interface ReviewerOverridePanelProps {
   essayId: string;
   scoreData: EssayScoreResponse;
   onReviewSubmitted: (updatedScore: EssayScoreResponse) => void;
-  initialRole?: UserRole;
   className?: string;
 }
 
@@ -56,13 +53,9 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
   essayId,
   scoreData,
   onReviewSubmitted,
-  initialRole = 'TEACHER',
   className = '',
 }) => {
   const { user } = useAuth();
-
-  // Role simulation state (for previewing student experience & E2E compatibility)
-  const [role, setRole] = useState<UserRole>(initialRole);
 
   const rubricMin = scoreData.rubricMin ?? 2.0;
   const rubricMax = scoreData.rubricMax ?? 12.0;
@@ -196,54 +189,12 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
           </div>
         </div>
 
-        {/* Role Switcher (Maintained for testing and role previews) */}
-        <div className="flex items-center space-x-1 bg-slate-100 dark:bg-slate-950/80 p-1 rounded-lg border border-slate-200 dark:border-slate-800 text-[11px]">
-          <span className="text-slate-500 dark:text-slate-400 px-1 font-medium text-[10px]">Role:</span>
-          <button
-            type="button"
-            id="role-selector-teacher"
-            onClick={() => setRole('TEACHER')}
-            className={`px-2 py-0.5 rounded font-semibold text-[10px] transition ${
-              role === 'TEACHER'
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            TEACHER
-          </button>
-          <button
-            type="button"
-            id="role-selector-student"
-            onClick={() => setRole('STUDENT')}
-            className={`px-2 py-0.5 rounded font-semibold text-[10px] transition ${
-              role === 'STUDENT'
-                ? 'bg-slate-700 text-white shadow-sm'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            STUDENT
-          </button>
-        </div>
       </div>
 
       {/* ===================================================================
-          ROLE RESTRICTION BANNER (When simulated as STUDENT)
+          OVERRIDE FORM
           =================================================================== */}
-      {role !== 'TEACHER' ? (
-        <div className="p-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-600 dark:text-slate-400 space-y-2">
-          <p>
-            You are viewing this workspace in <span className="font-semibold text-slate-800 dark:text-slate-300">STUDENT</span> mode. Manual score overrides and rubric adjustments require the <span className="font-semibold text-purple-600 dark:text-purple-400">TEACHER</span> role.
-          </p>
-          <button
-            type="button"
-            onClick={() => setRole('TEACHER')}
-            className="text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 font-semibold underline"
-          >
-            Switch to TEACHER role to submit override &rarr;
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
+      <div className="space-y-4">
           {/* Error Banner */}
           {error && (
             <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 rounded-lg text-xs flex items-start gap-2">
@@ -291,7 +242,7 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
                     <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
                       <span className="font-semibold text-slate-700 dark:text-slate-300">Automated AI Assessment</span>
                       <span className="text-[10px] font-mono">
-                        v{scoreData.modelVersion || '1.4.0'}
+                        {scoreData.modelVersion || 'unregistered'}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-600 dark:text-slate-400 font-mono">
@@ -568,7 +519,6 @@ export const ReviewerOverridePanel: React.FC<ReviewerOverridePanelProps> = ({
             </form>
           )}
         </div>
-      )}
 
       {/* ===================================================================
           5. CONFIRMATION MODAL BEFORE SUBMIT (Prompt 10)

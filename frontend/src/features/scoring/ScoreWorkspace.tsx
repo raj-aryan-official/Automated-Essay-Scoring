@@ -8,6 +8,7 @@ import { InspectionDrawer } from '../feedback/InspectionDrawer';
 import { DimensionCard } from '../feedback/DimensionCard';
 import { DimensionRadarChart } from '../feedback/DimensionRadarChart';
 import { Drawer } from '../../components/ui';
+import { useAuth } from '../../context/AuthContext';
 import {
   BookOpen,
   Sliders,
@@ -32,6 +33,9 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
   scoreData,
   onReviewSubmitted,
 }) => {
+  const { user } = useAuth();
+  const canReview = user?.role === 'TEACHER' || user?.role === 'ADMIN';
+
   // OBJ-004 Performance Instrumentation: Track score and feedback render duration (< 500 ms target)
   useEffect(() => {
     if (typeof performance !== 'undefined' && essay?.id) {
@@ -99,40 +103,46 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // 4. Desktop Drag-to-Resize Logic
-  const handleResizeStart = (e: React.MouseEvent) => {
+  // 4. Desktop Drag-to-Resize Logic (mouse + touch support)
+  const handleResizeStart = (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
     setIsResizing(true);
-    startXRef.current = e.clientX;
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    startXRef.current = clientX;
     startWidthRef.current = drawerWidth;
   };
 
   useEffect(() => {
     if (!isResizing) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       // Anchored to the right: dragging left increases drawer width
-      const delta = startXRef.current - e.clientX;
+      const delta = startXRef.current - clientX;
       const newWidth = Math.min(600, Math.max(280, startWidthRef.current + delta));
       setDrawerWidth(newWidth);
     };
 
-    const handleMouseUp = () => {
+    const handleUp = () => {
       setIsResizing(false);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('mousemove', handleMove as EventListener);
+    document.addEventListener('mouseup', handleUp);
+    document.addEventListener('touchmove', handleMove as EventListener, { passive: false });
+    document.addEventListener('touchend', handleUp);
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMove as EventListener);
+      document.removeEventListener('mouseup', handleUp);
+      document.removeEventListener('touchmove', handleMove as EventListener);
+      document.removeEventListener('touchend', handleUp);
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isResizing, drawerWidth]);
+  }, [isResizing]);
 
   // Dimension Handlers
   const toggleDimension = (dim: DimensionKey) => {
@@ -168,26 +178,27 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
     return [];
   }, [scoreData]);
 
-  const rubricMin = scoreData.rubricMin ?? 2.0;
-  const rubricMax = scoreData.rubricMax ?? 12.0;
+  const rubricMin = scoreData.rubricMin ?? essay.rubric_min ?? 0;
+  const rubricMax = scoreData.rubricMax ?? essay.rubric_max ?? 0;
 
-  // Normalized dimension map for mobile tabs and inspector
+  // Normalized dimension map for mobile tabs and inspector. Missing dimensions keep a null score
+  // and an explicit "not returned" message instead of synthesised values.
   const dimensionMap = useMemo(() => {
     const map: Record<DimensionKey, DimensionScoreDetail> = {
       grammar: {
         dimension: 'grammar',
-        score: rubricMin + (rubricMax - rubricMin) * 0.75,
-        feedback: 'Solid syntactic control with occasional complex clause run-ons.',
+        score: null,
+        feedback: 'The model did not return grammar feedback for this essay.',
       },
       coherence: {
         dimension: 'coherence',
-        score: rubricMin + (rubricMax - rubricMin) * 0.70,
-        feedback: 'Effective thematic progression and logical paragraph transitions.',
+        score: null,
+        feedback: 'The model did not return coherence feedback for this essay.',
       },
       argumentation: {
         dimension: 'argumentation',
-        score: rubricMin + (rubricMax - rubricMin) * 0.80,
-        feedback: 'Compelling central thesis supported by concrete evidence.',
+        score: null,
+        feedback: 'The model did not return argumentation feedback for this essay.',
       },
     };
 
@@ -199,7 +210,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
     });
 
     return map;
-  }, [scoreData.dimensions, rubricMin, rubricMax]);
+  }, [scoreData.dimensions]);
 
   // Bi-directional click handler: Clicking a highlighted span scrolls to and opens the matching card in the drawer or mobile tab
   const handleSelectSpan = (span: FeedbackSpan) => {
@@ -295,6 +306,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
           />
 
           {/* Collapsible Tablet Reviewer Override Accordion */}
+          {canReview && (
           <div className="bg-slate-900/90 border border-slate-800 rounded-xl overflow-hidden shadow-md">
             <button
               type="button"
@@ -319,6 +331,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               </div>
             )}
           </div>
+          )}
         </div>
       )}
 
@@ -342,15 +355,17 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
             />
 
             {/* Reviewer Override Panel */}
-            <ReviewerOverridePanel
-              essayId={essay.id}
-              scoreData={scoreData}
-              onReviewSubmitted={(updatedScore) => {
-                if (onReviewSubmitted) {
-                  onReviewSubmitted(updatedScore);
-                }
-              }}
-            />
+            {canReview && (
+              <ReviewerOverridePanel
+                essayId={essay.id}
+                scoreData={scoreData}
+                onReviewSubmitted={(updatedScore) => {
+                  if (onReviewSubmitted) {
+                    onReviewSubmitted(updatedScore);
+                  }
+                }}
+              />
+            )}
           </aside>
         )}
 
@@ -550,6 +565,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               </div>
 
               {/* Collapsible Mobile Reviewer Override Accordion */}
+              {canReview && (
               <div className="bg-slate-950/80 border border-slate-800 rounded-xl overflow-hidden shadow-md mt-6">
                 <button
                   type="button"
@@ -574,6 +590,7 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
                   </div>
                 )}
               </div>
+              )}
             </div>
           )}
         </section>
@@ -610,8 +627,8 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
               isOpen={isDrawerOpen}
               onClose={() => setIsDrawerOpen(false)}
               onSelectDimension={handleSelectDimensionFromDrawer}
-              rubricMin={scoreData.rubricMin ?? 2.0}
-              rubricMax={scoreData.rubricMax ?? 12.0}
+              rubricMin={rubricMin}
+              rubricMax={rubricMax}
               isDesktop={true}
             />
           </aside>
@@ -649,8 +666,8 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
             isOpen={isDrawerOpen}
             onClose={() => setIsDrawerOpen(false)}
             onSelectDimension={handleSelectDimensionFromDrawer}
-            rubricMin={scoreData.rubricMin ?? 2.0}
-            rubricMax={scoreData.rubricMax ?? 12.0}
+            rubricMin={rubricMin}
+            rubricMax={rubricMax}
             isDesktop={false}
           />
         </Drawer>
@@ -712,14 +729,20 @@ export const ScoreWorkspace: React.FC<ScoreWorkspaceProps> = ({
                 onResetFilters={resetFilters}
               >
                 <div className="pt-4 border-t border-slate-800">
-                  <ReviewerOverridePanel
-                    essayId={essay.id}
-                    scoreData={scoreData}
-                    onReviewSubmitted={(updated) => {
-                      if (onReviewSubmitted) onReviewSubmitted(updated);
-                      setIsMobileSheetOpen(false);
-                    }}
-                  />
+                  {canReview ? (
+                    <ReviewerOverridePanel
+                      essayId={essay.id}
+                      scoreData={scoreData}
+                      onReviewSubmitted={(updated) => {
+                        if (onReviewSubmitted) onReviewSubmitted(updated);
+                        setIsMobileSheetOpen(false);
+                      }}
+                    />
+                  ) : (
+                    <p className="text-xs text-slate-400">
+                      Only teachers and administrators can file score overrides.
+                    </p>
+                  )}
                 </div>
               </ControlRail>
             </div>

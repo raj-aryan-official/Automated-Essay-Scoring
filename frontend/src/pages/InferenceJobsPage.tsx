@@ -25,13 +25,13 @@ export const InferenceJobsPage: React.FC = () => {
   const [error, setError] = useState<unknown | null>(null);
 
   const fetchJobCounts = useCallback(async (isManual = false) => {
-    setIsLoading(true);
+    if (isManual) setIsLoading(true);
     try {
       const data = await getJobStatusCounts();
       setCounts(data);
       setError(null);
       if (isManual) {
-        toast.success('Inference worker queue refreshed successfully');
+        toast.success('Job queue refreshed');
       }
     } catch (err) {
       console.warn('Failed to fetch job status counts:', err);
@@ -47,9 +47,12 @@ export const InferenceJobsPage: React.FC = () => {
 
   useEffect(() => {
     fetchJobCounts();
-    const interval = setInterval(() => fetchJobCounts(false), 10000);
+    const interval = setInterval(() => {
+      // Stop polling if we're in an error state to avoid wasted requests
+      if (!error) fetchJobCounts(false);
+    }, 10000);
     return () => clearInterval(interval);
-  }, [fetchJobCounts]);
+  }, [fetchJobCounts, error]);
 
   if (error && !counts) {
     return (
@@ -57,7 +60,7 @@ export const InferenceJobsPage: React.FC = () => {
         <ErrorState
           error={error}
           onRetry={() => fetchJobCounts(true)}
-          onHome={() => navigate('/')}
+          onHome={() => navigate('/dashboard')}
         />
       </div>
     );
@@ -79,7 +82,7 @@ export const InferenceJobsPage: React.FC = () => {
             </Badge>
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            Asynchronous background workers executing PyTorch BERT tokenization, forward passes, and rubric scaling.
+            Asynchronous scoring workers claim jobs from the persistent database queue and apply the active rubric model.
           </p>
         </div>
 
@@ -183,8 +186,8 @@ export const InferenceJobsPage: React.FC = () => {
           <CardContent className="p-8">
             <EmptyState
               icon={<Cpu className="w-8 h-8 text-primary-400" />}
-              title="No inference jobs yet — submit your first essay"
-              description="Background Celery workers are currently idle. Submit an essay to start asynchronous tokenization, embedding generation, and automated rubric scoring."
+              title="No inference jobs yet"
+              description="The scoring queue is idle. Submit an essay to start automated scoring."
               action={{
                 label: "Submit essay for inference",
                 onClick: () => navigate('/submit'),
@@ -199,10 +202,10 @@ export const InferenceJobsPage: React.FC = () => {
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary-500 dark:text-primary-400" />
-            <span>Worker Queue Lifecycle Architecture</span>
+            <span>Job Queue Lifecycle</span>
           </CardTitle>
           <CardDescription>
-            Multi-stage pipeline dispatching jobs to Celery workers with persistent database transaction locks.
+            Each dispatch creates a job row that a worker claims with a row-level lock, so jobs are never processed twice.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-xs text-slate-700 dark:text-slate-300">
@@ -213,7 +216,7 @@ export const InferenceJobsPage: React.FC = () => {
                 1. Stage: Queued
               </span>
               <p className="text-slate-500 dark:text-slate-400 text-[11px]">
-                Essay raw text is validated, written to PostgreSQL, and a Celery task payload is pushed to Redis broker.
+                The validated essay and a queued job record are stored in the database.
               </p>
             </div>
 

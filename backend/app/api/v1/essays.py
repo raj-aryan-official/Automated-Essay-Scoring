@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy.orm import Session
+from sqlalchemy import or_
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.deps import get_db, require_teacher, require_viewer
 from app.core.validation import (
@@ -19,7 +20,9 @@ from app.core.validation import (
 )
 from app.models.entities import (
     Essay,
+    Job,
     ModelEntity,
+    Prompt,
     Score,
     User,
 )
@@ -28,18 +31,26 @@ from app.schemas.essay import (
     EssayCreate,
     EssayCreateResponse,
     EssayDetailResponse,
+    EssayListResponse,
     EssayResponse,
     EssayScoreResponse,
     ReviewerOverrideRequest,
     SourceTypeEnum,
 )
-from app.schemas.job import JobDispatchResponse
+from app.schemas.job import JobDispatchResponse, JobResponse
+from app.services.document_extraction import extract_document_text
 from app.services.job_service import create_scoring_job
 from app.services.storage import StorageService, get_storage_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# WHY: Only a queued or running job blocks a second dispatch; any other job state is historical
+ACTIVE_JOB_STATUSES = ("QUEUED", "PROCESSING")
+
+# WHY: Essays in these states already have a model score, so re-dispatching would create duplicate scores
+SCORED_ESSAY_STATUSES = ("SCORED", "FEEDBACK_READY", "UNDER_REVIEW", "FINALIZED")
 
 
 def _is_base64(s: str) -> bool:
@@ -53,34 +64,46 @@ def _is_base64(s: str) -> bool:
         return False
 
 
-def _get_or_create_user(db: Session, user_id: UUID | None = None) -> User:
-    """Ensure a user exists for foreign key reference."""
-    if user_id:
-        user = db.query(User).filter(User.id == user_id).first()
-        if not user:
-            user = User(
-                id=user_id,
-                email=f"user_{user_id}@aes.local",
-                password_hash="system_managed",
-                role="VIEWER",
-            )
-            db.add(user)
-            db.commit()
-            db.refresh(user)
-        return user
-
-    user = db.query(User).first()
-    if not user:
-        user = User(
-            id=uuid.uuid4(),
-            email="student@aes.local",
-            password_hash="system_managed",
-            role="VIEWER",
+def _build_score_response(db: Session, essay: Essay, score: Score) -> EssayScoreResponse:
+    """Serialize a score row together with its prompt rubric bounds."""
+    model_version = "v1.0.0"
+    if score.inference_run and score.inference_run.model:
+        model_version = score.inference_run.model.version
+    else:
+        active_model = (
+            db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    return user
+        if active_model:
+            model_version = active_model.version
+
+    dimensions = [
+        DimensionScoreDetail(
+            dimension=df.dimension,
+            score=df.sub_score,
+            subScore=df.sub_score,
+            feedback=df.feedback_text,
+            feedbackText=df.feedback_text,
+        )
+        for df in score.dimension_feedbacks
+    ]
+
+    prompt = essay.prompt
+    return EssayScoreResponse(
+        essayId=essay.id,
+        holisticScore=score.holistic_score,
+        rubricBand=score.rubric_band,
+        confidence=score.confidence,
+        dimensions=dimensions,
+        modelVersion=model_version,
+        promptId=essay.prompt_id,
+        promptTitle=prompt.title if prompt else None,
+        rubricMin=prompt.rubric_min if prompt else None,
+        rubricMax=prompt.rubric_max if prompt else None,
+        essayStatus=essay.status,
+        reviewerOverrideScore=score.reviewer_override_score,
+        reviewerOverrideReason=score.reviewer_override_reason,
+        reviewerOverrideAt=score.reviewer_override_at,
+    )
 
 
 @router.post(
@@ -104,7 +127,6 @@ def _get_or_create_user(db: Session, user_id: UUID | None = None) -> User:
                             },
                             "raw_text": {"type": "string"},
                             "file": {"type": "string", "format": "binary"},
-                            "submitted_by": {"type": "string", "format": "uuid"},
                         },
                         "required": ["prompt_id"],
                     }
@@ -132,7 +154,6 @@ async def submit_essay(
     prompt_id: UUID
     source_type: str
     raw_text: str = ""
-    submitted_by_id: UUID | None = None
     storage_bucket: str | None = None
     storage_key: str | None = None
 
@@ -175,16 +196,6 @@ async def submit_essay(
                 )
             source_type = source_type_in
 
-        submitted_by_raw = form.get("submitted_by")
-        if submitted_by_raw:
-            try:
-                submitted_by_id = UUID(str(submitted_by_raw))
-            except ValueError:
-                raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    detail="Field 'submitted_by' must be a valid UUID.",
-                ) from None
-
         form_raw_text = form.get("raw_text")
         if form_raw_text is not None:
             raw_text = str(form_raw_text)
@@ -205,9 +216,8 @@ async def submit_essay(
                     file_bytes, filename=filename, content_type=file_content_type
                 )
 
-                if not raw_text.strip():
-                    raw_text = file_bytes.decode("utf-8", errors="replace")
-
+                # WHY: PDFs/DOCX must be parsed server-side; decoding raw bytes as UTF-8 corrupts the essay text
+                raw_text = extract_document_text(file_bytes, filename=filename)
                 raw_text = validate_essay_text(raw_text)
 
                 try:
@@ -257,7 +267,6 @@ async def submit_essay(
         prompt = validate_prompt_exists(db, prompt_id)
 
         source_type = payload.source_type.value
-        submitted_by_id = payload.submitted_by
         raw_text = payload.raw_text or ""
         storage_bucket = payload.storage_bucket
         storage_key = payload.storage_key
@@ -283,9 +292,7 @@ async def submit_essay(
                 # Validate document size (<= 20MB) and MIME type / extension
                 validate_document(file_bytes, filename=filename)
 
-                if not raw_text.strip():
-                    raw_text = file_bytes.decode("utf-8", errors="replace")
-
+                raw_text = extract_document_text(file_bytes, filename=filename)
                 raw_text = validate_essay_text(raw_text)
 
                 try:
@@ -299,16 +306,16 @@ async def submit_essay(
                 storage_key = key
             elif raw_text.strip():
                 raw_text = validate_essay_text(raw_text)
-            elif storage_key and not storage_bucket:
-                storage_bucket = storage.bucket_name
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="A document file or raw_text must be provided for DOCUMENT submissions",
+                )
 
-    # Ensure user exists for foreign key constraint
-    user = _get_or_create_user(db, submitted_by_id) if submitted_by_id else current_user
-
-    # Persist the essay record with status=SUBMITTED
+    # WHY: Attribution always comes from the authenticated JWT so callers cannot impersonate another submitter
     essay = Essay(
         id=essay_id,
-        submitted_by=user.id,
+        submitted_by=current_user.id,
         prompt_id=prompt.id,
         raw_text=raw_text,
         source_type=source_type,
@@ -331,13 +338,16 @@ async def submit_essay(
 
 @router.get(
     "",
-    response_model=list[EssayResponse],
-    summary="List submitted essays with optional filtering and pagination",
+    response_model=EssayListResponse,
+    summary="List submitted essays with search, filtering and pagination",
 )
-# WHY: Supports paginated historical essay browsing with status and prompt filtering for teachers and auditors
+# WHY: Server-side pagination/search keeps the explorer responsive and avoids unbounded limit requests
 def list_essays(
-    skip: int = Query(0, ge=0, description="Offset of records to skip"),
-    limit: int = Query(50, ge=1, le=100, description="Maximum records to return"),
+    page: int = Query(1, ge=1, description="1-based page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Records per page"),
+    q: str | None = Query(
+        None, max_length=200, description="Search essay text, prompt, submitter"
+    ),
     status_filter: str | None = Query(
         None, alias="status", description="Filter by status (e.g. SUBMITTED, SCORED)"
     ),
@@ -345,14 +355,41 @@ def list_essays(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_viewer),
 ):
-    """Retrieve historical essays with pagination and optional status/prompt filters."""
+    """Retrieve historical essays with server-side search, filtering and pagination."""
     query = db.query(Essay)
+
     if status_filter:
         query = query.filter(Essay.status == status_filter)
     if prompt_id:
         query = query.filter(Essay.prompt_id == prompt_id)
+    if q and q.strip():
+        needle = f"%{q.strip()}%"
+        query = query.outerjoin(Prompt, Essay.prompt_id == Prompt.id).outerjoin(
+            User, Essay.submitted_by == User.id
+        )
+        query = query.filter(
+            or_(
+                Essay.raw_text.ilike(needle),
+                Essay.status.ilike(needle),
+                Prompt.title.ilike(needle),
+                User.email.ilike(needle),
+            )
+        )
 
-    essays = query.order_by(Essay.created_at.desc()).offset(skip).limit(limit).all()
+    total = query.count()
+    offset = (page - 1) * page_size
+    essays = (
+        query.options(
+            joinedload(Essay.prompt),
+            joinedload(Essay.submitter),
+            joinedload(Essay.scores),
+        )
+        .order_by(Essay.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+        .all()
+    )
+
     results = []
     for e in essays:
         item = EssayResponse.model_validate(e)
@@ -364,13 +401,14 @@ def list_essays(
         if e.submitter:
             item.submitter_email = e.submitter.email
         if e.scores:
-            latest_score = e.scores[-1]
+            latest_score = max(e.scores, key=lambda s: s.created_at or datetime.min)
             item.holistic_score = latest_score.holistic_score
             item.rubric_band = latest_score.rubric_band
             item.confidence = latest_score.confidence
             item.reviewer_override_score = latest_score.reviewer_override_score
         results.append(item)
-    return results
+
+    return EssayListResponse(items=results, total=total, skip=offset, limit=page_size)
 
 
 # WHY: Fetches full essay text and dynamically generates temporary S3 presigned download URLs for original document submissions
@@ -410,6 +448,12 @@ def get_essay_by_id(
     detail_res = EssayDetailResponse.model_validate(essay)
     detail_res.download_url = download_url
     detail_res.prompt_title = prompt_title
+    if essay.prompt:
+        detail_res.asap_set_id = essay.prompt.asap_set_id
+        detail_res.rubric_min = essay.prompt.rubric_min
+        detail_res.rubric_max = essay.prompt.rubric_max
+    if essay.submitter:
+        detail_res.submitter_email = essay.submitter.email
     return detail_res
 
 
@@ -436,6 +480,40 @@ def dispatch_scoring_job(
             detail=f"Essay with id '{essay_id}' not found.",
         )
 
+    # WHY: Reuse an in-flight job instead of queuing duplicates for the same essay
+    active_job = (
+        db.query(Job)
+        .filter(
+            Job.essay_id == essay.id,
+            Job.job_type == "SCORING",
+            Job.status.in_(ACTIVE_JOB_STATUSES),
+        )
+        .order_by(Job.queued_at.desc())
+        .first()
+    )
+    if active_job:
+        return JobDispatchResponse(
+            job_id=active_job.id,
+            essay_id=essay.id,
+            status=active_job.status,
+            job_type=active_job.job_type,
+            message="Scoring job is already in progress",
+        )
+
+    if essay.status in SCORED_ESSAY_STATUSES:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Essay already has a score (status '{essay.status}'). "
+                "Use the reviewer override workflow to change it."
+            ),
+        )
+    if essay.status not in ("SUBMITTED", "PROCESSING_FAILED"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Essay cannot be scored from status '{essay.status}'.",
+        )
+
     job = create_scoring_job(db, essay_id=essay.id)
 
     return JobDispatchResponse(
@@ -445,6 +523,39 @@ def dispatch_scoring_job(
         job_type=job.job_type,
         message="Scoring job queued successfully",
     )
+
+
+# WHY: Lets the UI recover the polling target after a page refresh instead of guessing a job UUID
+@router.get(
+    "/{essay_id}/jobs/latest",
+    response_model=JobResponse,
+    summary="Get the most recent scoring job for an essay",
+)
+def get_latest_essay_job(
+    essay_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_viewer),
+):
+    """Return the newest job row associated with the essay."""
+    essay = db.query(Essay).filter(Essay.id == essay_id).first()
+    if not essay:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Essay with id '{essay_id}' not found.",
+        )
+
+    job = (
+        db.query(Job)
+        .filter(Job.essay_id == essay_id)
+        .order_by(Job.queued_at.desc())
+        .first()
+    )
+    if not job:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No job found for essay '{essay_id}'.",
+        )
+    return JobResponse.model_validate(job)
 
 
 # WHY: Fetches calculated holistic score, calibrated confidence, and 3-dimensional feedback items for split-screen ScoreWorkspace
@@ -481,42 +592,7 @@ def get_essay_score(
             detail=f"Score for essay '{essay_id}' not found. Essay status is '{essay.status}'.",
         )
 
-    # Determine model version
-    model_version = "v1.0.0"
-    if score.inference_run and score.inference_run.model:
-        model_version = score.inference_run.model.version
-    else:
-        active_model = (
-            db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
-        )
-        if active_model:
-            model_version = active_model.version
-
-    # Collect dimension feedback
-    dimensions = []
-    if score.dimension_feedbacks:
-        for df in score.dimension_feedbacks:
-            dimensions.append(
-                DimensionScoreDetail(
-                    dimension=df.dimension,
-                    score=df.sub_score,
-                    subScore=df.sub_score,
-                    feedback=df.feedback_text,
-                    feedbackText=df.feedback_text,
-                )
-            )
-
-    return EssayScoreResponse(
-        essayId=essay.id,
-        holisticScore=score.holistic_score,
-        rubricBand=score.rubric_band,
-        confidence=score.confidence,
-        dimensions=dimensions,
-        modelVersion=model_version,
-        reviewerOverrideScore=score.reviewer_override_score,
-        reviewerOverrideReason=score.reviewer_override_reason,
-        reviewerOverrideAt=getattr(score, "reviewer_override_at", None),
-    )
+    return _build_score_response(db, essay, score)
 
 
 @router.post(
@@ -530,16 +606,20 @@ def review_essay(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_teacher),
 ):
-    """Accept reviewer_override_score and reviewer_override_reason, update the
+    """Accept reviewer_override_score and reviewer_override_reason, persist the
 
-    essay's status to UNDER_REVIEW then FINALIZED, and persist the override onto
-    the scores row with a timestamp.
+    override onto the scores row, and finalize the essay in a single transaction.
     """
     essay = db.query(Essay).filter(Essay.id == essay_id).first()
     if not essay:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Essay with id '{essay_id}' not found.",
+        )
+    if essay.status == "FINALIZED":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Essay is already finalized; overrides can no longer be changed.",
         )
 
     score = (
@@ -554,60 +634,32 @@ def review_essay(
             detail=f"Cannot review essay '{essay_id}' because it has not been scored yet. Current status is '{essay.status}'.",
         )
 
-    # WHY: Step 1: Update status to UNDER_REVIEW to signal active human intervention
-    essay.status = "UNDER_REVIEW"
-    db.commit()
-    db.refresh(essay)
+    # WHY: An override outside the prompt's rubric range would produce an invalid grade
+    prompt = essay.prompt
+    if prompt and not (
+        prompt.rubric_min <= payload.reviewer_override_score <= prompt.rubric_max
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                f"Override score must be within this prompt's rubric range "
+                f"[{prompt.rubric_min:g}, {prompt.rubric_max:g}]."
+            ),
+        )
 
-    # WHY: Step 2: Persist educator's adjusted score along with mandatory justification rationale and UTC audit timestamp
-    override_time = datetime.now(timezone.utc)
     score.reviewer_override_score = payload.reviewer_override_score
     score.reviewer_override_reason = payload.reviewer_override_reason
-    score.reviewer_override_at = override_time
-
-    # WHY: Step 3: Transition status to FINALIZED to lock the score against further automatic modification
+    score.reviewer_override_at = datetime.now(timezone.utc)
     essay.status = "FINALIZED"
     db.commit()
     db.refresh(score)
     db.refresh(essay)
 
     logger.info(
-        f"Essay '{essay_id}' reviewed and finalized. Override score: {payload.reviewer_override_score}"
+        "Essay '%s' finalized by %s. Override score: %s",
+        essay_id,
+        current_user.email,
+        payload.reviewer_override_score,
     )
 
-    # Determine model version
-    model_version = "v1.0.0"
-    if score.inference_run and score.inference_run.model:
-        model_version = score.inference_run.model.version
-    else:
-        active_model = (
-            db.query(ModelEntity).filter(ModelEntity.status == "PRODUCTION").first()
-        )
-        if active_model:
-            model_version = active_model.version
-
-    # Collect dimension feedback
-    dimensions = []
-    if score.dimension_feedbacks:
-        for df in score.dimension_feedbacks:
-            dimensions.append(
-                DimensionScoreDetail(
-                    dimension=df.dimension,
-                    score=df.sub_score,
-                    subScore=df.sub_score,
-                    feedback=df.feedback_text,
-                    feedbackText=df.feedback_text,
-                )
-            )
-
-    return EssayScoreResponse(
-        essayId=essay.id,
-        holisticScore=score.holistic_score,
-        rubricBand=score.rubric_band,
-        confidence=score.confidence,
-        dimensions=dimensions,
-        modelVersion=model_version,
-        reviewerOverrideScore=score.reviewer_override_score,
-        reviewerOverrideReason=score.reviewer_override_reason,
-        reviewerOverrideAt=score.reviewer_override_at,
-    )
+    return _build_score_response(db, essay, score)

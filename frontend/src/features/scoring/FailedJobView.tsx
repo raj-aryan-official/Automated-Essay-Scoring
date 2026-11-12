@@ -56,9 +56,9 @@ export const FailedJobView: React.FC<FailedJobViewProps> = ({
       return {
         headline: 'Essay Exceeded Transformer Context Window',
         explanation:
-          'The submitted essay exceeded the maximum token capacity (~1,024 tokens) supported by the DeBERTa model.',
+          'The submitted essay exceeded the maximum input length supported by the scoring model.',
         recommendation:
-          'Try editing the essay to focus on the core argument or split into standard length paragraphs.',
+          'Shorten the essay, or verify that the document was extracted as text rather than scanned images.',
       };
     }
 

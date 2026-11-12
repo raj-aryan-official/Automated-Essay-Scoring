@@ -230,12 +230,16 @@ def test_rbac_viewer_allowed_read_actions(
     client: TestClient,
     viewer_headers: dict,
 ):
-    """Verify VIEWER role can read essays, jobs, and analytics."""
+    """Verify VIEWER role can read essays, jobs, and queue analytics."""
     res_essays = client.get("/api/v1/essays", headers=viewer_headers)
     assert res_essays.status_code == 200
 
-    res_analytics = client.get("/api/v1/analytics/evaluation", headers=viewer_headers)
+    res_analytics = client.get("/api/v1/analytics/jobs", headers=viewer_headers)
     assert res_analytics.status_code == 200
+
+    # Model Evaluation is ML_ENGINEER-only per the PRD RBAC matrix
+    res_eval = client.get("/api/v1/analytics/evaluation", headers=viewer_headers)
+    assert res_eval.status_code == 403
 
     res_jobs = client.get("/api/v1/analytics/jobs", headers=viewer_headers)
     assert res_jobs.status_code == 200

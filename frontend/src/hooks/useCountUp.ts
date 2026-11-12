@@ -12,13 +12,14 @@ export function useCountUp(
   duration: number = 300
 ): number {
   const prefersReducedMotion = useReducedMotion();
-  const [current, setCurrent] = useState<number>(() => {
-    return prefersReducedMotion ? target : minVal;
-  });
+  const canAnimate =
+    !prefersReducedMotion && typeof document !== 'undefined' && !document.hidden;
+  const [current, setCurrent] = useState<number>(() => (canAnimate ? minVal : target));
   const animatedRef = useRef<boolean>(false);
 
   useEffect(() => {
-    if (prefersReducedMotion) {
+    // Background tabs suspend requestAnimationFrame; never leave a metric stuck at its start value.
+    if (!canAnimate) {
       setCurrent(target);
       return;
     }
@@ -54,7 +55,7 @@ export function useCountUp(
     return () => {
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-  }, [target, minVal, duration, prefersReducedMotion]);
+  }, [target, minVal, duration, canAnimate]);
 
   return current;
 }
