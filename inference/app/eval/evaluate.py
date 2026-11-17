@@ -74,6 +74,7 @@ class PromptEvaluationResult:
     passed: bool
     checkpoint_path: str
     sample_predictions: list[dict[str, Any]]
+    inference_mode: str = "unknown"
 
 
 # WHY: Master evaluation report validating the Section 12.1 Acceptance Gate (mean QWK >= 0.70 across all 8 prompts)
@@ -147,6 +148,27 @@ def load_prompt_checkpoint(
                     base_model_name=base_model, hidden_dim=hidden_dim
                 )
                 model.regression_head.load_state_dict(state_dict, strict=False)
+
+                # Apply the fine-tuned LoRA adapter; without it the encoder is the
+                # untrained base model and the QWK score measures nothing.
+                adapter_dir = ckpt_path / "lora_adapter"
+                if adapter_dir.is_dir():
+                    load_adapter = getattr(model.encoder, "load_adapter", None)
+                    if callable(load_adapter):
+                        try:
+                            load_adapter(
+                                str(adapter_dir),
+                                adapter_name="default",
+                                is_trainable=False,
+                            )
+                            logger.info(
+                                f"Loaded LoRA adapter for prompt {prompt_id} from '{adapter_dir}'."
+                            )
+                        except Exception as e:
+                            logger.warning(
+                                f"Could not load LoRA adapter from '{adapter_dir}': {e}"
+                            )
+
                 model.eval()
                 logger.info(f"Loaded PyTorch model checkpoint for prompt {prompt_id}.")
         except Exception as e:
@@ -274,6 +296,7 @@ def evaluate_prompt(
     target_qwk: float = 0.70,
     test_split_ratio: float = 0.1,
     random_state: int = 42,
+    require_neural_model: bool = False,
 ) -> PromptEvaluationResult:
     """Execute evaluation pipeline for a single ASAP prompt over its held-out test split.
 
@@ -308,6 +331,14 @@ def evaluate_prompt(
         ckpt_root, prompt_id, auto_train_if_missing=True
     )
 
+    # WHY: The heuristic fallback scores essays from ground-truth labels, so a QWK
+    # produced by it is not evidence about a model. Refuse that silently passing gate.
+    if require_neural_model and model is None:
+        raise RuntimeError(
+            f"Checkpoint for prompt {prompt_id} at '{ckpt_root / str(prompt_id)}' "
+            "has no loadable neural weights; refusing to score with the heuristic fallback."
+        )
+
     # 2. Load dataset
     df = None
     if dataset_path and os.path.isfile(dataset_path):
@@ -331,7 +362,7 @@ def evaluate_prompt(
     prompt_samples = 0
     if df is not None:
         try:
-            recs = df.to_dict() if hasattr(df, "to_dict") else []
+            recs = df.to_dict(orient="records") if hasattr(df, "to_dict") else []
             prompt_samples = sum(
                 1 for r in recs if int(r.get("essay_set", 0)) == prompt_id
             )
@@ -354,7 +385,7 @@ def evaluate_prompt(
         test_size=test_split_ratio,
         random_state=random_state,
     )
-    test_records = test_df.to_dict() if hasattr(test_df, "to_dict") else []
+    test_records = test_df.to_dict(orient="records") if hasattr(test_df, "to_dict") else []
     n_test = len(test_records)
     if n_test == 0:
         raise ValueError(f"Held-out test split for prompt {prompt_id} is empty.")
@@ -411,6 +442,7 @@ def evaluate_prompt(
         passed=passed,
         checkpoint_path=str(ckpt_root / str(prompt_id)),
         sample_predictions=samples,
+        inference_mode="neural" if model is not None else "heuristic_fallback",
     )
 
 

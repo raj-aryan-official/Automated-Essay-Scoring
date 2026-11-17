@@ -115,7 +115,7 @@ def test_train_prompt_and_checkpoints(tmp_path: Path):
     assert meta["hyperparameters"]["lora_r"] == 8
     assert meta["hyperparameters"]["epochs"] == 3
     assert meta["best_epoch"] >= 1
-    assert meta["val_loss"] <= result["best_val_loss"]
+    assert meta["val_loss"] == pytest.approx(result["best_val_loss"], abs=1e-6)
 
     # Verify regression head weight file exists
     assert (ckpt_dir / "regression_head.pt").is_file()

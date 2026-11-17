@@ -17,6 +17,7 @@ import json
 import logging
 import math
 import os
+import random
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,6 +27,11 @@ try:
     import yaml  # type: ignore
 except ImportError:
     yaml = None  # type: ignore
+
+try:
+    import numpy as np
+except ImportError:
+    np = None  # type: ignore
 
 from app.dataset.asap_adapter import (
     ASAP_RUBRIC_CONFIG,
@@ -290,8 +296,10 @@ class PromptTrainer:
         log_dir: str | Path | None = None,
         dataset_path: str | Path | None = None,
         device: str | None = None,
+        seed: int = 42,
     ) -> None:
         self.prompt_id = prompt_id
+        self.seed = seed
         self.base_model = base_model
         self.epochs = epochs
         self.batch_size = batch_size
@@ -340,6 +348,15 @@ class PromptTrainer:
 
         self.tb_logger = TensorBoardLogger(self.log_dir)
         self.best_val_loss = float("inf")
+        self.training_mode = "unknown"
+
+    def _seed_everything(self) -> None:
+        """Seed every RNG the training loop touches so a run is reproducible from its config."""
+        random.seed(self.seed)
+        if np is not None:
+            np.random.seed(self.seed)
+        if torch is not None:
+            torch.manual_seed(self.seed)
 
     def _load_yaml_config(self, config_path: str | Path) -> None:
         """Load hyperparameters from configuration file."""
@@ -417,6 +434,7 @@ class PromptTrainer:
             f"(epochs={self.epochs}, batch_size={self.batch_size}, lr={self.learning_rate})"
         )
 
+        self._seed_everything()
         train_df, val_df, _ = self.load_data()
 
         # Check if full PyTorch + PEFT training is available in environment
@@ -427,14 +445,17 @@ class PromptTrainer:
             and torch is not None
             and AutoTokenizer is not None
         ):
+            self.training_mode = "neural"
             try:
                 return self._train_torch(train_df, val_df)
             except Exception as e:
                 logger.warning(
                     f"Error during PyTorch training execution: {e}. Falling back to simulation mode."
                 )
+                self.training_mode = "simulation"
                 return self._train_simulation(train_df, val_df)
         else:
+            self.training_mode = "simulation"
             return self._train_simulation(train_df, val_df)
 
     def _train_torch(self, train_df: Any, val_df: Any) -> dict[str, Any]:
@@ -556,6 +577,9 @@ class PromptTrainer:
             "epochs_completed": self.epochs,
             "history": history,
             "checkpoint_dir": str(self.checkpoint_dir),
+            "training_mode": self.training_mode,
+            "seed": self.seed,
+            "device": self.device,
         }
 
     def _train_simulation(self, train_df: Any, val_df: Any) -> dict[str, Any]:
@@ -610,6 +634,9 @@ class PromptTrainer:
             "epochs_completed": self.epochs,
             "history": history,
             "checkpoint_dir": str(self.checkpoint_dir),
+            "training_mode": self.training_mode,
+            "seed": self.seed,
+            "device": self.device,
         }
 
     def _save_checkpoint(
@@ -659,6 +686,8 @@ class PromptTrainer:
             "val_loss": round(float(val_loss), 6),
             "loss_metric": "MSE",
             "base_model": self.base_model,
+            "training_mode": self.training_mode,
+            "device": self.device,
             "hyperparameters": {
                 "epochs": self.epochs,
                 "batch_size": self.batch_size,
@@ -670,6 +699,7 @@ class PromptTrainer:
                 "lora_dropout": self.lora_dropout,
                 "hidden_dim": self.hidden_dim,
                 "max_sequence_length": self.max_sequence_length,
+                "seed": self.seed,
             },
             "rubric": ASAP_RUBRIC_CONFIG.get(
                 self.prompt_id, {"min_score": 2.0, "max_score": 12.0}
@@ -691,6 +721,7 @@ def train_prompt(
     checkpoint_dir: str | Path | None = None,
     log_dir: str | Path | None = None,
     config_path: str | Path | None = None,
+    seed: int = 42,
 ) -> dict[str, Any]:
     """Convenience functional interface to train a model for a specific ASAP prompt."""
     trainer = PromptTrainer(
@@ -701,6 +732,7 @@ def train_prompt(
         checkpoint_dir=checkpoint_dir,
         log_dir=log_dir,
         config_path=config_path,
+        seed=seed,
     )
     return trainer.train()
 
@@ -727,6 +759,9 @@ def main() -> None:
     parser.add_argument(
         "--config", type=str, default=None, help="Path to YAML model configuration file"
     )
+    parser.add_argument(
+        "--seed", type=int, default=42, help="Random seed for reproducible runs"
+    )
 
     args = parser.parse_args()
     logging.basicConfig(
@@ -741,6 +776,7 @@ def main() -> None:
         checkpoint_dir=args.checkpoint_dir,
         log_dir=args.log_dir,
         config_path=args.config,
+        seed=args.seed,
     )
     print("\nTraining Completed Successfully:")
     print(json.dumps(result, indent=2))

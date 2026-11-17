@@ -356,7 +356,7 @@ def split_prompt_dataset(
     else:
         # SimpleDataFrame or list of records
         prompt_records = (
-            [r for r in df.to_dict() if int(r.get("essay_set", 0)) == essay_set]
+            [r for r in df.to_dict(orient="records") if int(r.get("essay_set", 0)) == essay_set]
             if hasattr(df, "to_dict")
             else []
         )
@@ -374,11 +374,24 @@ def split_prompt_dataset(
         and train_test_split is not None
         and isinstance(prompt_df, getattr(pd, "DataFrame", ()))
     ):
-        class_counts = prompt_df["domain1_score"].value_counts()
-        can_stratify = (class_counts.min() >= 2) and (len(class_counts) > 1)
-        stratify_col = prompt_df["domain1_score"] if can_stratify else None
+        def _can_stratify(scores: Any, holdout_ratio: float) -> bool:
+            """Stratifying needs >=2 samples per class and room for every class on both sides."""
+            counts = scores.value_counts()
+            n_classes = len(counts)
+            n_total = len(scores)
+            return (
+                n_classes > 1
+                and int(counts.min()) >= 2
+                and n_total * holdout_ratio >= n_classes
+                and n_total * (1.0 - holdout_ratio) >= n_classes
+            )
 
         temp_ratio = val_size + test_size
+        stratify_col = (
+            prompt_df["domain1_score"]
+            if _can_stratify(prompt_df["domain1_score"], temp_ratio)
+            else None
+        )
         train_df, temp_df = train_test_split(
             prompt_df,
             test_size=temp_ratio,
@@ -387,11 +400,11 @@ def split_prompt_dataset(
         )
 
         val_relative_ratio = val_size / temp_ratio
-        temp_stratify = None
-        if can_stratify:
-            temp_class_counts = temp_df["domain1_score"].value_counts()
-            if (temp_class_counts.min() >= 2) and (len(temp_class_counts) > 1):
-                temp_stratify = temp_df["domain1_score"]
+        temp_stratify = (
+            temp_df["domain1_score"]
+            if _can_stratify(temp_df["domain1_score"], 1.0 - val_relative_ratio)
+            else None
+        )
 
         val_df, test_df = train_test_split(
             temp_df,
@@ -407,7 +420,7 @@ def split_prompt_dataset(
         )
 
     # Deterministic slice fallback
-    records = prompt_df.to_dict() if hasattr(prompt_df, "to_dict") else []
+    records = prompt_df.to_dict(orient="records") if hasattr(prompt_df, "to_dict") else []
     rng = random.Random(random_state)
     shuffled = list(records)
     rng.shuffle(shuffled)

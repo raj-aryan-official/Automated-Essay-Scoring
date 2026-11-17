@@ -155,7 +155,15 @@ def test_regression_head_instantiation():
     assert head.dropout_prob == 0.1
 
     # Safe forward invocation
-    out = head.forward([[0.0] * 768])
+    try:
+        import torch
+    except ImportError:
+        torch = None
+
+    features: object = [[0.0] * 768]
+    if torch is not None:
+        features = torch.zeros(1, 768)
+    out = head.forward(features)
     assert out is not None
 
 

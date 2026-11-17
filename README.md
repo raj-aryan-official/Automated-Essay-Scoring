@@ -239,32 +239,49 @@ Every value is read from the environment; `.env.example` has the full set with d
 
 ## 9. Training, export, and evaluation
 
+Run these commands from the `inference/` directory so the `app` package resolves.
+
 Check the environment first:
 
 ```bash
-python inference/check_env.py
+cd inference
+python check_env.py
 ```
 
 ### Train a prompt adapter
 
 ```bash
-python -m inference.app.engine.train \
+python -m app.engine.train \
   --prompt_id 1 \
   --epochs 5 \
   --batch_size 8 \
   --lr 2e-5 \
-  --checkpoint_dir inference/checkpoints/1
+  --checkpoint_dir checkpoints/1
 ```
 
-Optional flags: `--log_dir` for TensorBoard scalars, `--config` for a YAML model config. Training writes `scalars.jsonl`, which the evaluation page reads for loss curves.
+Optional flags: `--seed` for reproducible runs, `--log_dir` for scalars, `--config` for a YAML model config. Training writes `scalars.jsonl`, which the evaluation page reads for loss curves.
+
+### Train repeatedly and store every run
+
+```bash
+python -m app.engine.train_sweep \
+  --prompt_ids all \
+  --runs 3 \
+  --seeds 42,43,44 \
+  --epochs 5 \
+  --dataset_path data/asap_essays.tsv \
+  --sweep_name baseline_3seeds
+```
+
+Each run stores its resolved config, training log, scalars, LoRA adapter, regression head, and held-out QWK report under `runs/sweeps/<sweep_name>/prompt_<id>/run_<n>_seed<seed>/`; the sweep root holds `summary.json`, `summary.csv`, and `summary.md`. Without PyTorch the sweep refuses to run unless `--allow-simulation` is passed, and simulation checkpoints are never evaluated because their weights are placeholders.
 
 ### Export to ONNX and benchmark latency
 
 ```bash
-python -m inference.app.engine.export_onnx \
+python -m app.engine.export_onnx \
   --prompt_id 1 \
-  --checkpoint_dir inference/checkpoints/1 \
-  --output_path inference/checkpoints/1/model.onnx
+  --checkpoint_dir checkpoints/1 \
+  --output_path checkpoints/1/model.onnx
 ```
 
 Optional flags: `--num_iterations` (default 50), `--nfr_target_ms` (default 300), `--output_json`.
@@ -272,20 +289,20 @@ Optional flags: `--num_iterations` (default 50), `--nfr_target_ms` (default 300)
 ### Verify checkpoint integrity
 
 ```bash
-python inference/checkpoints/validate_checksums.py
+python checkpoints/validate_checksums.py
 ```
 
 ### Evaluate against the QWK gate
 
 ```bash
-python -m inference.app.eval.evaluate \
-  --checkpoint_dir inference/checkpoints \
+python -m app.eval.evaluate \
+  --checkpoint_dir checkpoints \
   --prompts all \
   --target_qwk 0.70 \
-  --output_json inference/runs/week7_evaluation.json
+  --output_json runs/week7_evaluation.json
 ```
 
-`--prompts` takes `all` or a comma-separated list such as `1,3,7`. `--data_path` points at the ASAP TSV/CSV when it is not in the default location. The report written here is the file served by the model evaluation page.
+`--prompts` takes `all` or a comma-separated list such as `1,3,7`. `--data_path` points at the ASAP TSV/CSV when it is not in the default location. The report written here is the file served by the model evaluation page. Only checkpoints with real weights are scored; a simulation checkpoint is refused rather than scored by the heuristic fallback.
 
 The project target is a mean QWK of at least 0.70 across the eight prompts. No benchmark numbers are checked into this repository; run the evaluation above to produce them.
 
